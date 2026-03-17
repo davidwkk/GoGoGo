@@ -6,7 +6,7 @@
 graph TB
     subgraph Frontend ["Frontend (React + Vite + shadcn/ui)"]
         UI[Chat UI + Results Display]
-        STT[ASR - Web Speech API / Google STT]
+        STT[ASR - Web Speech API]
         TTS[TTS - Gemini TTS]
         MAP[Map Display - Google Maps Embed/Static API]
     end
@@ -18,6 +18,7 @@ graph TB
         LiteAgent[Gemini 3.1 Flash-Lite - Preference Extraction]
         Config[pydantic-settings - Env Config]
         CORS[CORS Middleware]
+        Logging[Loguru + LangChain Callbacks]
     end
 
     subgraph Tools ["Agent Tools - via SerpAPI"]
@@ -56,87 +57,90 @@ gogogo/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── routes/
-│   │   │   │   ├── auth.py         # /auth/register, /auth/login
-│   │   │   │   ├── chat.py         # /chat/stream (SSE)
-│   │   │   │   ├── trips.py        # /trips CRUD
-│   │   │   │   └── users.py        # /users/me, preferences
-│   │   │   └── deps.py             # Shared dependencies (get_current_user, get_db)
+│   │   │   │   ├── auth.py             # /auth/register, /auth/login
+│   │   │   │   ├── chat.py             # /chat/stream (SSE)
+│   │   │   │   ├── trips.py            # /trips CRUD
+│   │   │   │   └── users.py            # /users/me, preferences
+│   │   │   └── deps.py                 # get_current_user, get_db
 │   │   ├── agent/
-│   │   │   ├── agent.py            # LangChain agent setup
+│   │   │   ├── agent.py                # LangChain agent setup
+│   │   │   ├── callbacks.py            # Custom LangChain callback handler (logging)
 │   │   │   ├── tools/
-│   │   │   │   ├── search.py       # Tavily / SerpAPI web search tool
-│   │   │   │   ├── flights.py      # SerpAPI Google Flights tool
-│   │   │   │   ├── hotels.py       # SerpAPI Google Hotels tool
-│   │   │   │   ├── weather.py      # OpenWeatherMap tool
-│   │   │   │   └── maps.py         # Google Maps Static API tool
-│   │   │   └── schemas.py          # Structured Pydantic output models
+│   │   │   │   ├── search.py           # SerpAPI web search
+│   │   │   │   ├── flights.py          # SerpAPI Google Flights
+│   │   │   │   ├── hotels.py           # SerpAPI Google Hotels
+│   │   │   │   ├── weather.py          # OpenWeatherMap
+│   │   │   │   └── maps.py             # Google Maps Static/Embed
+│   │   │   └── schemas.py              # Structured Pydantic output models
 │   │   ├── core/
-│   │   │   ├── config.py           # pydantic-settings env config
-│   │   │   ├── security.py         # JWT encode/decode
-│   │   │   └── middleware.py       # CORS setup
+│   │   │   ├── config.py               # pydantic-settings env config
+│   │   │   ├── security.py             # JWT encode/decode
+│   │   │   ├── middleware.py           # CORS setup
+│   │   │   └── logging.py              # Loguru setup
 │   │   ├── db/
-│   │   │   ├── base.py             # SQLAlchemy declarative base
-│   │   │   ├── session.py          # Async engine + session factory
+│   │   │   ├── base.py                 # SQLAlchemy declarative base
+│   │   │   ├── session.py              # Async engine + session factory
 │   │   │   └── models/
 │   │   │       ├── user.py
-│   │   │       ├── session.py
+│   │   │       ├── chat_session.py
 │   │   │       ├── message.py
 │   │   │       ├── trip.py
 │   │   │       └── preference.py
-│   │   ├── repositories/           # DB access layer
+│   │   ├── repositories/               # DB access layer (no expire_all!)
 │   │   │   ├── user_repo.py
 │   │   │   ├── session_repo.py
 │   │   │   ├── message_repo.py
 │   │   │   ├── trip_repo.py
 │   │   │   └── preference_repo.py
-│   │   ├── schemas/                # Pydantic request/response schemas
+│   │   ├── schemas/                    # Pydantic request/response schemas
 │   │   │   ├── auth.py
 │   │   │   ├── chat.py
 │   │   │   ├── trip.py
 │   │   │   └── user.py
-│   │   ├── services/               # Business logic
+│   │   ├── services/                   # Business logic
 │   │   │   ├── auth_service.py
 │   │   │   ├── chat_service.py
 │   │   │   ├── trip_service.py
 │   │   │   └── preference_service.py
-│   │   └── main.py                 # FastAPI app entrypoint
+│   │   └── main.py                     # FastAPI app entrypoint
 │   ├── alembic/
-│   │   ├── versions/               # Migration files
+│   │   ├── versions/
 │   │   └── env.py
+│   ├── logs/                           # Loguru output (gitignored)
 │   ├── tests/
 │   ├── alembic.ini
-│   ├── pyproject.toml              # uv managed
-│   ├── .env                        # Local env vars (gitignored)
+│   ├── pyproject.toml
+│   ├── .env
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ui/                 # shadcn/ui primitives
-│   │   │   ├── chat/               # ChatWindow, MessageBubble, InputBar
-│   │   │   ├── trip/               # ItineraryCard, HotelCard, FlightCard
-│   │   │   ├── map/                # MapEmbed (Google Maps Embed API)
-│   │   │   └── voice/              # VoiceButton, TTSPlayer
+│   │   │   ├── ui/                     # shadcn/ui primitives
+│   │   │   ├── chat/                   # ChatWindow, MessageBubble, InputBar
+│   │   │   ├── trip/                   # ItineraryCard, HotelCard, FlightCard
+│   │   │   ├── map/                    # MapEmbed (Google Maps Embed API)
+│   │   │   └── voice/                  # VoiceButton, TTSPlayer
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx
 │   │   │   ├── ChatPage.tsx
 │   │   │   └── TripPage.tsx
 │   │   ├── hooks/
-│   │   │   ├── useASR.ts           # Speech-to-text hook
-│   │   │   ├── useTTS.ts           # Text-to-speech hook
-│   │   │   ├── useChat.ts          # SSE streaming hook
-│   │   │   └── useAuth.ts          # Auth state hook
+│   │   │   ├── useASR.ts               # Web Speech API hook
+│   │   │   ├── useTTS.ts               # Gemini TTS hook
+│   │   │   ├── useChat.ts              # SSE streaming hook
+│   │   │   └── useAuth.ts              # Auth state hook
 │   │   ├── services/
-│   │   │   ├── api.ts              # Axios base client
+│   │   │   ├── api.ts                  # Axios base client
 │   │   │   ├── authService.ts
 │   │   │   ├── chatService.ts
 │   │   │   └── tripService.ts
-│   │   ├── store/                  # Zustand or React Context
+│   │   ├── store/                      # Zustand global state
 │   │   └── main.tsx
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── Dockerfile
 ├── docker-compose.yml
-├── .env.example                    # Committed to git, no secrets
+├── .env.example
 ├── .gitignore
 └── README.md
 ```
@@ -152,16 +156,16 @@ gogogo/
 | `users`            | `id`, `username`, `email`, `hashed_password`, `created_at`                            | Basic auth              |
 | `chat_sessions`    | `id`, `user_id`, `title`, `created_at`                                                | One per conversation    |
 | `messages`         | `id`, `session_id`, `role` (user/assistant), `content`, `created_at`                  | Full chat history       |
-| `trips`            | `id`, `user_id`, `session_id`, `title`, `destination`, `itinerary_json`, `created_at` | JSONB for full plan     |
+| `trips`            | `id`, `user_id`, `session_id`, `title`, `destination`, `itinerary_json`, `created_at` | JSONB structured plan   |
 | `user_preferences` | `id`, `user_id`, `preferences_json`, `updated_at`                                     | Extracted by Flash-Lite |
 
-### Itinerary JSONB Structure (Pydantic-enforced)
+### Itinerary Structured Output (Pydantic — enforced via `.with_structured_output()`)
 
 ```python
 class AttractionItem(BaseModel):
     name: str
     description: str
-    category: str          # museum, restaurant, landmark, etc.
+    category: str           # museum, restaurant, landmark, etc.
     address: str
     photo_url: str | None
     rating: float | None
@@ -199,105 +203,146 @@ class TripItinerary(BaseModel):
     map_embed_url: str | None
 ```
 
-> The agent is forced to output this exact structure via LangChain's **structured output** (`.with_structured_output(TripItinerary)`). No free-form JSON guessing.
-
 ---
 
 ## 🔑 API Keys Needed
 
-| Service              | Purpose                                               | Free Tier             | Sign Up                  |
-| -------------------- | ----------------------------------------------------- | --------------------- | ------------------------ |
-| **Google AI Studio** | Gemini 3 Flash (agent) + 3.1 Flash-Lite (preferences) | ✅ Generous free tier | aistudio.google.com      |
-| **Google Cloud TTS** | Gemini TTS for voice output                           | ✅ 1M chars/mo        | console.cloud.google.com |
-| **SerpAPI**          | Flights + Hotels + Web Search                         | ✅ 100 searches/mo    | serpapi.com              |
-| **OpenWeatherMap**   | Weather data                                          | ✅ 1000 req/day       | openweathermap.org       |
-| **Google Maps**      | Static/Embed map display                              | ✅ $200 credit/mo     | console.cloud.google.com |
+| Service              | Purpose                         | Free Tier          |
+| -------------------- | ------------------------------- | ------------------ |
+| **Google AI Studio** | Gemini 3 Flash + 3.1 Flash-Lite | ✅ Generous        |
+| **Google Cloud TTS** | Gemini TTS voice output         | ✅ 1M chars/mo     |
+| **SerpAPI**          | Web search + Flights + Hotels   | ✅ 100 searches/mo |
+| **OpenWeatherMap**   | Weather data                    | ✅ 1000 req/day    |
+| **Google Maps**      | Static/Embed map display        | ✅ $200 credit/mo  |
 
-> 💡 All 5 services have free tiers sufficient for a demo. Total cost for a presentation: **$0**.
+> 💡 Total demo cost: **$0** across all services.
 
 ---
 
 ## 🗣️ ASR & TTS Options
 
-### ASR (Speech → Text) — Input
+### ASR (Speech → Text)
 
-| Option                              | Quality               | Cost                      | Complexity         | Recommendation              |
-| ----------------------------------- | --------------------- | ------------------------- | ------------------ | --------------------------- |
-| **Web Speech API** (browser-native) | Good                  | Free                      | None (zero setup)  | ✅ **Recommended for demo** |
-| **Google Cloud Speech-to-Text**     | Excellent             | Free 60min/mo             | Medium (GCP setup) | Good if quality matters     |
-| **Gemini Live API**                 | Excellent, multimodal | Included w/ Gemini        | Medium             | Future upgrade path         |
-| **Whisper (OpenAI)**                | Excellent             | Paid API / Free self-host | High (self-host)   | Overkill for demo           |
+| Option                              | Quality               | Cost                  | Complexity | Verdict            |
+| ----------------------------------- | --------------------- | --------------------- | ---------- | ------------------ |
+| **Web Speech API** (browser-native) | Good                  | Free                  | None       | ✅ **Recommended** |
+| **Google Cloud STT**                | Excellent             | Free 60min/mo         | Medium     | Good upgrade path  |
+| **Gemini Live API**                 | Excellent, multimodal | Included w/ Gemini    | Medium     | Future upgrade     |
+| **Whisper (OpenAI)**                | Excellent             | Paid / Free self-host | High       | Overkill for demo  |
 
-> **Verdict:** Use **Web Speech API** for ASR. It's free, zero-setup, works in Chrome, and is more than sufficient for a demo. Audio never leaves the browser.
+> **Decision:** Web Speech API — free, zero setup, works in Chrome, audio stays in browser.
 
----
+### TTS (Text → Speech)
 
-### TTS (Text → Speech) — Output
+| Option                         | Quality               | Cost                | Complexity | Verdict                   |
+| ------------------------------ | --------------------- | ------------------- | ---------- | ------------------------- |
+| **Gemini TTS**                 | Excellent, expressive | ✅ 1M chars/mo free | Low        | ✅ **Recommended**        |
+| **Google Cloud TTS (WaveNet)** | Very good             | ✅ 1M chars/mo free | Low        | Solid fallback            |
+| **OpenAI TTS-1**               | Very natural          | ~$15/1M chars       | Low        | Extra vendor, costs money |
+| **ElevenLabs**                 | Best quality          | Free 10k chars/mo   | Low        | Very limited free tier    |
+| **Kokoro / Coqui TTS**         | Good                  | Free (self-hosted)  | High       | Overkill for demo         |
+| **Web Speech SpeechSynthesis** | Robotic               | Free                | None       | Last resort fallback      |
 
-| Option                             | Quality               | Cost                 | Complexity                    | Recommendation            |
-| ---------------------------------- | --------------------- | -------------------- | ----------------------------- | ------------------------- |
-| **Gemini TTS** (Google Cloud)      | Excellent, expressive | ✅ 1M chars/mo free  | Low (same GCP account)        | ✅ **Recommended**        |
-| **Google Cloud TTS (WaveNet)**     | Very good             | ✅ 1M chars/mo free  | Low                           | Solid fallback            |
-| **OpenAI TTS-1**                   | Very natural          | Paid (~$15/1M chars) | Low                           | Extra vendor, costs money |
-| **ElevenLabs**                     | Best quality          | Free 10k chars/mo    | Low                           | Very limited free tier    |
-| **Kokoro / Coqui TTS**             | Good, open-source     | Free (self-hosted)   | High (extra Docker container) | Overkill for demo         |
-| **Web Speech API SpeechSynthesis** | Robotic               | Free                 | None                          | Last resort fallback      |
-
-> **Verdict:** Use **Gemini TTS** — stays in Google ecosystem, same billing account, high quality, and free tier is generous enough for a demo.
+> **Decision:** Gemini TTS — same Google ecosystem, same billing, high quality, generous free tier.
 
 ---
 
-## 🐳 Docker Setup (Dev)
+## 🤖 Agent Design
 
-### Containers
-
-| Container  | Image             | Ports  | Purpose                    |
-| ---------- | ----------------- | ------ | -------------------------- |
-| `db`       | `postgres:16`     | `5432` | PostgreSQL database        |
-| `backend`  | Custom Dockerfile | `8000` | FastAPI + uvicorn --reload |
-| `frontend` | Custom Dockerfile | `5173` | Vite dev server + HMR      |
-
-### Key Docker Practices
-
-- Backend & frontend code → **volume-mounted** (not copied) for hot-reload
-- PostgreSQL data → **named volume** (`postgres_data`) to persist across restarts
-- `.env` file → passed into containers via `env_file` directive
-- `depends_on` with `healthcheck` on `db` so backend waits for Postgres to be ready
+```
+User Message
+    │
+    ▼
+System Prompt (injected user preferences + session context)
+    │
+    ▼
+Gemini 3 Flash — LangChain Agent
+    ├── Tool: web_search        → SerpAPI general search
+    ├── Tool: search_flights    → SerpAPI Google Flights
+    ├── Tool: search_hotels     → SerpAPI Google Hotels
+    ├── Tool: get_weather       → OpenWeatherMap
+    └── Tool: get_map_url       → Google Maps Static/Embed API
+    │
+    ▼
+Structured Output → TripItinerary (Pydantic + .with_structured_output())
+    │
+    ├──► Streamed to frontend via SSE
+    │
+    └──► Gemini 3.1 Flash-Lite (async background)
+             └── Extracts preferences → saved to user_preferences table
+```
 
 ---
 
-## ⚙️ Environment Config (pydantic-settings)
+## 📝 Logging Design
+
+### Strategy: Two-Layer Logging
+
+| Layer           | Tool                            | Purpose                               |
+| --------------- | ------------------------------- | ------------------------------------- |
+| **App-level**   | `loguru`                        | API requests, auth, DB ops, errors    |
+| **Agent-level** | LangChain `BaseCallbackHandler` | Tool calls, LLM I/O, agent loop steps |
+
+### Log Levels by Event
+
+| Event                            | Level              |
+| -------------------------------- | ------------------ |
+| App startup / shutdown           | `INFO`             |
+| Incoming API request             | `INFO`             |
+| Auth success / failure           | `INFO` / `WARNING` |
+| Agent action (tool call + input) | `INFO`             |
+| Tool result (truncated)          | `INFO`             |
+| LLM prompt / response preview    | `DEBUG`            |
+| Agent finish (output keys)       | `SUCCESS`          |
+| DB errors, unhandled exceptions  | `ERROR`            |
+| Trip saved, preference updated   | `INFO`             |
+
+### Log Outputs
+
+| Sink               | Format                        | Rotation      |
+| ------------------ | ----------------------------- | ------------- |
+| **stdout**         | Colored, human-readable (dev) | —             |
+| **`logs/app.log`** | Full structured logs          | 10MB / 7 days |
+
+### Log Level via Env
+
+```bash
+# .env
+LOG_LEVEL=DEBUG    # dev
+LOG_LEVEL=INFO     # prod
+```
+
+### Sample Terminal Output
+
+```
+10:42:01 | INFO    | api.chat      - [POST /chat/stream] user_id=3 session_id=7
+10:42:01 | INFO    | agent.callbacks - [TOOL CALL] search_hotels | {'query': 'hotels in Tokyo'}
+10:42:02 | INFO    | agent.callbacks - [TOOL RESULT] [{'name': 'Shinjuku Granbell', 'price': '$120/night'}]...
+10:42:02 | INFO    | agent.callbacks - [TOOL CALL] get_weather | {'city': 'Tokyo'}
+10:42:03 | INFO    | agent.callbacks - [TOOL RESULT] {'temp': 18, 'condition': 'Partly Cloudy'}...
+10:42:04 | SUCCESS | agent.callbacks - [AGENT FINISH] Output keys: ['destination', 'days', 'hotels', 'flights']
+10:42:04 | INFO    | services.trip - Trip saved | trip_id=42 user_id=3
+```
+
+---
+
+## ⚙️ Environment Config (`pydantic-settings`)
 
 ```python
-# app/core/config.py
 class Settings(BaseSettings):
-    # Database
     DATABASE_URL: str
-
-    # Auth
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-
-    # Gemini
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-3-flash"
     GEMINI_LITE_MODEL: str = "gemini-3.1-flash-lite"
-
-    # SerpAPI
     SERPAPI_KEY: str
-
-    # OpenWeatherMap
     OPENWEATHER_API_KEY: str
-
-    # Google Maps
     GOOGLE_MAPS_API_KEY: str
-
-    # Google Cloud TTS
     GOOGLE_TTS_API_KEY: str
+    LOG_LEVEL: str = "DEBUG"
 
     model_config = SettingsConfigDict(env_file=".env")
-
-settings = Settings()
 ```
 
 ---
@@ -305,10 +350,9 @@ settings = Settings()
 ## 🔒 CORS Config
 
 ```python
-# app/core/middleware.py
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_origins=["http://localhost:5173"],   # Vite dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -317,47 +361,28 @@ app.add_middleware(
 
 ---
 
-## 🤖 Agent Design
+## 🐳 Docker Setup
 
-### Single Agent with Tools
+| Container  | Image         | Port   | Notes                                        |
+| ---------- | ------------- | ------ | -------------------------------------------- |
+| `db`       | `postgres:16` | `5432` | Named volume `postgres_data` for persistence |
+| `backend`  | Custom        | `8000` | Code volume-mounted, `uvicorn --reload`      |
+| `frontend` | Custom        | `5173` | Code volume-mounted, Vite HMR                |
 
-```
-User Message
-    │
-    ▼
-System Prompt (injected user preferences + trip context)
-    │
-    ▼
-Gemini 3 Flash (LangChain Agent)
-    ├── Tool: web_search        → SerpAPI general search
-    ├── Tool: search_flights    → SerpAPI Google Flights
-    ├── Tool: search_hotels     → SerpAPI Google Hotels
-    ├── Tool: get_weather       → OpenWeatherMap
-    └── Tool: get_map_url       → Google Maps Static/Embed API
-    │
-    ▼
-Structured Output → TripItinerary (Pydantic)
-    │
-    ▼
-Streamed back to frontend via SSE
-    │
-    ▼
-Gemini 3.1 Flash-Lite (async, background)
-    └── Extracts preferences → saved to user_preferences table
-```
+> `backend` uses `depends_on` with a `healthcheck` on `db` to wait for Postgres readiness.
 
 ---
 
 ## 🚦 Implementation Phases
 
-| Phase               | Tasks                                                                                                               | Deliverable                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| **1 — Infra**       | Git init, Docker Compose, FastAPI skeleton, uv setup, Alembic init, React+Vite+shadcn init, CORS, pydantic-settings | Running `docker-compose up` with all 3 containers |
-| **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI                                     | Working auth flow                                 |
-| **3 — Agent Core**  | LangChain agent + Gemini, all 5 tools, structured Pydantic output, SSE streaming                                    | Agent returns structured trip plan                |
-| **4 — Persistence** | Chat session + message save, trip save, preference extraction (Flash-Lite)                                          | Full DB integration                               |
-| **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                      | Full working demo                                 |
-| **6 — A+ Polish**   | Weather-aware routing, preference memory injection, photos via SerpAPI, UI polish                                   | A+ features                                       |
+| Phase               | Tasks                                                                                                                             | Deliverable                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **1 — Infra**       | Git init, Docker Compose, FastAPI skeleton, uv setup, Alembic init, React+Vite+shadcn init, CORS, pydantic-settings, Loguru setup | `docker-compose up` with all 3 containers healthy |
+| **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI                                                   | Working auth flow end-to-end                      |
+| **3 — Agent Core**  | LangChain agent + Gemini 3 Flash, all 5 tools, structured Pydantic output, SSE streaming, agent logging callbacks                 | Agent returns structured `TripItinerary`          |
+| **4 — Persistence** | Chat session + message save, trip save, preference extraction via Flash-Lite                                                      | Full DB integration                               |
+| **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                                    | Full working demo                                 |
+| **6 — A+ Polish**   | Weather-aware routing, preference memory injection, UI polish                                                                     | A+ features                                       |
 
 ---
 
@@ -370,7 +395,7 @@ Gemini 3.1 Flash-Lite (async, background)
 | Migrations                | Alembic                                       |
 | Auth                      | JWT (python-jose + passlib)                   |
 | Agent                     | LangChain + Gemini 3 Flash                    |
-| Structured Output         | Pydantic models + `.with_structured_output()` |
+| Structured Output         | Pydantic + `.with_structured_output()`        |
 | Lightweight LLM           | Gemini 3.1 Flash-Lite (preference extraction) |
 | Search / Flights / Hotels | SerpAPI                                       |
 | Weather                   | OpenWeatherMap                                |
@@ -378,6 +403,8 @@ Gemini 3.1 Flash-Lite (async, background)
 | TTS                       | Gemini TTS (Google Cloud)                     |
 | Maps                      | Google Maps Static / Embed API                |
 | Frontend                  | React + Vite + TypeScript + shadcn/ui         |
+| State Management          | Zustand                                       |
 | Database                  | PostgreSQL 16                                 |
 | Containerization          | Docker + Docker Compose                       |
 | Env Config                | pydantic-settings                             |
+| Logging                   | Loguru (app) + LangChain Callbacks (agent)    |
