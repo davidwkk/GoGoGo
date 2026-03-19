@@ -26,7 +26,16 @@ cp .env.example .env
 ```
 Fill in your API keys in the `.env` file.
 
-### 3. Start all services
+### 3. Backend IDE Setup (optional - for local autocomplete)
+```bash
+cd backend
+uv venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+uv sync
+```
+This sets up a local virtual environment so your IDE can provide autocomplete.
+
+### 4. Start all services
 ```bash
 docker-compose up --build
 ```
@@ -37,7 +46,7 @@ docker-compose up --build
 | Backend  | http://localhost:8000      |
 | API Docs | http://localhost:8000/docs |
 
-### 4. Stop services
+### 5. Stop services
 ```bash
 docker-compose down
 ```
