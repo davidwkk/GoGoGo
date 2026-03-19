@@ -109,9 +109,9 @@ npm run preview
 │  ├── /users - User preferences                              │
 │  └── /health - Docker healthcheck                           │
 │                                                             │
-│  LangChain Agent (Gemini 3 Flash)                           │
-│  ├── Tools: web_search, flights, hotels, weather, maps      │
-│  └── Structured output: TripItinerary (Pydantic)            │
+│  LangChain Agent (Gemini 3 Flash)                          │
+│  ├── Phase 1: agent.stream() → SSE → client shows thinking │
+│  └── Phase 2: .with_structured_output() → TripItinerary    │
 │                                                             │
 │  Data Layer                                                 │
 │  ├── SQLAlchemy async + Alembic migrations                  │
@@ -147,6 +147,9 @@ npm run preview
 Required in `.env`:
 - `SECRET_KEY` - JWT signing key
 - `GEMINI_API_KEY` - Google AI Studio
+- `GEMINI_MODEL` - Gemini model for agent (default: gemini-3-flash-preview)
+- `GEMINI_LITE_MODEL` - Lightweight model for preference extraction
+- `GEMINI_TTS_MODEL` - TTS model (default: gemini-2.5-flash-preview-tts)
 - `SERPAPI_KEY` - SerpAPI (web search, flights, hotels)
 - `OPENWEATHER_API_KEY` - Weather data
 - `GOOGLE_MAPS_API_KEY` - Map display
@@ -158,6 +161,6 @@ PostgreSQL 16 with async SQLAlchemy. Alembic handles migrations. Key tables: `us
 
 ## API Design
 
-- REST + SSE streaming for chat
+- REST + SSE streaming (Phase 1: agent reasoning stream)
 - JWT Bearer token authentication
-- Structured JSON output enforced via Pydantic + `.with_structured_output()`
+- Phase 2: `.with_structured_output()` → TripItinerary (Pydantic)
