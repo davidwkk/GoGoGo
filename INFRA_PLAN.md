@@ -250,6 +250,9 @@ class TripItinerary(BaseModel):
 
 ## 🤖 Agent Design
 
+### Two-Phase Approach
+
+**Phase 1 — Agent Loop (SSE Streaming)**
 ```
 User Message
     │
@@ -265,12 +268,28 @@ Gemini 3 Flash — LangChain Agent (max_iterations=15)
     └── Tool: get_map_url       → Google Maps Static/Embed API
     │
     ▼
-Structured Output → TripItinerary (Pydantic + .with_structured_output())
+SSE Stream → Frontend (shows agent thinking, tool calls, reasoning)
+```
+
+**Phase 2 — Structured Output (after agent completes)**
+```
+Agent Loop Output (raw text summary)
     │
-    ├──► Streamed to frontend via SSE
+    ▼
+Gemini 3 Flash + .with_structured_output() → TripItinerary (Pydantic)
     │
-    └──► Gemini 3.1 Flash-Lite (async, per-session-end)
-             └── On session end: extract/update preferences → saved to user_preferences table
+    ▼
+Final structured JSON → Frontend (itinerary display)
+```
+
+**Why two phases?**
+- SSE delivers real-time UX (show agent reasoning steps)
+- Separate `.with_structured_output()` call ensures reliable, complete structured data
+- No conflict between streaming and parsing
+
+**Preference Extraction (async, per-session-end)**
+```
+Session End → Gemini 3.1 Flash-Lite → extract/update preferences → saved to user_preferences table
 ```
 
 ---
@@ -379,10 +398,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-3-flash"
     GEMINI_LITE_MODEL: str = "gemini-3.1-flash-lite"
+    GEMINI_TTS_MODEL: str = "gemini-2.5-flash-preview-tts"
     SERPAPI_KEY: str
     OPENWEATHER_API_KEY: str
     GOOGLE_MAPS_API_KEY: str
-    GOOGLE_TTS_API_KEY: str
     LOG_LEVEL: str = "DEBUG"
 
     model_config = SettingsConfigDict(env_file=".env")
