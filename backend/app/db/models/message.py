@@ -1,8 +1,13 @@
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, Text, func
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.db.models.chat_session import ChatSession
 
 
 class Message(Base):
@@ -16,4 +21,4 @@ class Message(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    session: Mapped["ChatSession"] = relationship(back_populates="messages")  # noqa: F821
+    session: Mapped[ChatSession] = relationship(back_populates="messages")

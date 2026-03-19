@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     GEMINI_LITE_MODEL: str = "gemini-2.0-flash-lite"
     GEMINI_TTS_MODEL: str = "gemini-2.5-flash-preview-tts"
     SERPAPI_KEY: str
+    TAVILY_API_KEY: str
     OPENWEATHER_API_KEY: str
     GOOGLE_MAPS_API_KEY: str
     LOG_LEVEL: str = "DEBUG"

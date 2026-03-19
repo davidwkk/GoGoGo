@@ -14,11 +14,11 @@ graph TB
     subgraph Backend ["Backend (FastAPI + uv)"]
         API[REST API + SSE Streaming]
         Auth[JWT Auth]
-        Agent[LangChain Single Agent - Gemini 3 Flash]
+        Agent[Gemini Agent - google-genai direct]
         LiteAgent[Gemini 3.1 Flash-Lite - Preference Extraction]
         Config[pydantic-settings - Env Config]
         CORS[CORS Middleware]
-        Logging[Loguru + LangChain Callbacks]
+        Logging[Loguru + Custom Callbacks]
     end
 
     subgraph Tools ["Agent Tools - via SerpAPI"]
@@ -64,10 +64,10 @@ gogogo/
 │   │   │   │   └── health.py           # /health
 │   │   │   └── deps.py                 # get_current_user, get_db
 │   │   ├── agent/
-│   │   │   ├── agent.py                # LangChain agent setup
-│   │   │   ├── callbacks.py            # Custom LangChain callback handler (logging)
+│   │   │   ├── agent.py                # google-genai agent setup
+│   │   │   ├── callbacks.py            # Custom callback handler (logging)
 │   │   │   ├── tools/
-│   │   │   │   ├── search.py           # SerpAPI web search
+│   │   │   │   ├── search.py           # Tavily + SerpAPI web search
 │   │   │   │   ├── flights.py          # SerpAPI Google Flights
 │   │   │   │   ├── hotels.py           # SerpAPI Google Hotels
 │   │   │   │   ├── weather.py          # OpenWeatherMap
@@ -208,11 +208,12 @@ class TripItinerary(BaseModel):
 
 ## 🔑 API Keys Needed
 
-| Service              | Purpose                         | Free Tier          |
-| -------------------- | ------------------------------- | ------------------ |
+| Service              | Purpose                         | Free Tier         |
+| -------------------- | ------------------------------- | ----------------- |
 | **Google AI Studio** | Gemini 3 Flash + 3.1 Flash-Lite | ✅ Generous        |
 | **Google Cloud TTS** | Gemini TTS voice output         | ✅ 1M chars/mo     |
 | **SerpAPI**          | Web search + Flights + Hotels   | ✅ 100 searches/mo |
+| **Tavily AI** (fallback) | Web search fallback          | ✅ 1000 searches/mo |
 | **OpenWeatherMap**   | Weather data                    | ✅ 1000 req/day    |
 | **Google Maps**      | Static/Embed map display        | ✅ $200 credit/mo  |
 
@@ -224,25 +225,25 @@ class TripItinerary(BaseModel):
 
 ### ASR (Speech → Text)
 
-| Option                              | Quality               | Cost                  | Complexity | Verdict            |
-| ----------------------------------- | --------------------- | --------------------- | ---------- | ------------------ |
+| Option                              | Quality               | Cost                  | Complexity | Verdict           |
+| ----------------------------------- | --------------------- | --------------------- | ---------- | ----------------- |
 | **Web Speech API** (browser-native) | Good                  | Free                  | None       | ✅ **Recommended** |
-| **Google Cloud STT**                | Excellent             | Free 60min/mo         | Medium     | Good upgrade path  |
-| **Gemini Live API**                 | Excellent, multimodal | Included w/ Gemini    | Medium     | Future upgrade     |
-| **Whisper (OpenAI)**                | Excellent             | Paid / Free self-host | High       | Overkill for demo  |
+| **Google Cloud STT**                | Excellent             | Free 60min/mo         | Medium     | Good upgrade path |
+| **Gemini Live API**                 | Excellent, multimodal | Included w/ Gemini    | Medium     | Future upgrade    |
+| **Whisper (OpenAI)**                | Excellent             | Paid / Free self-host | High       | Overkill for demo |
 
 > **Decision:** Web Speech API — free, zero setup, works in Chrome, audio stays in browser.
 
 ### TTS (Text → Speech)
 
-| Option                         | Quality               | Cost                | Complexity | Verdict                   |
-| ------------------------------ | --------------------- | ------------------- | ---------- | ------------------------- |
-| **Gemini TTS**                 | Excellent, expressive | ✅ 1M chars/mo free | Low        | ✅ **Recommended**        |
+| Option                         | Quality               | Cost               | Complexity | Verdict                   |
+| ------------------------------ | --------------------- | ------------------ | ---------- | ------------------------- |
+| **Gemini TTS**                 | Excellent, expressive | ✅ 1M chars/mo free | Low        | ✅ **Recommended**         |
 | **Google Cloud TTS (WaveNet)** | Very good             | ✅ 1M chars/mo free | Low        | Solid fallback            |
-| **OpenAI TTS-1**               | Very natural          | ~$15/1M chars       | Low        | Extra vendor, costs money |
-| **ElevenLabs**                 | Best quality          | Free 10k chars/mo   | Low        | Very limited free tier    |
-| **Kokoro / Coqui TTS**         | Good                  | Free (self-hosted)  | High       | Overkill for demo         |
-| **Web Speech SpeechSynthesis** | Robotic               | Free                | None       | Last resort fallback      |
+| **OpenAI TTS-1**               | Very natural          | ~$15/1M chars      | Low        | Extra vendor, costs money |
+| **ElevenLabs**                 | Best quality          | Free 10k chars/mo  | Low        | Very limited free tier    |
+| **Kokoro / Coqui TTS**         | Good                  | Free (self-hosted) | High       | Overkill for demo         |
+| **Web Speech SpeechSynthesis** | Robotic               | Free               | None       | Last resort fallback      |
 
 > **Decision:** Gemini TTS — same Google ecosystem, same billing, high quality, generous free tier.
 
@@ -260,8 +261,8 @@ User Message
 System Prompt (injected user preferences + session context)
     │
     ▼
-Gemini 3 Flash — LangChain Agent (max_iterations=15)
-    ├── Tool: web_search        → SerpAPI general search
+Gemini 3 Flash — Direct API Agent Loop
+    ├── Tool: web_search        → Tavily (primary) / SerpAPI (flights/hotels)
     ├── Tool: search_flights    → SerpAPI Google Flights
     ├── Tool: search_hotels     → SerpAPI Google Hotels
     ├── Tool: get_weather       → OpenWeatherMap
@@ -301,7 +302,7 @@ Session End → Gemini 3.1 Flash-Lite → extract/update preferences → saved t
 | Layer           | Tool                            | Purpose                               |
 | --------------- | ------------------------------- | ------------------------------------- |
 | **App-level**   | `loguru`                        | API requests, auth, DB ops, errors    |
-| **Agent-level** | LangChain `BaseCallbackHandler` | Tool calls, LLM I/O, agent loop steps |
+| **Agent-level** | Custom `BaseCallbackHandler` | Tool calls, LLM I/O, agent loop steps |
 
 ### Log Levels by Event
 
@@ -350,10 +351,10 @@ LOG_LEVEL=INFO     # prod
 
 Minimal coverage for demo — focus on agent tools and auth.
 
-| Layer | Scope | Tools |
-| ----- | ----- | ----- |
-| **Unit** | Agent tools (search, flights, hotels, weather, maps), Pydantic schemas, JWT encode/decode, password hashing | `pytest` |
-| **Integration** | API endpoints (auth, chat stream, trips), DB operations | `pytest` + `httpx.AsyncClient` |
+| Layer           | Scope                                                                                                       | Tools                          |
+| --------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| **Unit**        | Agent tools (search, flights, hotels, weather, maps), Pydantic schemas, JWT encode/decode, password hashing | `pytest`                       |
+| **Integration** | API endpoints (auth, chat stream, trips), DB operations                                                     | `pytest` + `httpx.AsyncClient` |
 
 ### What to Test
 
@@ -396,10 +397,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-3-flash"
-    GEMINI_LITE_MODEL: str = "gemini-3.1-flash-lite"
+    GEMINI_MODEL: str = "gemini-3-flash-preview"
+    GEMINI_LITE_MODEL: str = "gemini-3.1-flash-lite-preview"
     GEMINI_TTS_MODEL: str = "gemini-2.5-flash-preview-tts"
     SERPAPI_KEY: str
+    TAVILY_API_KEY: str
     OPENWEATHER_API_KEY: str
     GOOGLE_MAPS_API_KEY: str
     LOG_LEVEL: str = "DEBUG"
@@ -450,14 +452,14 @@ async def health_check():
 
 ## 🚦 Implementation Phases
 
-| Phase               | Tasks                                                                                                                             | Deliverable                                       |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| **1 — Infra**       | Git init, Docker Compose, FastAPI skeleton, uv setup, Alembic init, React+Vite+shadcn init, CORS, pydantic-settings, Loguru setup | `docker-compose up` with all 3 containers healthy |
-| **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI, unit tests for auth service                       | Working auth flow end-to-end                      |
-| **3 — Agent Core**  | LangChain agent + Gemini 3 Flash (max_iterations=15), all 5 tools, structured Pydantic output, SSE streaming, agent logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
-| **4 — Persistence** | Chat session + message save, trip save, Flash-Lite extraction on session end                                                     | Full DB integration                               |
-| **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                                    | Full working demo                                 |
-| **6 — A+ Polish**   | Weather-aware routing, preference memory injection, UI polish                                                                     | A+ features                                       |
+| Phase               | Tasks                                                                                                                                                       | Deliverable                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **1 — Infra**       | Git init, Docker Compose, FastAPI skeleton, uv setup, Alembic init, React+Vite+shadcn init, CORS, pydantic-settings, Loguru setup                           | `docker-compose up` with all 3 containers healthy |
+| **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI, unit tests for auth service                                                | Working auth flow end-to-end                      |
+| **3 — Agent Core**  | google-genai direct + Gemini 3 Flash, all 5 tools, structured Pydantic output, SSE streaming, logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
+| **4 — Persistence** | Chat session + message save, trip save, Flash-Lite extraction on session end                                                                                | Full DB integration                               |
+| **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                                                              | Full working demo                                 |
+| **6 — A+ Polish**   | Weather-aware routing, preference memory injection, UI polish                                                                                               | A+ features                                       |
 
 ---
 
@@ -469,10 +471,10 @@ async def health_check():
 | ORM                       | SQLAlchemy (async)                            |
 | Migrations                | Alembic                                       |
 | Auth                      | JWT (python-jose + passlib)                   |
-| Agent                     | LangChain + Gemini 3 Flash                    |
+| Agent                     | google-genai + Gemini 3 Flash                 |
 | Structured Output         | Pydantic + `.with_structured_output()`        |
 | Lightweight LLM           | Gemini 3.1 Flash-Lite (preference extraction) |
-| Search / Flights / Hotels | SerpAPI                                       |
+| Search / Flights / Hotels | Tavily (search) + SerpAPI (flights/hotels)   |
 | Weather                   | OpenWeatherMap                                |
 | ASR                       | Web Speech API (browser-native)               |
 | TTS                       | Gemini TTS (Google Cloud)                     |
@@ -482,4 +484,4 @@ async def health_check():
 | Database                  | PostgreSQL 16                                 |
 | Containerization          | Docker + Docker Compose                       |
 | Env Config                | pydantic-settings                             |
-| Logging                   | Loguru (app) + LangChain Callbacks (agent)    |
+| Logging                   | Loguru (app) + Custom Callbacks (agent)       |
