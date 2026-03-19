@@ -12,6 +12,8 @@ class Message(Base):
     session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id"))
     role: Mapped[str] = mapped_column(String(20))  # "user" or "assistant"
     content: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     session: Mapped["ChatSession"] = relationship(back_populates="messages")  # noqa: F821
