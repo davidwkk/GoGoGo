@@ -60,7 +60,8 @@ gogogo/
 │   │   │   │   ├── auth.py             # /auth/register, /auth/login
 │   │   │   │   ├── chat.py             # /chat/stream (SSE)
 │   │   │   │   ├── trips.py            # /trips CRUD
-│   │   │   │   └── users.py            # /users/me, preferences
+│   │   │   │   ├── users.py            # /users/me, preferences
+│   │   │   │   └── health.py           # /health
 │   │   │   └── deps.py                 # get_current_user, get_db
 │   │   ├── agent/
 │   │   │   ├── agent.py                # LangChain agent setup
@@ -127,7 +128,7 @@ gogogo/
 │   │   ├── hooks/
 │   │   │   ├── useASR.ts               # Web Speech API hook
 │   │   │   ├── useTTS.ts               # Gemini TTS hook
-│   │   │   ├── useChat.ts              # SSE streaming hook
+│   │   │   ├── useChat.ts              # SSE streaming hook + 3x auto-retry
 │   │   │   └── useAuth.ts              # Auth state hook
 │   │   ├── services/
 │   │   │   ├── api.ts                  # Axios base client
@@ -256,7 +257,7 @@ User Message
 System Prompt (injected user preferences + session context)
     │
     ▼
-Gemini 3 Flash — LangChain Agent
+Gemini 3 Flash — LangChain Agent (max_iterations=10)
     ├── Tool: web_search        → SerpAPI general search
     ├── Tool: search_flights    → SerpAPI Google Flights
     ├── Tool: search_hotels     → SerpAPI Google Hotels
@@ -268,8 +269,8 @@ Structured Output → TripItinerary (Pydantic + .with_structured_output())
     │
     ├──► Streamed to frontend via SSE
     │
-    └──► Gemini 3.1 Flash-Lite (async background)
-             └── Extracts preferences → saved to user_preferences table
+    └──► Gemini 3.1 Flash-Lite (async, per-session-end)
+             └── On session end: extract/update preferences → saved to user_preferences table
 ```
 
 ---
@@ -326,6 +327,48 @@ LOG_LEVEL=INFO     # prod
 
 ---
 
+## 🧪 Testing Strategy
+
+Minimal coverage for demo — focus on agent tools and auth.
+
+| Layer | Scope | Tools |
+| ----- | ----- | ----- |
+| **Unit** | Agent tools (search, flights, hotels, weather, maps), Pydantic schemas, JWT encode/decode, password hashing | `pytest` |
+| **Integration** | API endpoints (auth, chat stream, trips), DB operations | `pytest` + `httpx.AsyncClient` |
+
+### What to Test
+
+- `auth_service.py` — register, login, password verify
+- `agent/tools/*.py` — each tool returns expected shape
+- `schemas.py` — `TripItinerary` validates correctly
+- `security.py` — JWT encode/decode roundtrip
+- `/auth/register`, `/auth/login` — returns token, correct status codes
+- `/chat/stream` — SSE connection, structured output shape
+- `/trips` — CRUD roundtrip
+
+### What to Skip
+
+- E2E tests (manual demo walkthrough sufficient)
+- Frontend component tests (shadcn/ui is tested upstream)
+- Load/stress testing (demo scale)
+
+### Implementation
+
+```
+backend/tests/
+├── unit/
+│   ├── test_tools/          # One file per tool
+│   ├── test_schemas/         # Pydantic validation
+│   └── test_security/        # JWT, password hashing
+├── integration/
+│   ├── test_auth/            # /register, /login
+│   ├── test_chat/            # /chat/stream
+│   └── test_trips/           # CRUD
+└── conftest.py               # Shared fixtures (test db, async client)
+```
+
+---
+
 ## ⚙️ Environment Config (`pydantic-settings`)
 
 ```python
@@ -361,6 +404,19 @@ app.add_middleware(
 
 ---
 
+## 🏥 Healthcheck Endpoint
+
+```python
+# backend/app/api/routes/health.py
+@router.get("/health")
+async def health_check():
+    return {"status": "ok"}
+```
+
+> Used by Docker `healthcheck` to verify backend container is ready.
+
+---
+
 ## 🐳 Docker Setup
 
 | Container  | Image         | Port   | Notes                                        |
@@ -378,9 +434,9 @@ app.add_middleware(
 | Phase               | Tasks                                                                                                                             | Deliverable                                       |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | **1 — Infra**       | Git init, Docker Compose, FastAPI skeleton, uv setup, Alembic init, React+Vite+shadcn init, CORS, pydantic-settings, Loguru setup | `docker-compose up` with all 3 containers healthy |
-| **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI                                                   | Working auth flow end-to-end                      |
-| **3 — Agent Core**  | LangChain agent + Gemini 3 Flash, all 5 tools, structured Pydantic output, SSE streaming, agent logging callbacks                 | Agent returns structured `TripItinerary`          |
-| **4 — Persistence** | Chat session + message save, trip save, preference extraction via Flash-Lite                                                      | Full DB integration                               |
+| **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI, unit tests for auth service                       | Working auth flow end-to-end                      |
+| **3 — Agent Core**  | LangChain agent + Gemini 3 Flash (max_iterations=10), all 5 tools, structured Pydantic output, SSE streaming, agent logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
+| **4 — Persistence** | Chat session + message save, trip save, Flash-Lite extraction on session end                                                     | Full DB integration                               |
 | **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                                    | Full working demo                                 |
 | **6 — A+ Polish**   | Weather-aware routing, preference memory injection, UI polish                                                                     | A+ features                                       |
 
