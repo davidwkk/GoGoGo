@@ -1,6 +1,18 @@
 # GoGoGo
 Final Project for CSCI3280 2025-26 Sem2
 
+## Introduction
+
+GoGoGo is an AI-powered travel agent application that helps users plan trips through natural conversation. Users interact with an intelligent agent that coordinates flights, hotels, attractions, and weather information to create personalized travel itineraries.
+
+## Tech Stack
+
+**Backend:** FastAPI, SQLAlchemy (async), PostgreSQL 16, LangChain, Alembic
+**Frontend:** React, Vite, shadcn/ui, Zustand
+**AI:** Gemini 3 Flash, Gemini 3.1 Flash Lite (via Google AI Studio)
+**APIs:** SerpAPI (search/flights/hotels), OpenWeatherMap, Google Maps, Gemini TTS
+**Tooling:** Ruff (linting), Docker, Docker Compose
+
 ## Group Members
 | Name          | Student ID |
 | ------------- | ---------- |
@@ -11,6 +23,8 @@ Final Project for CSCI3280 2025-26 Sem2
 ## Prerequisites
 - [Docker](https://www.docker.com/) & Docker Compose
 - [Git](https://git-scm.com/)
+- [uv](https://github.com/astral-sh/uv) - Python package manager (install via `pip install uv` or `brew install uv`)
+- [Ruff](https://docs.astral.sh/ruff/) - Python linter (install via `uv add ruff` or `pip install ruff`)
 
 ## Development
 
