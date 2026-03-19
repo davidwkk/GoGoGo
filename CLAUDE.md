@@ -150,7 +150,6 @@ Required in `.env`:
 - `SERPAPI_KEY` - SerpAPI (web search, flights, hotels)
 - `OPENWEATHER_API_KEY` - Weather data
 - `GOOGLE_MAPS_API_KEY` - Map display
-- `GOOGLE_TTS_API_KEY` - Gemini TTS
 - `DATABASE_URL` - PostgreSQL connection (set by docker-compose)
 
 ## Database
