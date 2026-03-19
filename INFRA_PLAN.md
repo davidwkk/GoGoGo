@@ -257,7 +257,7 @@ User Message
 System Prompt (injected user preferences + session context)
     │
     ▼
-Gemini 3 Flash — LangChain Agent (max_iterations=10)
+Gemini 3 Flash — LangChain Agent (max_iterations=15)
     ├── Tool: web_search        → SerpAPI general search
     ├── Tool: search_flights    → SerpAPI Google Flights
     ├── Tool: search_hotels     → SerpAPI Google Hotels
@@ -375,7 +375,7 @@ backend/tests/
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-3-flash"
     GEMINI_LITE_MODEL: str = "gemini-3.1-flash-lite"
@@ -435,7 +435,7 @@ async def health_check():
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | **1 — Infra**       | Git init, Docker Compose, FastAPI skeleton, uv setup, Alembic init, React+Vite+shadcn init, CORS, pydantic-settings, Loguru setup | `docker-compose up` with all 3 containers healthy |
 | **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI, unit tests for auth service                       | Working auth flow end-to-end                      |
-| **3 — Agent Core**  | LangChain agent + Gemini 3 Flash (max_iterations=10), all 5 tools, structured Pydantic output, SSE streaming, agent logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
+| **3 — Agent Core**  | LangChain agent + Gemini 3 Flash (max_iterations=15), all 5 tools, structured Pydantic output, SSE streaming, agent logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
 | **4 — Persistence** | Chat session + message save, trip save, Flash-Lite extraction on session end                                                     | Full DB integration                               |
 | **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                                    | Full working demo                                 |
 | **6 — A+ Polish**   | Weather-aware routing, preference memory injection, UI polish                                                                     | A+ features                                       |
