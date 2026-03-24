@@ -8,7 +8,6 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.models.message import Message
-    from app.db.models.user import User
 
 
 class ChatSession(Base):
@@ -21,5 +20,5 @@ class ChatSession(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    user: Mapped[User] = relationship(back_populates="sessions")
-    messages: Mapped[list[Message]] = relationship(back_populates="session")
+    user: Mapped["User"] = relationship(back_populates="sessions")
+    messages: Mapped[list["Message"]] = relationship(back_populates="session")
