@@ -1,3 +1,8 @@
+# Import Base first to avoid circular import issues with relationships
+from app.db.base import Base
+
+# Import models directly - they use string annotations for relationships
+# to avoid needing the actual class at import time
 from app.db.models.user import User
 from app.db.models.chat_session import ChatSession
 from app.db.models.message import Message
