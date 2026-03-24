@@ -13,11 +13,11 @@ cd GoGoGo
 # Set up environment
 cp .env.example .env   # Then fill in API keys (see below)
 
-# Start all services
-docker-compose up --build
+# Start all services with guided launcher (recommended)
+./dev.sh
 
-# Verify it's working
-curl http://localhost:8000/health
+# Or use docker-compose directly:
+docker-compose up --build
 ```
 
 | Service  | URL                        |
@@ -95,6 +95,7 @@ gogogo/
 │   │   └── store/    # Zustand state
 │   └── components/
 ├── scripts/          # Dev scripts (check-deps.sh)
+├── dev.sh            # Interactive service launcher with health checks
 └── docker-compose.yml
 ```
 
@@ -113,6 +114,14 @@ gogogo/
 ## Development
 
 > **Recommended:** Use **everything claude code** (`/everything claude code`) in Claude Code for TDD enforcement, code review, and build error resolution. See `CLAUDE.md` for project conventions.
+
+### Service Management
+
+Use `./dev.sh` for an interactive launcher with:
+- **Build modes:** quick restart, build with cache, build without cache, full rebuild
+- **Health checks:** waits for all services (frontend, backend, db) to be healthy
+- **Log viewer:** tail logs for any service after startup
+- **Color output:** clear status indicators for each step
 
 ### Backend Commands (inside container)
 

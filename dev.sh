@@ -5,8 +5,6 @@ cd "$(dirname "$0")"
 
 # ── Constants ────────────────────────────────────────────────
 HEALTH_TIMEOUT=60
-LOG_DIR="logs"
-LOG_FILE="$LOG_DIR/start_$(date +%Y%m%d_%H%M%S).log"
 
 # ── Colors ───────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -17,16 +15,15 @@ BOLD='\033[1m'
 RESET='\033[0m'
 
 # ── Logging ──────────────────────────────────────────────────
-log()     { echo -e "${CYAN}[$(date +%H:%M:%S)]${RESET} $*"    | tee -a "$LOG_FILE"; }
-success() { echo -e "${GREEN}[$(date +%H:%M:%S)] ✔ $*${RESET}" | tee -a "$LOG_FILE"; }
-warn()    { echo -e "${YELLOW}[$(date +%H:%M:%S)] ⚠ $*${RESET}" | tee -a "$LOG_FILE"; }
-error()   { echo -e "${RED}[$(date +%H:%M:%S)] ✘ $*${RESET}"   | tee -a "$LOG_FILE"; }
+log()     { echo -e "${CYAN}[$(date +%H:%M:%S)]${RESET} $*";    }
+success() { echo -e "${GREEN}[$(date +%H:%M:%S)] ✔ $*${RESET}"; }
+warn()    { echo -e "${YELLOW}[$(date +%H:%M:%S)] ⚠ $*${RESET}"; }
+error()   { echo -e "${RED}[$(date +%H:%M:%S)] ✘ $*${RESET}";   }
 
 # ── Trap ─────────────────────────────────────────────────────
-trap 'error "Script failed on line $LINENO. Check $LOG_FILE for details."' ERR
+trap 'error "Script failed on line $LINENO."' ERR
 
 # ── Setup ────────────────────────────────────────────────────
-mkdir -p "$LOG_DIR"
 echo -e "\n${BOLD}${CYAN}╔══════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${CYAN}║           GoGoGo Service Launcher                ║${RESET}"
 echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════╝${RESET}\n"
@@ -63,28 +60,28 @@ echo ""
 
 # ── 4. Prune dangling images ──────────────────────────────────
 log "Removing dangling images..."
-docker image prune -f | tee -a "$LOG_FILE"
+docker image prune -f
 success "Dangling images removed."
 
 # ── 5. Execute build mode ─────────────────────────────────────
 case "$BUILD_CHOICE" in
   1)
     log "Quick restart: bringing down existing containers..."
-    docker compose down --remove-orphans 2>&1 | tee -a "$LOG_FILE"
+    docker compose down --remove-orphans
     success "Containers removed. Volumes kept."
     log "Starting services..."
-    docker compose up --remove-orphans -d "$@" 2>&1 | tee -a "$LOG_FILE"
+    docker compose up --remove-orphans -d "$@"
     ;;
   2)
     log "Building with cache and starting services..."
-    docker compose up --build --remove-orphans -d "$@" 2>&1 | tee -a "$LOG_FILE"
+    docker compose up --build --remove-orphans -d "$@"
     ;;
   3)
     log "Building without cache..."
-    docker compose build --no-cache 2>&1 | tee -a "$LOG_FILE"
+    docker compose build --no-cache
     success "Build complete."
     log "Starting services..."
-    docker compose up --remove-orphans -d "$@" 2>&1 | tee -a "$LOG_FILE"
+    docker compose up --remove-orphans -d "$@"
     ;;
   4)
     warn "Build from scratch will remove all volumes including the database!"
@@ -92,13 +89,13 @@ case "$BUILD_CHOICE" in
     echo ""
     if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
       log "Bringing down containers and volumes..."
-      docker compose down --remove-orphans -v 2>&1 | tee -a "$LOG_FILE"
+      docker compose down --remove-orphans -v
       success "Containers and volumes removed."
       log "Building without cache..."
-      docker compose build --no-cache 2>&1 | tee -a "$LOG_FILE"
+      docker compose build --no-cache
       success "Build complete."
       log "Starting services..."
-      docker compose up --remove-orphans -d "$@" 2>&1 | tee -a "$LOG_FILE"
+      docker compose up --remove-orphans -d "$@"
     else
       warn "Aborted. Exiting."
       exit 0
@@ -106,7 +103,7 @@ case "$BUILD_CHOICE" in
     ;;
   5)
     log "Starting services without build..."
-    docker compose up --remove-orphans -d "$@" 2>&1 | tee -a "$LOG_FILE"
+    docker compose up --remove-orphans -d "$@"
     ;;
   *)
     error "Invalid choice: '$BUILD_CHOICE'. Exiting."
@@ -117,7 +114,6 @@ esac
 success "Services started."
 
 # ── 6. Per-service health check ───────────────────────────────
-# Returns 0 if healthy, 1 if unhealthy/timeout
 check_service_health() {
   local SERVICE="$1"
   local LABEL="$2"
@@ -167,7 +163,6 @@ check_service_health() {
   done
 }
 
-
 log "Waiting for all services to become healthy (timeout: ${HEALTH_TIMEOUT}s each)..."
 echo ""
 
@@ -179,7 +174,7 @@ check_service_health "db"       "Database (db)" || FAILED=1
 echo ""
 if [ "$FAILED" -eq 1 ]; then
   error "One or more services failed. Bringing down all containers..."
-  docker compose down --remove-orphans 2>&1 | tee -a "$LOG_FILE"
+  docker compose down --remove-orphans
   exit 1
 fi
 
@@ -190,7 +185,6 @@ echo -e "${BOLD}${GREEN}║              Services are running!               ║
 echo -e "${BOLD}${GREEN}╠══════════════════════════════════════════════════╣${RESET}"
 echo -e "${BOLD}${GREEN}║  🌐 Frontend  →  http://localhost:5173           ║${RESET}"
 echo -e "${BOLD}${GREEN}║  ⚙️  Backend   →  http://localhost:8000           ║${RESET}"
-echo -e "${BOLD}${GREEN}║  📄 Logs      →  ${LOG_FILE}  ║${RESET}"
 echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}\n"
 
 # ── 8. Log viewer ─────────────────────────────────────────────

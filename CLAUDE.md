@@ -14,7 +14,7 @@ GoGoGo is a travel agent AI app. Users chat with an AI to plan trips, getting st
 
 ```bash
 cp .env.example .env    # Fill in API keys
-docker-compose up --build
+./dev.sh               # Interactive launcher with health checks (recommended)
 docker-compose down -v # Reset database
 ```
 
