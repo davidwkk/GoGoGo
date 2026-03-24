@@ -21,7 +21,7 @@ class TripResponse(BaseModel):
 
 
 @router.get("", response_model=list[TripResponse])
-async def list_trips(
+def list_trips(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -30,7 +30,7 @@ async def list_trips(
 
 
 @router.get("/{trip_id}", response_model=TripResponse)
-async def get_trip(
+def get_trip(
     trip_id: int,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -40,7 +40,7 @@ async def get_trip(
 
 
 @router.post("", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
-async def create_trip(
+def create_trip(
     body: TripCreate,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),

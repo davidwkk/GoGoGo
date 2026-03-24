@@ -3,7 +3,7 @@
 from app.agent.schemas import TripItinerary
 
 
-async def invoke_agent(
+def invoke_agent(
     user_message: str,
     user_id: int,
     session_id: int | None = None,

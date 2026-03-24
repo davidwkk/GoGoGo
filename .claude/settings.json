@@ -5,17 +5,22 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "REPO_ROOT=$(git -C \"$(dirname {filePath})\" rev-parse --show-toplevel 2>/dev/null || dirname {filePath}) && cd \"$REPO_ROOT/backend\" && ruff check --fix {filePath}",
-            "pathPattern": "backend/.*\\.py$"
+            "command": "filePath=$(jq -r '.tool_input.file_path // .tool_response.filePath' /dev/stdin 2>/dev/null); ext=\"${filePath##*.}\"; if [[ \"$ext\" == \"py\" ]]; then REPO_ROOT=$(git -C \"$(dirname \"$filePath\")\" rev-parse --show-toplevel 2>/dev/null || dirname \"$filePath\") && cd \"$REPO_ROOT/backend\" && ruff check --fix \"$filePath\" 2>/dev/null || true; fi",
+            "timeout": 30
           },
           {
             "type": "command",
-            "command": "REPO_ROOT=$(git -C \"$(dirname {filePath})\" rev-parse --show-toplevel 2>/dev/null || dirname {filePath}) && cd \"$REPO_ROOT/frontend\" && npm run lint 2>/dev/null || true",
-            "pathPattern": "frontend/.*\\.(ts|tsx)$"
+            "command": "filePath=$(jq -r '.tool_input.file_path // .tool_response.filePath' /dev/stdin 2>/dev/null); ext=\"${filePath##*.}\"; if [[ \"$ext\" == \"ts\" || \"$ext\" == \"tsx\" ]]; then REPO_ROOT=$(git -C \"$(dirname \"$filePath\")\" rev-parse --show-toplevel 2>/dev/null || dirname \"$filePath\") && cd \"$REPO_ROOT/frontend\" && npx eslint --fix \"$filePath\" 2>/dev/null || true; fi",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "filePath=$(jq -r '.tool_input.file_path // .tool_response.filePath' /dev/stdin 2>/dev/null); ext=\"${filePath##*.}\"; if [[ \"$ext\" != \"py\" && \"$ext\" != \"ts\" && \"$ext\" != \"tsx\" ]]; then npx prettier --write \"$filePath\" 2>/dev/null || true; fi",
+            "timeout": 30
           }
         ]
       }

@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+from contextlib import contextmanager
 
 from fastapi import FastAPI
 
@@ -8,10 +8,10 @@ from app.core.middleware import setup_middleware
 from app.db.session import init_db
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+@contextmanager
+def lifespan(app: FastAPI):
     setup_logging()
-    await init_db()
+    init_db()
     yield
 
 

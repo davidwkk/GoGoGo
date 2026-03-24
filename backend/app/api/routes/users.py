@@ -13,6 +13,6 @@ class UserResponse(BaseModel):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: dict = Depends(get_current_user)):
+def get_me(current_user: dict = Depends(get_current_user)):
     # TODO: Fetch from DB via user_repo
     return UserResponse(id=1, username="demo", email="demo@example.com")

@@ -50,7 +50,7 @@ Get free API keys and add them to your `.env`:
 
 | Layer | Stack |
 | ----- | ----- |
-| Backend | FastAPI, SQLAlchemy (async), PostgreSQL 16, Alembic |
+| Backend | FastAPI, SQLAlchemy, PostgreSQL 16, Alembic |
 | Frontend | React, Vite, shadcn/ui, Zustand |
 | AI | Gemini 3 Flash, Gemini 3.1 Flash-Lite |
 | APIs | SerpAPI, Tavily, OpenWeatherMap, Google Maps |
