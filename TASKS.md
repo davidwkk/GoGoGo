@@ -37,7 +37,8 @@ backend/app/agent/
     └── maps.py               # Google Maps Static/Embed URL builder
 
 backend/app/services/
-├── chat_service.py           # Invoke agent, return TripItinerary
+├── chat_service.py           # Invoke agent, return TripItinerary (David)
+├── message_service.py        # Message persistence (Minqi)
 └── preference_service.py     # Flash-Lite extraction + save preferences
 
 backend/app/db/models/
@@ -55,7 +56,7 @@ backend/app/api/routes/
 frontend/src/
 ├── hooks/
 │   ├── useASR.ts             # Web Speech API hook
-│   ├── useTTS.ts             # Gemini TTS hook
+│   ├── useTTS.ts             # Web Speech Synthesis hook
 │   └── useChat.ts            # Chat request hook (SSE in Phase 2)
 ├── components/voice/
 │   ├── VoiceButton.tsx       # Mic toggle button
@@ -81,7 +82,7 @@ frontend/src/
 - [ ] Implement `callbacks.py` — Loguru logging for tool calls + agent finish
 - [ ] Implement `chat_service.py`
   - Run agent loop → raw output
-  - Call `.with_structured_output()` → `TripItinerary`
+  - Call `generate_content` with response_schema → `TripItinerary`
   - Return structured result
 - [ ] Expose `POST /chat` in `api/routes/chat.py`
   - Use **mocked auth** (`get_current_user` returns dummy user)
@@ -93,10 +94,8 @@ frontend/src/
 - [ ] Write Alembic migration for `user_preferences`
 - [ ] Implement `preference_repo.py` — upsert preferences
 - [ ] Implement `preference_service.py`
-  - Trigger extraction on **deterministic session-end events**:
-    1. User explicitly clicks "End Session" button in UI
-    2. User navigates away from chat page (`beforeunload` event)
-    3. User logs out
+  - Trigger extraction when session explicitly ended via `POST /chat/sessions/{id}/end`
+  - Or trigger via `sendBeacon` on frontend `beforeunload` / logout
   - Call Gemini 3.1 Flash-Lite with full conversation history
   - Extract structured preferences from conversation
   - Save/update via `preference_repo`
@@ -104,10 +103,11 @@ frontend/src/
 
 #### Phase 3 — Voice UI (Week 3)
 - [ ] `useASR.ts` — Web Speech API, start/stop recording, emit transcript
-- [ ] `useTTS.ts` — Browser `window.speechSynthesis` (first draft); swap to Gemini TTS API later if needed
+- [ ] `useTTS.ts` — Browser `window.speechSynthesis` (Phase 1); upgrade to Gemini TTS or Gemini Live later
 - [ ] `VoiceButton.tsx` — Mic toggle, visual recording state
 - [ ] `TTSPlayer.tsx` — Auto-play TTS when new assistant message arrives
 - [ ] Wire voice into Chat UI (coordinate with Minqi's `ChatPage`)
+- [ ] **Future upgrade:** Gemini Live API — single multimodal session replacing ASR + agent + TTS hooks
 
 #### Phase 4 — SSE Streaming (Week 4)
 - [ ] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint
@@ -164,7 +164,8 @@ backend/app/schemas/
 └── user.py                   # UserOut schema
 
 backend/app/services/
-└── auth_service.py           # Register, login, password verify
+├── auth_service.py           # Register, login, password verify
+└── message_service.py        # Message persistence (append, get history)
 
 backend/app/core/
 └── security.py               # JWT encode/decode, password hashing

@@ -1,36 +1,55 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sse_starlette.sse import EventSourceResponse
-import asyncio
-import json
 
 from app.api.deps import get_current_user
+from app.schemas.chat import ChatRequest, ChatResponse
+from app.services.chat_service import invoke_agent
+from app.services.message_service import append_message, create_session, get_session
 
 router = APIRouter()
 
 
-class ChatStreamRequest(BaseModel):
-    message: str
-    session_id: int | None = None
-
-
-async def generate_response(message: str, user_id: int):
-    # TODO: Integrate LangChain agent here
-    # This is a placeholder that streams back the received message
-    response_text = f"You said: {message}. The agent is not yet integrated."
-    for chunk in response_text.split():
-        await asyncio.sleep(0.05)
-        yield {"event": "message", "data": json.dumps({"content": chunk + " "})}
-    yield {"event": "done", "data": json.dumps({"session_id": 1})}
-
-
-@router.post("/stream")
-async def chat_stream(
-    body: ChatStreamRequest,
+@router.post("", response_model=ChatResponse)
+async def chat(
+    body: ChatRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    async def event_generator():
-        async for event in generate_response(body.message, current_user["user_id"]):
-            yield event
+    """
+    POST /chat — sync chat endpoint (Phase 1).
 
-    return EventSourceResponse(event_generator())
+    Phase 1: Simple sync response with TripItinerary JSON.
+    Phase 2: Upgrade to SSE streaming with agent reasoning steps.
+    """
+    user_id = current_user["user_id"]
+
+    # Get or create session
+    if body.session_id:
+        session = await get_session(body.session_id)
+    else:
+        session = await create_session(user_id=user_id)
+
+    # Save user message
+    await append_message(
+        session_id=session.id,
+        role="user",
+        content=body.message,
+    )
+
+    # Invoke agent (David owns this)
+    result = await invoke_agent(
+        user_message=body.message,
+        user_id=user_id,
+        session_id=session.id,
+    )
+
+    # Save assistant response
+    await append_message(
+        session_id=session.id,
+        role="assistant",
+        content=result.model_dump_json(),
+    )
+
+    return ChatResponse(
+        session_id=session.id,
+        itinerary=result,
+    )

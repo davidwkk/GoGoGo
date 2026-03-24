@@ -7,7 +7,7 @@ graph TB
     subgraph Frontend ["Frontend (React + Vite + shadcn/ui)"]
         UI[Chat UI + Results Display]
         STT[ASR - Web Speech API]
-        TTS[TTS - Gemini TTS]
+        TTS[TTS - Web Speech Synthesis]
         MAP[Map Display - Google Maps Embed/Static API]
     end
 
@@ -58,7 +58,7 @@ gogogo/
 │   │   ├── api/
 │   │   │   ├── routes/
 │   │   │   │   ├── auth.py             # /auth/register, /auth/login
-│   │   │   │   ├── chat.py             # /chat/stream (SSE)
+│   │   │   │   ├── chat.py             # /chat (sync, Phase 1) → /chat/stream (SSE, Phase 2)
 │   │   │   │   ├── trips.py            # /trips CRUD
 │   │   │   │   ├── users.py            # /users/me, preferences
 │   │   │   │   └── health.py           # /health
@@ -100,7 +100,8 @@ gogogo/
 │   │   │   └── user.py
 │   │   ├── services/                   # Business logic
 │   │   │   ├── auth_service.py
-│   │   │   ├── chat_service.py
+│   │   │   ├── chat_service.py          # Agent invocation (David)
+│   │   │   ├── message_service.py       # Message persistence (Minqi)
 │   │   │   ├── trip_service.py
 │   │   │   └── preference_service.py
 │   │   └── main.py                     # FastAPI app entrypoint
@@ -238,14 +239,25 @@ class TripItinerary(BaseModel):
 
 | Option                         | Quality               | Cost               | Complexity | Verdict                   |
 | ------------------------------ | --------------------- | ------------------ | ---------- | ------------------------- |
-| **Gemini TTS**                 | Excellent, expressive | ✅ 1M chars/mo free | Low        | ✅ **Recommended**         |
+| **Web Speech Synthesis**       | Basic                 | Free               | None       | ✅ **Recommended for demo** |
+| **Gemini TTS**                 | Excellent, expressive | ✅ 1M chars/mo free | Low        | Future upgrade            |
 | **Google Cloud TTS (WaveNet)** | Very good             | ✅ 1M chars/mo free | Low        | Solid fallback            |
 | **OpenAI TTS-1**               | Very natural          | ~$15/1M chars      | Low        | Extra vendor, costs money |
 | **ElevenLabs**                 | Best quality          | Free 10k chars/mo  | Low        | Very limited free tier    |
-| **Kokoro / Coqui TTS**         | Good                  | Free (self-hosted) | High       | Overkill for demo         |
-| **Web Speech SpeechSynthesis** | Robotic               | Free               | None       | Last resort fallback      |
 
-> **Decision:** Gemini TTS — same Google ecosystem, same billing, high quality, generous free tier.
+> **Decision:** Web Speech Synthesis — browser-native, zero backend, acceptable for demo. Gemini TTS as future upgrade.
+
+### Future Upgrade: Gemini Live (Multimodal Voice)
+
+| Aspect | Details |
+|--------|---------|
+| **What it is** | Google's native multimodal API — handles speech input + reasoning + speech output in one loop |
+| **Pros** | Most natural voice experience, single API, impressive demo |
+| **Cons** | WebSocket setup, audio streaming complexity, 4-week timeline risk |
+| **Upgrade path** | Replace ASR hook + agent call + TTS hook with single Gemini Live session |
+| **When to upgrade** | After core agent works (Week 3-4) if time permits |
+
+> **Recommendation:** Ship with Web Speech API first. Gemini Live is a polished upgrade for after the core demo works.
 
 ---
 
@@ -253,7 +265,7 @@ class TripItinerary(BaseModel):
 
 ### Two-Phase Approach
 
-**Phase 1 — Agent Loop (SSE Streaming)**
+**Phase 1 — Agent Loop (Sync, then SSE)**
 ```
 User Message
     │
@@ -269,7 +281,7 @@ Gemini 3 Flash — Direct API Agent Loop
     └── Tool: get_map_url       → Google Maps Static/Embed API
     │
     ▼
-SSE Stream → Frontend (shows agent thinking, tool calls, reasoning)
+Agent Response (raw text summary)
 ```
 
 **Phase 2 — Structured Output (after agent completes)**
@@ -277,16 +289,16 @@ SSE Stream → Frontend (shows agent thinking, tool calls, reasoning)
 Agent Loop Output (raw text summary)
     │
     ▼
-Gemini 3 Flash + .with_structured_output() → TripItinerary (Pydantic)
+Gemini 3 Flash → TripItinerary (Pydantic via generate_content with response_model)
     │
     ▼
 Final structured JSON → Frontend (itinerary display)
 ```
 
 **Why two phases?**
-- SSE delivers real-time UX (show agent reasoning steps)
-- Separate `.with_structured_output()` call ensures reliable, complete structured data
-- No conflict between streaming and parsing
+- Sync POST /chat (Phase 1) — simple, reliable, works immediately
+- SSE streaming (Phase 2) — real-time UX with agent reasoning steps
+- Structured output via google-genai's native response schema support
 
 **Preference Extraction (async, per-session-end)**
 ```
@@ -472,12 +484,12 @@ async def health_check():
 | Migrations                | Alembic                                       |
 | Auth                      | JWT (python-jose + passlib)                   |
 | Agent                     | google-genai + Gemini 3 Flash                 |
-| Structured Output         | Pydantic + `.with_structured_output()`        |
+| Structured Output         | Pydantic + google-genai response_schema       |
 | Lightweight LLM           | Gemini 3.1 Flash-Lite (preference extraction) |
 | Search / Flights / Hotels | Tavily (search) + SerpAPI (flights/hotels)   |
 | Weather                   | OpenWeatherMap                                |
 | ASR                       | Web Speech API (browser-native)               |
-| TTS                       | Gemini TTS (Google Cloud)                     |
+| TTS                       | Web Speech Synthesis (browser-native)          |
 | Maps                      | Google Maps Static / Embed API                |
 | Frontend                  | React + Vite + TypeScript + shadcn/ui         |
 | State Management          | Zustand                                       |
