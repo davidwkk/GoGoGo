@@ -224,6 +224,8 @@ class TripItinerary(BaseModel):
 
 ## 🗣️ ASR & TTS Options
 
+> **⚠️ Web Speech API Feedback Loop Risk**: Handling the Web Speech API alongside TTS can cause feedback loops (the mic picks up the TTS audio) or React state race conditions (user clicks mic while TTS is still playing). **Recommendation**: Ensure `useASR` explicitly mutes or pauses `useTTS` when recording starts. Add visual indicators (a pulsing mic) so the user knows exactly when the app is listening vs. speaking.
+
 ### ASR (Speech → Text)
 
 | Option                              | Quality               | Cost                  | Complexity | Verdict           |
@@ -306,6 +308,12 @@ User Input (voice or text)
 ## 🤖 Agent Design
 
 ### Two-Phase Approach
+
+> **⚠️ Loop Bound (MAX_ITERATIONS = 5)**: Keep the agent loop strictly bounded (e.g., `MAX_ITERATIONS = 5`) to prevent infinite loops if the LLM gets confused or cycles. Implement a hard iteration cap in `agent.py`.
+
+> **⚠️ API Error Handling**: If an external API (like SerpAPI) fails, do **not** throw a 500 error. Instead, catch the exception in the tool and return a string like `{"error": "Flight API timeout, tell the user you cannot fetch flights right now."}`. This allows the LLM to gracefully apologize to the user instead of crashing the app. Each tool must handle its own exceptions and return error dicts.
+
+> **⚠️ SSE + DB Session Risk**: When upgrading to SSE (`StreamingResponse` in FastAPI), keeping the database session open while yielding tokens can lead to connection pool exhaustion or transaction timeouts. **Recommendation**: Save the user message to the DB before the stream starts. Collect the full assistant response in memory during the stream, and save the final assistant message to the DB after the stream finishes using a background task or a separate DB session. Do **not** hold the DB transaction open during LLM generation.
 
 **Phase 1 — Agent Loop (Sync, then SSE)**
 ```

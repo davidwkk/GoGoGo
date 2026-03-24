@@ -68,6 +68,9 @@ frontend/src/
 ### ✅ Task Breakdown
 
 #### Phase 1 — Agent Core (Week 1–2)
+> **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
+> **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
+
 - [ ] Implement all 5 tools in `tools/` — each returns typed dict
   - `search.py` — Tavily primary, SerpAPI fallback
   - `flights.py` — SerpAPI Google Flights
@@ -102,6 +105,8 @@ frontend/src/
 - [ ] Inject saved preferences into agent system prompt in `agent.py`
 
 #### Phase 3 — Voice UI (Week 3)
+> **⚠️ Feedback Loop Risk**: `useASR` must explicitly mute/pause `useTTS` when recording starts. Add a pulsing mic visual indicator so users can distinguish listening vs. speaking states.
+
 - [ ] `useASR.ts` — Web Speech API, start/stop recording, emit transcript
 - [ ] `useTTS.ts` — Browser `window.speechSynthesis` (Phase 1); upgrade to Gemini TTS or Gemini Live later
 - [ ] `VoiceButton.tsx` — Mic toggle, visual recording state
@@ -110,6 +115,8 @@ frontend/src/
 - [ ] **Future upgrade:** Gemini Live API — single multimodal session replacing ASR + agent + TTS hooks
 
 #### Phase 4 — SSE Streaming (Week 4)
+> **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
+
 - [ ] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint
 - [ ] Stream agent thinking steps + tool calls to frontend
 - [ ] Update `useChat.ts` — consume SSE, show intermediate steps in UI
