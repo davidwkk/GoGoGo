@@ -48,6 +48,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
 
   frontend:
     build:
@@ -67,7 +68,7 @@ services:
         ["CMD-SHELL", "curl -s http://localhost:5173/ > /dev/null && echo ok"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 15s
 
 volumes:
