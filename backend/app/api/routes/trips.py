@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 
@@ -23,7 +23,7 @@ class TripResponse(BaseModel):
 @router.get("", response_model=list[TripResponse])
 async def list_trips(
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     # TODO: Fetch via trip_repo
     return []
@@ -33,7 +33,7 @@ async def list_trips(
 async def get_trip(
     trip_id: int,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     # TODO: Fetch via trip_repo
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
@@ -43,7 +43,7 @@ async def get_trip(
 async def create_trip(
     body: TripCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     # TODO: Create via trip_repo
     return TripResponse(id=1, **body.model_dump())

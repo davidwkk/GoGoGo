@@ -9,12 +9,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd backend && ruff check --fix {filePath}",
+            "command": "REPO_ROOT=$(git -C \"$(dirname {filePath})\" rev-parse --show-toplevel 2>/dev/null || dirname {filePath}) && cd \"$REPO_ROOT/backend\" && ruff check --fix {filePath}",
             "pathPattern": "backend/.*\\.py$"
           },
           {
             "type": "command",
-            "command": "cd frontend && npm run lint 2>/dev/null || true",
+            "command": "REPO_ROOT=$(git -C \"$(dirname {filePath})\" rev-parse --show-toplevel 2>/dev/null || dirname {filePath}) && cd \"$REPO_ROOT/frontend\" && npm run lint 2>/dev/null || true",
             "pathPattern": "frontend/.*\\.(ts|tsx)$"
           }
         ]

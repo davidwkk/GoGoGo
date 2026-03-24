@@ -4,7 +4,7 @@ GoGoGo is a travel agent AI app. Users chat with an AI to plan trips, getting st
 
 ## Stack
 
-**Backend:** FastAPI + SQLAlchemy (async) + PostgreSQL 16 + Alembic
+**Backend:** FastAPI + SQLAlchemy + PostgreSQL 16 + Alembic
 **Agent:** google-genai + Gemini 3 Flash + Gemini 3.1 Flash-Lite (preferences)
 **Tools:** Tavily (search) + SerpAPI (flights/hotels) + OpenWeatherMap + Google Maps
 **Frontend:** React + Vite + shadcn/ui + Zustand
@@ -36,7 +36,7 @@ docker-compose logs -f backend
 ```
 Frontend (React + Vite)
 ├── Pages: LoginPage, ChatPage, TripPage
-├── Voice: Web Speech API (ASR) + Gemini TTS
+├── Voice I/O: Web Speech API (STT) → text → LLM → text + Web Speech Synthesis (TTS)
 └── State: Zustand store
 
 Backend (FastAPI)
