@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(
+def chat(
     body: ChatRequest,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -38,7 +38,7 @@ async def chat(
     )
 
     # Invoke agent (David owns this)
-    result = await invoke_agent(
+    result = invoke_agent(
         user_message=body.message,
         user_id=user_id,
         session_id=session.id,

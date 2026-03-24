@@ -339,13 +339,13 @@ backend/tests/integration/
 
 ## 📋 Follow-up Items (Post-SSE Loading UX)
 
-| # | Owner | Task |
-|---|-------|------|
-| 1 | **Frontend (Minqi)** | Display fake loading steps ("Searching flights...", "Checking weather...") during sync POST request to keep user engaged before SSE is ready |
-| 2 | **Minqi** | Build `chat_history_service.py` with `append_user_message()` and `append_agent_message()` methods |
-| 3 | **David** | Import and call `chat_history_service` methods inside `chat_service.py` workflow |
-| 4 | **Xuan** | `trip_repo`: Call `itinerary.model_dump(mode='json')` before saving to SQLAlchemy; validate back with `TripItinerary.model_validate(db_obj.itinerary_json)` on retrieval |
-| 5 | **Frontend (Minqi)** | Add "Save & Finish Trip" button in UI that explicitly calls `POST /chat/sessions/{id}/end` |
+| #   | Owner                | Task                                                                                                                                                                     |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Frontend (Minqi)** | Display fake loading steps ("Searching flights...", "Checking weather...") during sync POST request to keep user engaged before SSE is ready                             |
+| 2   | **Minqi**            | Build `chat_history_service.py` with `append_user_message()` and `append_agent_message()` methods                                                                        |
+| 3   | **David**            | Import and call `chat_history_service` methods inside `chat_service.py` workflow                                                                                         |
+| 4   | **Xuan**             | `trip_repo`: Call `itinerary.model_dump(mode='json')` before saving to SQLAlchemy; validate back with `TripItinerary.model_validate(db_obj.itinerary_json)` on retrieval |
+| 5   | **Frontend (Minqi)** | Add "Save & Finish Trip" button in UI that explicitly calls `POST /chat/sessions/{id}/end`                                                                               |
 
 ---
 

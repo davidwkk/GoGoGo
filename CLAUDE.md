@@ -80,4 +80,4 @@ LOG_LEVEL=DEBUG
 
 ## Database
 
-PostgreSQL 16 + async SQLAlchemy + Alembic. Tables: `users`, `chat_sessions`, `messages`, `trips`, `user_preferences`.
+PostgreSQL 16 + SQLAlchemy + Alembic. Tables: `users`, `chat_sessions`, `messages`, `trips`, `user_preferences`.

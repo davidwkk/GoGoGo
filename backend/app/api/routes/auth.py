@@ -26,7 +26,7 @@ class TokenResponse(BaseModel):
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(body: RegisterRequest):
+def register(body: RegisterRequest):
     # TODO: Save user to DB via repository
     _hashed = get_password_hash(body.password)  # Pending DB save
     token = create_access_token(
@@ -37,7 +37,7 @@ async def register(body: RegisterRequest):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+def login(body: LoginRequest):
     # TODO: Verify credentials via repository
     # For now, accept any valid email format
     token = create_access_token(
