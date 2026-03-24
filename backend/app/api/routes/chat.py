@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_db
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import invoke_agent
 from app.services.message_service import append_message, create_session, get_session
@@ -12,6 +13,7 @@ router = APIRouter()
 async def chat(
     body: ChatRequest,
     current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     POST /chat — sync chat endpoint (Phase 1).
@@ -23,12 +25,13 @@ async def chat(
 
     # Get or create session
     if body.session_id:
-        session = await get_session(body.session_id)
+        session = get_session(db, body.session_id)
     else:
-        session = await create_session(user_id=user_id)
+        session = create_session(db, user_id=user_id)
 
     # Save user message
-    await append_message(
+    append_message(
+        db,
         session_id=session.id,
         role="user",
         content=body.message,
@@ -42,7 +45,8 @@ async def chat(
     )
 
     # Save assistant response
-    await append_message(
+    append_message(
+        db,
         session_id=session.id,
         role="assistant",
         content=result.model_dump_json(),

@@ -261,6 +261,48 @@ class TripItinerary(BaseModel):
 
 ---
 
+## 🗣️ Voice I/O Flow
+
+```
+User Input (voice or text)
+    │
+    ├─── [Voice] Web Speech API (ASR) → transcript ──────────────────┐
+    │                                                               │
+    └─── [Text] typed directly ─────────────────────────────────────┘
+                            │
+                            ▼
+                    Gemini 3 Flash Agent
+                    (tools: search, flights, hotels, weather, maps)
+                            │
+                            ▼
+                    Structured Output (TripItinerary)
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+              ▼                           ▼
+        Text Response              TTS Audio Output
+        (ChatPage UI)              (Web Speech Synthesis)
+```
+
+**Step-by-step:**
+1. **Input:** User speaks via mic (VoiceButton) or types in input bar
+2. **STT:** Web Speech API (`useASR.ts`) converts audio → text transcript
+3. **LLM:** Text sent to backend → Gemini 3 Flash agent with tools/APIs → structured trip plan
+4. **TTS:** Text response sent to Web Speech Synthesis (`useTTS.ts`) → audio playback
+5. **Output:** Both text (ChatPage) and audio play simultaneously
+
+**Files:**
+- `frontend/src/hooks/useASR.ts` — Web Speech API STT
+- `frontend/src/hooks/useTTS.ts` — Web Speech Synthesis TTS
+- `frontend/src/components/voice/VoiceButton.tsx` — Mic toggle
+- `frontend/src/components/voice/TTSPlayer.tsx` — Auto-play TTS on agent response
+- `backend/app/agent/agent.py` — Gemini 3 Flash with tools
+- `backend/app/services/chat_service.py` — Agent invocation + structured output
+
+**Future upgrade:** Replace STT → Agent → TTS chain with Gemini Live API (single multimodal WebSocket session).
+
+---
+
 ## 🤖 Agent Design
 
 ### Two-Phase Approach
@@ -480,7 +522,7 @@ async def health_check():
 | Layer                     | Choice                                        |
 | ------------------------- | --------------------------------------------- |
 | Backend                   | FastAPI + uv + Python 3.12                    |
-| ORM                       | SQLAlchemy (async)                            |
+| ORM                       | SQLAlchemy                                    |
 | Migrations                | Alembic                                       |
 | Auth                      | JWT (python-jose + passlib)                   |
 | Agent                     | google-genai + Gemini 3 Flash                 |

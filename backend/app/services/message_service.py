@@ -1,15 +1,14 @@
 """Message persistence service — Minqi owns this."""
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.message import Message
 from app.db.models.chat_session import ChatSession
 
 
-async def append_message(
-    db: AsyncSession,
+def append_message(
+    db: Session,
     session_id: int,
     role: str,
     content: str,
@@ -21,17 +20,17 @@ async def append_message(
         content=content,
     )
     db.add(message)
-    await db.commit()
-    await db.refresh(message)
+    db.commit()
+    db.refresh(message)
     return message
 
 
-async def get_session_messages(
-    db: AsyncSession,
+def get_session_messages(
+    db: Session,
     session_id: int,
 ) -> list[Message]:
     """Get all messages for a session, ordered by created_at."""
-    result = await db.execute(
+    result = db.execute(
         select(Message)
         .where(Message.session_id == session_id)
         .order_by(Message.created_at)
@@ -39,8 +38,8 @@ async def get_session_messages(
     return list(result.scalars().all())
 
 
-async def create_session(
-    db: AsyncSession,
+def create_session(
+    db: Session,
     user_id: int,
     title: str = "New Chat",
 ) -> ChatSession:
@@ -50,17 +49,17 @@ async def create_session(
         title=title,
     )
     db.add(session)
-    await db.commit()
-    await db.refresh(session)
+    db.commit()
+    db.refresh(session)
     return session
 
 
-async def get_session(
-    db: AsyncSession,
+def get_session(
+    db: Session,
     session_id: int,
 ) -> ChatSession | None:
     """Get a chat session by ID."""
-    result = await db.execute(
+    result = db.execute(
         select(ChatSession)
         .where(ChatSession.id == session_id)
         .options(selectinload(ChatSession.messages))
@@ -68,13 +67,13 @@ async def get_session(
     return result.scalar_one_or_none()
 
 
-async def end_session(
-    db: AsyncSession,
+def end_session(
+    db: Session,
     session_id: int,
 ) -> ChatSession | None:
     """Mark a session as ended (placeholder for future extension)."""
-    session = await get_session(db, session_id)
+    session = get_session(db, session_id)
     if session:
         # Could add an `ended_at` field or `status` field here
-        await db.commit()
+        db.commit()
     return session
