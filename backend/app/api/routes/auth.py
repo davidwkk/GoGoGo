@@ -1,10 +1,10 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 from pydantic import BaseModel, EmailStr
 
 from app.core.config import settings
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import create_access_token, get_password_hash
 
 router = APIRouter()
 
@@ -28,7 +28,7 @@ class TokenResponse(BaseModel):
 @router.post("/register", response_model=TokenResponse)
 async def register(body: RegisterRequest):
     # TODO: Save user to DB via repository
-    hashed = get_password_hash(body.password)
+    _hashed = get_password_hash(body.password)  # Pending DB save
     token = create_access_token(
         {"sub": body.username},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
