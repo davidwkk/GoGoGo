@@ -1,6 +1,6 @@
 """Chat service — David owns agent invocation only."""
 
-from app.agent.schemas import TripItinerary
+from app.schemas.chat import TripItinerary
 
 
 def invoke_agent(
