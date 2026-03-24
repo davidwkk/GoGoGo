@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -26,6 +26,8 @@ def chat(
     # Get or create session
     if body.session_id:
         session = get_session(db, body.session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
     else:
         session = create_session(db, user_id=user_id)
 

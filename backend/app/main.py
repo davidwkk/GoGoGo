@@ -1,4 +1,5 @@
-from contextlib import contextmanager
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -8,8 +9,8 @@ from app.core.middleware import setup_middleware
 from app.db.session import init_db
 
 
-@contextmanager
-def lifespan(app: FastAPI):
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
     init_db()
     yield
