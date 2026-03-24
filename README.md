@@ -1,57 +1,23 @@
 # GoGoGo
-Final Project for CSCI3280 2025-26 Sem2
+Final Project for CSCI3280 2025-26 Sem2 — AI-powered travel agent
 
-## Introduction
+## Quick Start
 
-GoGoGo is an AI-powered travel agent application that helps users plan trips through natural conversation. Users interact with an intelligent agent that coordinates flights, hotels, attractions, and weather information to create personalized travel itineraries.
-
-## Tech Stack
-
-**Backend:** FastAPI, SQLAlchemy (async), PostgreSQL 16, LangChain, Alembic
-**Frontend:** React, Vite, shadcn/ui, Zustand
-**AI:** Gemini 3 Flash, Gemini 3.1 Flash Lite (via Google AI Studio)
-**APIs:** SerpAPI (search/flights/hotels), OpenWeatherMap, Google Maps, Gemini TTS
-**Tooling:** Ruff (linting), Docker, Docker Compose
-
-## Group Members
-| Name          | Student ID |
-| ------------- | ---------- |
-| Wong Kwok Kam | 1155192018 |
-| Peng Minqi    | 1155191548 |
-| Lim Xuan Qing | 1155264390 |
-
-## Prerequisites
-- [Docker](https://www.docker.com/) & Docker Compose
-- [Git](https://git-scm.com/)
-- [uv](https://github.com/astral-sh/uv) - Python package manager (install via `pip install uv` or `brew install uv`)
-- [Ruff](https://docs.astral.sh/ruff/) - Python linter (install via `uv add ruff` or `pip install ruff`)
-
-## Development
-
-### 1. Clone the repository
 ```bash
 git clone git@github.com:davidwkk/GoGoGo.git
 cd GoGoGo
-```
 
-### 2. Set up environment variables
-```bash
-cp .env.example .env
-```
-Fill in your API keys in the `.env` file.
+# Check & install dependencies
+./scripts/check-deps.sh --install
 
-### 3. Backend IDE Setup (optional - for local autocomplete)
-```bash
-cd backend
-uv venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-uv sync
-```
-This sets up a local virtual environment so your IDE can provide autocomplete.
+# Set up environment
+cp .env.example .env   # Then fill in API keys (see below)
 
-### 4. Start all services
-```bash
+# Start all services
 docker-compose up --build
+
+# Verify it's working
+curl http://localhost:8000/health
 ```
 
 | Service  | URL                        |
@@ -60,9 +26,117 @@ docker-compose up --build
 | Backend  | http://localhost:8000      |
 | API Docs | http://localhost:8000/docs |
 
-### 5. Stop services
+**Stop:** `docker-compose down` | **Reset DB:** `docker-compose down -v`
+
+---
+
+## Required API Keys
+
+Get free API keys and add them to your `.env`:
+
+| Service | Purpose | Sign Up |
+| ------- | ------- | ------- |
+| `GEMINI_API_KEY` | AI agent + TTS | https://aistudio.google.com/ |
+| `SERPAPI_KEY` | Flights, hotels, search | https://serpapi.com/ |
+| `TAVILY_API_KEY` | Web search (primary) | https://tavily.com/ |
+| `OPENWEATHER_API_KEY` | Weather data | https://openweathermap.org/ |
+| `GOOGLE_MAPS_API_KEY` | Map display | https://console.cloud.google.com/ |
+
+> **Demo cost:** $0 (all services have generous free tiers)
+
+---
+
+## Tech Stack
+
+| Layer | Stack |
+| ----- | ----- |
+| Backend | FastAPI, SQLAlchemy (async), PostgreSQL 16, Alembic |
+| Frontend | React, Vite, shadcn/ui, Zustand |
+| AI | Gemini 3 Flash, Gemini 3.1 Flash-Lite |
+| APIs | SerpAPI, Tavily, OpenWeatherMap, Google Maps |
+| Tooling | Ruff, Docker, Docker Compose |
+
+---
+
+## Prerequisites
+
+Tools checked by `./scripts/check-deps.sh`:
+
+- **Docker** + Docker Compose
+- **Git**
+- **Node.js** + npm
+- **Python 3.10+**
+- **uv** — `pip install uv` or `brew install uv`
+- **Ruff** — `pip install ruff` (optional, for linting)
+
+Run without `--install` to just check:
 ```bash
-docker-compose down
+./scripts/check-deps.sh
 ```
 
-> **Note:** To reset the database, run `docker-compose down -v` to remove the persistent volume.
+---
+
+## Project Structure
+
+```
+gogogo/
+├── backend/           # FastAPI + SQLAlchemy API
+│   ├── app/
+│   │   ├── api/      # Routes: auth, chat, trips, users, health
+│   │   ├── agent/    # Gemini agent + tools
+│   │   ├── db/       # Models, sessions, migrations
+│   │   ├── schemas/  # Pydantic request/response models
+│   │   └── services/ # Business logic
+│   └── tests/
+├── frontend/         # React + Vite frontend
+│   ├── src/
+│   │   ├── pages/    # LoginPage, ChatPage, TripPage
+│   │   ├── hooks/    # useChat (SSE), useASR, useTTS
+│   │   └── store/    # Zustand state
+│   └── components/
+├── scripts/          # Dev scripts (check-deps.sh)
+└── docker-compose.yml
+```
+
+---
+
+## Group Members
+
+| Name | Student ID |
+| ---- | ---------- |
+| Wong Kwok Kam | 1155192018 |
+| Peng Minqi | 1155191548 |
+| Lim Xuan Qing | 1155264390 |
+
+---
+
+## Development
+
+> **Recommended:** Use **everything claude code** (`/everything claude code`) in Claude Code for TDD enforcement, code review, and build error resolution. See `CLAUDE.md` for project conventions.
+
+### Backend Commands (inside container)
+
+```bash
+docker-compose exec backend pytest                    # Run tests
+docker-compose exec backend pytest --cov=app --cov-report=term-missing
+docker-compose exec backend alembic revision --autogenerate -m "migration name"
+docker-compose exec backend alembic upgrade head
+docker-compose logs -f backend                       # Watch logs
+```
+
+### Backend IDE Setup (optional)
+
+For local autocomplete in your IDE:
+```bash
+cd backend
+uv venv
+source .venv/bin/activate
+uv sync
+```
+
+---
+
+## Documentation
+
+- **Architecture & API Design:** See [INFRA_PLAN.md](./INFRA_PLAN.md)
+- **Development Conventions:** See [CLAUDE.md](./CLAUDE.md)

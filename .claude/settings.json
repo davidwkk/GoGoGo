@@ -1,5 +1,24 @@
 {
   "enabledPlugins": {
     "everything-claude-code@everything-claude-code": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd backend && ruff check --fix {filePath}",
+            "pathPattern": "backend/.*\\.py$"
+          },
+          {
+            "type": "command",
+            "command": "cd frontend && npm run lint 2>/dev/null || true",
+            "pathPattern": "frontend/.*\\.(ts|tsx)$"
+          }
+        ]
+      }
+    ]
   }
 }
