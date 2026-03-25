@@ -7,7 +7,7 @@
 
 | Area                                      | Owner                                         |
 | ----------------------------------------- | --------------------------------------------- |
-| Infra — Docker, FastAPI skeleton, setup  | **David**                                     |
+| Infra — Docker, FastAPI skeleton, setup   | **David**                                     |
 | Agent Core, Tools, Structured Output      | **David**                                     |
 | Preference Extraction (Flash-Lite)        | **David**                                     |
 | Voice — ASR + TTS                         | **David**                                     |
@@ -34,8 +34,9 @@ backend/app/agent/
     ├── flights.py            # SerpAPI Google Flights
     ├── hotels.py             # SerpAPI Google Hotels
     ├── weather.py            # OpenWeatherMap
-    └── maps.py               # Google Maps Static/Embed URL builder
-
+    ├── maps.py               # Google Maps Static/Embed URL builder
+    ├── transport.py          # SerpAPI Google Maps (route/transport options)
+    └── attractions.py       # Wikipedia REST API (attraction details)
 backend/app/services/
 ├── chat_service.py           # Invoke agent, return TripItinerary (David)
 └── preference_service.py     # Flash-Lite extraction (gemini-3.1-flash-lite-preview) + save preferences
@@ -77,56 +78,99 @@ frontend/src/store/
 
 ### ✅ Task Breakdown
 
-#### Phase 1 — Agent Core (Days 1–6)
-> **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
-> **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
-> **⚠️ Unblock teammates on Day 3**: Commit a hardcoded `MOCK_ITINERARY` fixture so Minqi and Xuan can develop against a real schema immediately.
-> **⚠️ Loop termination**: Always check for `function_call` vs plain text to avoid infinite loops — if the model returns a function call, execute the tool and append both the model turn and tool response to messages; if plain text, the loop is done.
-> **⚠️ response_schema**: Only enforce `response_json_schema` on the **final** `generate_content` call that returns `TripItinerary` — mid-loop tool calls must **not** use `response_schema` or the model will try to end the loop prematurely.
-> **⚠️ History management**: You must manually append both model turns and tool responses to the `messages` list between iterations — Gemini does not auto-manage conversation history.
-> **⚠️ Pydantic bridging**: Use `TripItinerary.model_json_schema()` with `response_json_schema` to cleanly connect your existing Pydantic models to Gemini's schema enforcement.
+> **⚠️ HARD REQUIREMENTS — Must be implemented FIRST, in this order:**
+> 1. **Voice I/O** (ASR + TTS + text fallback) — deployed and testable by Day 4
+> 2. **Live Search** (no hallucination, live data, dynamic APIs) — all tool calls required on every plan
+> 3. **Core Functions**: `Plan` (itinerary), `Introduce` (attractions via Wikipedia), `Route` (transport via SerpAPI)
 
-- [ ] Implement all 5 tools in `tools/` — each returns typed dict
+#### Phase 1A — Voice UI First (Days 1–4)
+> **⚠️ Feedback Loop Risk**: `useASR` must explicitly mute/pause `useTTS` when recording starts. Add a pulsing mic visual indicator so users can distinguish listening vs. speaking states.
+> **⚠️ Text Fallback**: Every voice interaction must have a text fallback — if ASR fails or TTS is unavailable, fall back to on-screen text input/display.
+
+- [ ] `useASR.ts` — Web Speech API, start/stop recording, emit transcript
+  - Must emit partial transcripts in real-time
+  - Must handle browser permission denial gracefully → fall back to text input
+  - Export `isVoiceSupported(): boolean` — checks `window.SpeechRecognition ?? window.webkitSpeechRecognition` for browser support
+- [ ] `useTTS.ts` — Browser `window.speechSynthesis`
+  - Must fall back to text display if TTS unavailable
+  - Export `isTTSAvailable(): boolean` — checks `window.speechSynthesis` support
+- [ ] `VoiceButton.tsx` — Mic toggle, pulsing recording indicator (only rendered if `isVoiceSupported()`)
+- [ ] `TTSPlayer.tsx` — Auto-play TTS when new assistant message arrives; if TTS fails, show text instead
+- [ ] `chatSlice.ts` — add `voiceAvailable: boolean` flag; initialize with `isVoiceSupported()` on app load; gate voice UI on this flag
+
+#### Phase 1B — Live Search Tools (Days 1–6)
+> **⚠️ No Hallucination**: Every itinerary item must be fetched via live API — the agent MUST call at least one tool for every flight, hotel, attraction, transport, or weather data point. Pure LLM generation without tool calls is not acceptable.
+> **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
+
+- [ ] Implement all 7 tools in `tools/` — each returns typed dict, each tool call is mandatory for live data
+  - `transport.py` 🟢 — SerpAPI Google Maps engine → transport options (MTR, bus, taxi, train) between cities/locations **[CORE — Route]** (small — same pattern as flights.py)
+  - `attractions.py` 🟠 — Wikipedia REST API (`/page/summary/{title}`) → enrich attractions with description, thumbnail, coordinates **[CORE — Introduce]** (small — no API key, simple HTTP call)
+  - `maps.py` — Build Google Maps Embed/Static URL
   - `search.py` — Tavily primary, SerpAPI fallback
   - `flights.py` — SerpAPI Google Flights
   - `hotels.py` — SerpAPI Google Hotels
   - `weather.py` — OpenWeatherMap current weather
-  - `maps.py` — Build Google Maps Embed/Static URL
 - [ ] Define all Pydantic output models in `agent/schemas.py`
-  - `AttractionItem`, `HotelItem`, `FlightItem`, `DayPlan`, `TripItinerary`
+  - `AttractionItem` (with `description`, `thumbnail_url`, `coordinates` from Wikipedia) **[CORE — Introduce]**
+  - `HotelItem`, `FlightItem`, `TransportOption` (with `from_location`, `to_location`, `transport_type`, `duration`, `cost`) **[CORE — Route]**
+  - `DayPlan` (includes `TransportOption[]` for between-location routing), `TripItinerary` **[CORE — Plan]**
 - [ ] **Day 3 — Commit `MOCK_ITINERARY` fixture** (hardcoded `TripItinerary` instance in `tests/fixtures/`) to unblock Minqi and Xuan
 - [ ] Set up Gemini 3 Flash agent in `agent.py`
   - Register all tools
-  - Inject system prompt with user preferences placeholder
+  - System prompt enforces: **every response item must come from a tool call** — no pure LLM text for facts/prices/times
+  - Inject user preferences placeholder
+
+#### Phase 1C — Agent Loop + Structured Output (Days 4–9)
+> **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
+> **⚠️ Loop termination**: Always check for `function_call` vs plain text to avoid infinite loops — if the model returns a function call, execute the tool and append both the model turn and tool response to messages; if plain text, the loop is done.
+> **⚠️ response_schema**: Only enforce `response_json_schema` on the **final** `generate_content` call that returns `TripItinerary` — mid-loop tool calls must **not** use `response_schema` or the model will try to end the loop prematurely.
+> **⚠️ History management**: You must manually append both model turns and tool responses to the `messages` list between iterations — Gemini does not auto-manage conversation history.
+> **⚠️ Pydantic bridging**: Use `response_json_schema=TripItinerary.model_json_schema()` (pass the raw dict, NOT a string) with `response_mime_type="application/json"`. Validate response with `TripItinerary.model_validate_json(response.text)`. Union types are supported — see the ModerationResult example in the codebase.
+
 - [ ] Implement `callbacks.py` — Loguru logging for tool calls + agent finish
 - [ ] Implement `chat_service.py`
   - Run agent loop → structured `TripItinerary` via `generate_content` with `response_json_schema`
   - Return structured result
-  > **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation-and-ai/technology/developers-tools/gemini-api-structured-outputs/)
+  - **Text fallback**: if TTS fails, return text response as well
+  > **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation/google-ai/gemini-api-structured-outputs/)
+> **Correct pattern for structured output** (confirmed working):
+```python
+from google import genai
+client = genai.Client()
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
+    config={
+        "response_mime_type": "application/json",
+        "response_json_schema": TripItinerary.model_json_schema(),  # pass raw dict
+    },
+)
+result = TripItinerary.model_validate_json(response.text)  # validate response
+```
 - [ ] Expose `POST /chat` in `api/routes/chat.py`
   - Use **mocked auth** (`get_current_user` returns dummy user)
+  - Accept optional `session_id` in request — if absent, create a new session
   - **Stub DB** (skip saving messages for now)
   - Accept `ChatRequest`, return `TripItinerary` JSON
+  - Response must include `text` field for TTS fallback
+- [ ] **Empty preferences fallback**: If `user_preferences` is empty/null (first chat), proceed without preferences — do NOT block or error; inject empty preferences dict into system prompt
 
-#### Phase 2 — Preference Extraction (Days 7–12)
+#### Phase 2 — Preference Extraction (Days 9–13)
 - [ ] Define `user_preferences` table in `db/models/preference.py`
 - [ ] Write Alembic migration for `user_preferences`
 - [ ] Implement `preference_repo.py` — upsert preferences
 - [ ] Implement `preference_service.py`
   - Trigger extraction when session explicitly ended via `POST /chat/sessions/{id}/end`
-  - Or trigger via `sendBeacon` on frontend `beforeunload` / logout
+  - Or trigger via `sendBeacon` on frontend `beforeunload` / logout (with text fallback on mobile)
   - Call Gemini 3.1 Flash-Lite with full conversation history
   - Extract structured preferences from conversation
   - Save/update via `preference_repo`
 - [ ] Inject saved preferences into agent system prompt in `agent.py`
 
-#### Phase 3 — Voice UI (Days 10–14)
-> **⚠️ Feedback Loop Risk**: `useASR` must explicitly mute/pause `useTTS` when recording starts. Add a pulsing mic visual indicator so users can distinguish listening vs. speaking states.
-
-- [ ] `useASR.ts` — Web Speech API, start/stop recording, emit transcript
-- [ ] `useTTS.ts` — Browser `window.speechSynthesis`
-- [ ] `VoiceButton.tsx` — Mic toggle, visual recording state
-- [ ] `TTSPlayer.tsx` — Auto-play TTS when new assistant message arrives
+#### Phase 3 — Auth Wiring + Integration (Days 13–20)
+- [ ] Remove mock `get_current_user` once Minqi's JWT middleware is ready
+- [ ] Wire message saving once Minqi's `message_repo.py` is ready
+- [ ] Wire `save_trip` once Xuan's `trip_service.py` is ready
 - [ ] Wire voice into Chat UI (coordinate with Minqi's `ChatPage`)
 
 ### 🧪 Tests to Write
@@ -137,7 +181,9 @@ backend/tests/unit/
 │   ├── test_flights.py
 │   ├── test_hotels.py
 │   ├── test_weather.py
-│   └── test_maps.py
+│   ├── test_maps.py
+│   ├── test_transport.py     # SerpAPI Google Maps returns transport options
+│   └── test_attractions.py   # Wikipedia API returns summary + thumbnail
 └── test_schemas/
     └── test_trip_itinerary.py  # TripItinerary validates correctly
 
@@ -148,9 +194,11 @@ backend/tests/integration/
 
 ### ⚠️ Mocking Strategy (Unblock yourself)
 ```python
-# deps.py — temporary mock, swap when Minqi delivers auth
+# deps.py — temporary mock, swap when Minqi's JWT middleware is ready
+DEV_USER_ID = 1  # use named constant, NOT inline magic number
+
 async def get_current_user():
-    return User(id=1, username="dev", email="dev@test.com")
+    return User(id=DEV_USER_ID, username="dev", email="dev@test.com")
 ```
 > Remove mock once Minqi's JWT middleware is ready.
 
@@ -359,29 +407,40 @@ backend/tests/integration/
 
 ---
 
+## 🚨 Open Issues
+
+| #   | Severity | Area         | Issue                                                                                                                               |
+| --- | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 3   | 🔴        | Integration  | Mock user_id not safely isolated — use `DEV_USER_ID = 1` constant in `deps.py`; do NOT hardcode `id=1` inline                       |
+| 5   | 🟠        | Coordination | Session ID creation — Minqi creates session on first message; David reads `session_id` from request; document in Integration Points |
+
+---
+
 ## 🔗 Integration Points & Coordination
 
-| When       | Who           | Action                                                                 |
-| ---------- | ------------- | ---------------------------------------------------------------------- |
-| Day 1      | David + Xuan  | Finalize `TripItinerary` Pydantic schema together                      |
-| Day 3      | David → All   | Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately  |
-| Days 7–8   | Minqi → David | `deps.py` ready → David removes mock `get_current_user`                |
-| Days 8–10  | Xuan → David  | `trip_service.save_trip()` ready → David wires into `chat_service.py`  |
-| Days 8–10  | Minqi → David | `message_repo` ready → David wires message saving in `chat_service.py` |
-| Day 14     | David → Minqi | Voice hooks ready → wire into `ChatPage.tsx`                           |
-| Days 15–20 | All           | Integration week — full flow testing, bug fixes, demo polish           |
+| When       | Who           | Action                                                                                                                                              |
+| ---------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Day 1      | David + Xuan  | Finalize `TripItinerary` Pydantic schema together                                                                                                   |
+| Day 1      | David + Minqi | Define session ID creation flow: Minqi creates session on first message; `POST /chat` accepts optional `session_id`; if absent, backend creates one |
+| Day 3      | David → All   | Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                                                                               |
+| Days 4–6   | Minqi → David | `deps.py` ready → David removes mock `get_current_user`                                                                                             |
+| Days 4–9   | Xuan → David  | `trip_service.save_trip()` ready → David wires into `chat_service.py`                                                                               |
+| Days 4–9   | Minqi → David | `message_repo` ready → David wires message saving in `chat_service.py`                                                                              |
+| Day 4      | David → Minqi | Voice hooks ready → wire into `ChatPage.tsx`                                                                                                        |
+| Days 13–20 | All           | Integration week — full flow testing, bug fixes, demo polish                                                                                        |
 
 ---
 
 ## 📅 Revised Timeline (20 Days)
 
-| Days      | David                                                      | Minqi                                             | Xuan                                              |
-| --------- | ---------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
-| **1–3**   | Tools + Pydantic schemas + `agent.py` + mock fixture       | Auth backend (models, JWT, endpoints)             | Trip backend (model, repo, service, CRUD API)     |
-| **4–8**   | Real agent loop + `chat_service.py` + callbacks            | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
-| **9–13**  | Preference extraction + Voice UI (ASR/TTS)                 | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
-| **14–17** | Wire real auth + DB into chat, import chat_history_service | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
-| **18–20** | 🔴 Buffer — integration bugs, demo prep                     | 🔴 Buffer — integration bugs, demo prep            | 🔴 Buffer — integration bugs, demo prep            |
+| Days      | David                                                                                 | Minqi                                             | Xuan                                              |
+| --------- | ------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| **1–4**   | **Voice UI first** (useASR, useTTS, VoiceButton, TTSPlayer, text fallback)            | Auth backend (models, JWT, endpoints)             | Trip backend (model, repo, service, CRUD API)     |
+| **1–6**   | **Live tools first** (transport, attractions, maps, flights, hotels, weather, search) | —                                                 | —                                                 |
+| **4–9**   | Agent loop + `chat_service.py` + callbacks + `POST /chat`                             | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
+| **9–13**  | Preference extraction + auth wiring                                                   | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
+| **13–17** | Wire real auth + DB into chat, import chat_history_service                            | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
+| **18–20** | 🔴 Buffer — integration bugs, demo prep                                                | 🔴 Buffer — integration bugs, demo prep            | 🔴 Buffer — integration bugs, demo prep            |
 
 ---
 
