@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from google.genai import types
+from google.genai import Client, types
 from loguru import logger
 
 from app.agent.callbacks import log_agent_finish, log_tool_call, log_tool_response
@@ -44,10 +44,10 @@ _TOOL_MAP = {
 MAX_ITERATIONS = 5
 
 # Demo-grade client — single instance reused
-_client: types.Client | None = None
+_client: Client | None = None
 
 
-def _get_client() -> types.Client:
+def _get_client() -> Client:
     global _client
     if _client is None:
         _client = types.Client(api_key=settings.GEMINI_API_KEY)
