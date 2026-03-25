@@ -164,6 +164,8 @@ gogogo/
 
 ### Itinerary Structured Output (Pydantic — enforced via `generate_content` + `response_json_schema`)
 
+> **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation-and-ai/technology/developers-tools/gemini-api-structured-outputs/)
+
 ```python
 class AttractionItem(BaseModel):
     name: str

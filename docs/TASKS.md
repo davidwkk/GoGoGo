@@ -70,6 +70,10 @@ frontend/src/
 > **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
 > **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
 > **⚠️ Unblock teammates on Day 3**: Commit a hardcoded `MOCK_ITINERARY` fixture so Minqi and Xuan can develop against a real schema immediately.
+> **⚠️ Loop termination**: Always check for `function_call` vs plain text to avoid infinite loops — if the model returns a function call, execute the tool and append both the model turn and tool response to messages; if plain text, the loop is done.
+> **⚠️ response_schema**: Only enforce `response_json_schema` on the **final** `generate_content` call that returns `TripItinerary` — mid-loop tool calls must **not** use `response_schema` or the model will try to end the loop prematurely.
+> **⚠️ History management**: You must manually append both model turns and tool responses to the `messages` list between iterations — Gemini does not auto-manage conversation history.
+> **⚠️ Pydantic bridging**: Use `TripItinerary.model_json_schema()` with `response_json_schema` to cleanly connect your existing Pydantic models to Gemini's schema enforcement.
 
 - [ ] Implement all 5 tools in `tools/` — each returns typed dict
   - `search.py` — Tavily primary, SerpAPI fallback
@@ -87,6 +91,7 @@ frontend/src/
 - [ ] Implement `chat_service.py`
   - Run agent loop → structured `TripItinerary` via `generate_content` with `response_json_schema`
   - Return structured result
+  > **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation-and-ai/technology/developers-tools/gemini-api-structured-outputs/)
 - [ ] Expose `POST /chat` in `api/routes/chat.py`
   - Use **mocked auth** (`get_current_user` returns dummy user)
   - **Stub DB** (skip saving messages for now)
