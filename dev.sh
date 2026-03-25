@@ -21,7 +21,16 @@ warn()    { echo -e "${YELLOW}[$(date +%H:%M:%S)] ⚠ $*${RESET}"; }
 error()   { echo -e "${RED}[$(date +%H:%M:%S)] ✘ $*${RESET}";   }
 
 # ── Trap ─────────────────────────────────────────────────────
+cleanup() {
+  echo ""
+  warn "Interrupt received. Stopping all services..."
+  docker compose down --remove-orphans
+  success "All services stopped. Goodbye!"
+  exit 0
+}
+
 trap 'error "Script failed on line $LINENO."' ERR
+trap 'cleanup' INT TERM
 
 # ── Setup ────────────────────────────────────────────────────
 echo -e "\n${BOLD}${CYAN}╔══════════════════════════════════════════════════╗${RESET}"
@@ -49,14 +58,16 @@ export LOG_LEVEL=DEBUG
 echo -e ""
 echo -e "  ${BOLD}Select a build mode:${RESET}"
 echo -e ""
-echo -e "  ${CYAN}[1]${RESET} Quick restart       ${YELLOW}(down → up)${RESET}"
+echo -e "  ${CYAN}[1]${RESET} Quick restart       ${YELLOW}(down → up)${RESET} ${GREEN}[default]${RESET}"
 echo -e "  ${CYAN}[2]${RESET} Build with cache    ${YELLOW}(up --build)${RESET}"
 echo -e "  ${CYAN}[3]${RESET} Build without cache ${YELLOW}(build --no-cache → up)${RESET}"
 echo -e "  ${CYAN}[4]${RESET} Build from scratch  ${YELLOW}(down -v → build --no-cache → up)${RESET}"
 echo -e "  ${CYAN}[5]${RESET} Just start          ${YELLOW}(up, no build/down)${RESET}"
 echo -e ""
-read -rn 1 -p "  Enter choice [1-5]: " BUILD_CHOICE
+read -rn 1 -p "  Enter choice [1-5] (default: 1): " BUILD_CHOICE
 echo ""
+BUILD_CHOICE="${BUILD_CHOICE:-1}"
+
 
 # ── 4. Prune dangling images ──────────────────────────────────
 log "Removing dangling images..."
@@ -189,20 +200,22 @@ echo -e "${BOLD}${GREEN}╚═════════════════�
 
 # ── 8. Log viewer ─────────────────────────────────────────────
 echo -e "${YELLOW}View service logs?${RESET}"
-echo -e "  ${CYAN}[1]${RESET} Frontend (fn)"
-echo -e "  ${CYAN}[2]${RESET} Backend  (bn)"
-echo -e "  ${CYAN}[3]${RESET} Database (db)"
-echo -e "  ${CYAN}[4]${RESET} All"
+echo -e "  ${CYAN}[1]${RESET} All          ${GREEN}[default]${RESET}"
+echo -e "  ${CYAN}[2]${RESET} Frontend (fn)"
+echo -e "  ${CYAN}[3]${RESET} Backend  (bn)"
+echo -e "  ${CYAN}[4]${RESET} Database (db)"
 echo -e "  ${CYAN}[5]${RESET} None / Skip"
 echo -e "${YELLOW}Enter choice (1-5): ${RESET}\c"
 read -r -n 1 LOG_CHOICE
 echo ""
+LOG_CHOICE="${LOG_CHOICE:-1}"
+
 
 case "$LOG_CHOICE" in
-  1) log "Showing Frontend logs (Ctrl+C to exit)...";  docker compose logs -f frontend  ;;
-  2) log "Showing Backend logs (Ctrl+C to exit)...";   docker compose logs -f backend   ;;
-  3) log "Showing Database logs (Ctrl+C to exit)...";  docker compose logs -f db        ;;
-  4) log "Showing all logs (Ctrl+C to exit)...";       docker compose logs -f           ;;
+  1) log "Showing all logs (Ctrl+C to exit)...";       docker compose logs -f           ;;
+  2) log "Showing Frontend logs (Ctrl+C to exit)...";  docker compose logs -f frontend  ;;
+  3) log "Showing Backend logs (Ctrl+C to exit)...";   docker compose logs -f backend   ;;
+  4) log "Showing Database logs (Ctrl+C to exit)...";  docker compose logs -f db        ;;
   5) log "Skipping log view. All done!" ;;
   *) log "Invalid choice. Skipping log view." ;;
 esac
