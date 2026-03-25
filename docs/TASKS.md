@@ -85,8 +85,7 @@ frontend/src/
   - Inject system prompt with user preferences placeholder
 - [ ] Implement `callbacks.py` — Loguru logging for tool calls + agent finish
 - [ ] Implement `chat_service.py`
-  - Run agent loop → raw output
-  - Call `generate_content` with response_schema → `TripItinerary`
+  - Run agent loop → structured `TripItinerary` via `generate_content` with `response_json_schema`
   - Return structured result
 - [ ] Expose `POST /chat` in `api/routes/chat.py`
   - Use **mocked auth** (`get_current_user` returns dummy user)
