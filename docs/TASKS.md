@@ -5,16 +5,16 @@
 
 ## 🧭 Ownership Overview
 
-| Area                                      | Owner                                         |
-| ----------------------------------------- | --------------------------------------------- |
-| Infra — Docker, FastAPI skeleton, setup   | **David**                                     |
-| Agent Core, Tools, Structured Output      | **David**                                     |
-| Preference Extraction (Flash-Lite)        | **David**                                     |
-| Voice — ASR + TTS                         | **David**                                     |
-| Auth — Register/Login, JWT, Login UI      | **Minqi**                                     |
-| Chat — Session, Message History, Chat UI  | **Minqi**                                     |
-| Trip — CRUD, Itinerary Display, Map Embed | **Xuan**                                      |
-| DB Models + Migrations (all tables)       | **Shared** (each owns their feature's models) |
+| Area                                      | Owner                                                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Infra — Docker, FastAPI skeleton, setup   | **David**                                                                                                          |
+| Agent Core, Tools, Structured Output      | **David**                                                                                                          |
+| Preference Extraction (Flash-Lite)        | **David**                                                                                                          |
+| Voice — ASR + TTS                         | **David**                                                                                                          |
+| Auth — Register/Login, JWT, Login UI      | **Minqi**                                                                                                          |
+| Chat — Session, Message History, Chat UI  | **Minqi**                                                                                                          |
+| Trip — CRUD, Itinerary Display, Map Embed | **Xuan**                                                                                                           |
+| DB Models + Migrations (all tables)       | **David** (owns all migrations; each member defines their own models but David manages the Alembic revision chain) |
 
 ---
 
@@ -52,7 +52,7 @@ backend/app/schemas/
 
 backend/app/api/routes/
 ├── chat.py                   # POST /chat
-├── chat_sessions.py           # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages
+├── chat_sessions.py           # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages (Minqi owns endpoint logic; David owns route stub)
 └── health.py                 # /health
 
 backend/app/core/
@@ -97,32 +97,38 @@ frontend/src/store/
 - [ ] `VoiceButton.tsx` — Mic toggle, pulsing recording indicator (only rendered if `isVoiceSupported()`)
 - [ ] `TTSPlayer.tsx` — Auto-play TTS when new assistant message arrives; if TTS fails, show text instead
 - [ ] `chatSlice.ts` — add `voiceAvailable: boolean` flag; initialize with `isVoiceSupported()` on app load; gate voice UI on this flag
+- [ ] `useChat.ts` — wire VoiceButton → `chatService.ts` → `POST /chat`; handle `ChatResponse` (text + itinerary + message_type); needed for Phase 1A voice integration
 
 #### Phase 1B — Live Search Tools (Days 1–6)
 > **⚠️ No Hallucination**: Every itinerary item must be fetched via live API — the agent MUST call at least one tool for every flight, hotel, attraction, transport, or weather data point. Pure LLM generation without tool calls is not acceptable.
 > **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
 
-- [ ] Implement all 7 tools in `tools/` — each returns typed dict, each tool call is mandatory for live data
-  - `transport.py` 🟢 — SerpAPI Google Maps engine → transport options (MTR, bus, taxi, train) between cities/locations **[CORE — Route]** (small — same pattern as flights.py)
+- [ ] Implement all 7 tools in `tools/` — each returns `dict` (NOT Pydantic models); keep them lightweight mid-loop
+  > **Why dict not Pydantic mid-loop**: SDK serializes both equally; Pydantic mid-loop adds validation overhead with no benefit since agent doesn't enforce schemas on tool responses; final output only = Pydantic TripItinerary
+  > **⚠️ All tools must use `httpx.AsyncClient`** — do NOT use `requests` (sync, blocks event loop). Use `async with httpx.AsyncClient() as client: response = await client.get(url)`
+  - `transport.py` 🟢 — SerpAPI Google Maps engine → transport options (MTR, bus, taxi, train) between cities/locations **[CORE — Route]** (small — same pattern as flights.py) | ⚠️ Add `@functools.lru_cache(maxsize=128)` on the HTTP fetch function; key = `(from_location, to_location, mode)`; demo period only — quota is low
   - `attractions.py` 🟠 — Wikipedia REST API (`/page/summary/{title}`) → enrich attractions with description, thumbnail, coordinates **[CORE — Introduce]** (small — no API key, simple HTTP call)
-  - `maps.py` — Build Google Maps Embed/Static URL
-  - `search.py` — Tavily primary, SerpAPI fallback
-  - `flights.py` — SerpAPI Google Flights
-  - `hotels.py` — SerpAPI Google Hotels
-  - `weather.py` — OpenWeatherMap current weather
+  - `maps.py` — **URL builder only** (no API calls) — generates Google Maps Embed/Static URLs from coordinates/place names
+  - `search.py` — Tavily primary, SerpAPI fallback (httpx.AsyncClient)
+  - `flights.py` — SerpAPI Google Flights (httpx.AsyncClient)
+  - `hotels.py` — SerpAPI Google Hotels (httpx.AsyncClient)
+  - `weather.py` — OpenWeatherMap current weather (httpx.AsyncClient)
 - [ ] Define all Pydantic output models in `agent/schemas.py`
+  > **⚠️ Pydantic type rules**: ✅ `str`, `int`, `float`, `bool`, `list[str]`, `enum`, nested `BaseModel` | ⚠️ `dict[str, int]` — not well supported, avoid | ❌ Raw `dict` types not supported by Gemini schema
   - `AttractionItem` (with `description`, `thumbnail_url`, `coordinates` from Wikipedia) **[CORE — Introduce]**
   - `HotelItem`, `FlightItem`, `TransportOption` (with `from_location`, `to_location`, `transport_type`, `duration`, `cost`) **[CORE — Route]**
   - `DayPlan` (includes `TransportOption[]` for between-location routing), `TripItinerary` **[CORE — Plan]**
 - [ ] **Day 3 — Commit `MOCK_ITINERARY` fixture** (hardcoded `TripItinerary` instance in `tests/fixtures/`) to unblock Minqi and Xuan
 - [ ] Set up Gemini 3 Flash agent in `agent.py`
   - Register all tools
+  - System prompt: `prefs_section = f"User preferences: {preferences}" if preferences else ""` then `f"You are a travel planning assistant. {prefs_section}..."` — **never** use `{preferences or ""}` or direct None interpolation (it literally injects the word "None")
   - System prompt enforces: **every response item must come from a tool call** — no pure LLM text for facts/prices/times
-  - Inject user preferences placeholder
 
 #### Phase 1C — Agent Loop + Structured Output (Days 4–9)
 > **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
-> **⚠️ Loop termination**: Always check for `function_call` vs plain text to avoid infinite loops — if the model returns a function call, execute the tool and append both the model turn and tool response to messages; if plain text, the loop is done.
+> **⚠️ Function call iteration**: Iterate ALL parts — `function_calls = [p.function_call for p in response.candidates[0].content.parts if p.function_call]`. Do NOT assume `parts[0]` is the only function call — Gemini 3 Flash supports parallel calls in one turn.
+> **⚠️ Loop termination**: If `function_calls` is non-empty, execute tools and continue; if empty (plain text), the loop is done.
+> **⚠️ Preserve thought_signature**: Append `response.candidates[0].content` as-is to the messages list — do NOT reconstruct `types.Content(role="model", parts=[...])` manually. This strips the `thought_signature` and breaks multi-turn context. The SDK preserves it when you append the raw content object.
 > **⚠️ response_schema**: Only enforce `response_json_schema` on the **final** `generate_content` call that returns `TripItinerary` — mid-loop tool calls must **not** use `response_schema` or the model will try to end the loop prematurely.
 > **⚠️ History management**: You must manually append both model turns and tool responses to the `messages` list between iterations — Gemini does not auto-manage conversation history.
 > **⚠️ Pydantic bridging**: Use `response_json_schema=TripItinerary.model_json_schema()` (pass the raw dict, NOT a string) with `response_mime_type="application/json"`. Validate response with `TripItinerary.model_validate_json(response.text)`. Union types are supported — see the ModerationResult example in the codebase.
@@ -130,7 +136,8 @@ frontend/src/store/
 - [ ] Implement `callbacks.py` — Loguru logging for tool calls + agent finish
 - [ ] Implement `chat_service.py`
   - Run agent loop → structured `TripItinerary` via `generate_content` with `response_json_schema`
-  - Return structured result
+  - Wrap entire agent loop in `asyncio.wait_for(..., timeout=25.0)` — abort and return error text if wall-clock exceeds 25s
+  - Return `ChatResponse` (not bare `TripItinerary`): `ChatResponse(text=str, itinerary=TripItinerary|None, message_type=Literal["chat","itinerary","error"])`
   - **Text fallback**: if TTS fails, return text response as well
   > **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation/google-ai/gemini-api-structured-outputs/)
 > **Correct pattern for structured output** (confirmed working):
@@ -151,8 +158,10 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
   - Use **mocked auth** (`get_current_user` returns dummy user)
   - Accept optional `session_id` in request — if absent, create a new session
   - **Stub DB** (skip saving messages for now)
-  - Accept `ChatRequest`, return `TripItinerary` JSON
-  - Response must include `text` field for TTS fallback
+  - Accept `ChatRequest`, return `ChatResponse` (`text`, `itinerary | None`, `message_type`)
+  - `itinerary` is only populated when the user explicitly triggers trip generation (via "Generate Trip Plan" button in frontend); otherwise returns `text` only
+- [ ] Add `ChatResponse` schema in `schemas/chat.py`: `text: str`, `itinerary: TripItinerary | None`, `message_type: Literal["chat", "itinerary", "error"]`
+- [ ] Frontend: add "Generate Trip Plan" button in `ChatPage.tsx` / `InputBar.tsx` — pressing it sends `POST /chat` with a flag indicating full itinerary generation is requested
 - [ ] **Empty preferences fallback**: If `user_preferences` is empty/null (first chat), proceed without preferences — do NOT block or error; inject empty preferences dict into system prompt
 
 #### Phase 2 — Preference Extraction (Days 9–13)
@@ -160,8 +169,8 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [ ] Write Alembic migration for `user_preferences`
 - [ ] Implement `preference_repo.py` — upsert preferences
 - [ ] Implement `preference_service.py`
-  - Trigger extraction when session explicitly ended via `POST /chat/sessions/{id}/end`
-  - Or trigger via `sendBeacon` on frontend `beforeunload` / logout (with text fallback on mobile)
+  - Primary trigger: `POST /chat/sessions/{id}/end` — user explicitly ends session, requests trip plan
+  - Secondary (best-effort only): `sendBeacon` on frontend `beforeunload` / logout — don't architect data pipeline around this; it's unreliable
   - Call Gemini 3.1 Flash-Lite with full conversation history
   - Extract structured preferences from conversation
   - Save/update via `preference_repo`
@@ -197,8 +206,13 @@ backend/tests/integration/
 # deps.py — temporary mock, swap when Minqi's JWT middleware is ready
 DEV_USER_ID = 1  # use named constant, NOT inline magic number
 
-async def get_current_user():
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),  # real version uses JWT Bearer token
+):
     return User(id=DEV_USER_ID, username="dev", email="dev@test.com")
+# ⚠️ Swap the body only — keep the function signature identical when removing mock.
+# Minqi: your real get_current_user MUST return User(id, username, email) shape.
+# Do NOT change the return type or field names or David's routes break silently.
 ```
 > Remove mock once Minqi's JWT middleware is ready.
 
@@ -264,12 +278,13 @@ frontend/src/
 - [ ] Implement `security.py`
   - `hash_password`, `verify_password` (passlib bcrypt)
   - `create_access_token`, `decode_access_token` (python-jose)
+  - Use `oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")` in `deps.py`
 - [ ] Implement `auth_service.py` — register (check duplicate), login (verify + issue token)
 - [ ] Implement `user_repo.py` — `get_by_email`, `get_by_id`, `create`
 - [ ] Expose `POST /auth/register`, `POST /auth/login` in `api/routes/auth.py`
 - [ ] Implement `deps.py`
   - `get_db` — async session dependency
-  - `get_current_user` — decode JWT, return User
+  - `get_current_user` — decode JWT via `oauth2_scheme: OAuth2PasswordBearer` (David's mock uses the same signature); must return `User(id, username, email)` — do NOT change return type or field names
 - [ ] Expose `GET /users/me` in `api/routes/users.py`
 - [ ] **Notify David** once `deps.py` → `get_current_user` is ready so he removes the mock
 
