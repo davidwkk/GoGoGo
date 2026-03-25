@@ -1,5 +1,5 @@
 # 👥 `gogogo` — Task Assignment Document
-> Deadline: 1 month | Team: 3 members | Infra: ✅ Already set up
+> Deadline: Apr 16, 2026 (~20 days) | Team: 3 members | Infra: ✅ Already set up
 
 ---
 
@@ -10,7 +10,6 @@
 | Agent Core, Tools, Structured Output      | **David**                                     |
 | Preference Extraction (Flash-Lite)        | **David**                                     |
 | Voice — ASR + TTS                         | **David**                                     |
-| SSE Streaming                             | **David** (Phase 2)                           |
 | Auth — Register/Login, JWT, Login UI      | **Minqi**                                     |
 | Chat — Session, Message History, Chat UI  | **Minqi**                                     |
 | Trip — CRUD, Itinerary Display, Map Embed | **Xuan**                                      |
@@ -51,13 +50,13 @@ backend/app/schemas/
 └── chat.py                   # ChatRequest / ChatResponse schemas
 
 backend/app/api/routes/
-└── chat.py                   # POST /chat (sync first, SSE later)
+└── chat.py                   # POST /chat
 
 frontend/src/
 ├── hooks/
 │   ├── useASR.ts             # Web Speech API hook
 │   ├── useTTS.ts             # Web Speech Synthesis hook
-│   └── useChat.ts            # Chat request hook (SSE in Phase 2)
+│   └── useChat.ts            # Chat request hook
 ├── components/voice/
 │   ├── VoiceButton.tsx       # Mic toggle button
 │   └── TTSPlayer.tsx         # Auto-play TTS on agent response
@@ -67,9 +66,10 @@ frontend/src/
 
 ### ✅ Task Breakdown
 
-#### Phase 1 — Agent Core (Week 1–2)
+#### Phase 1 — Agent Core (Days 1–6)
 > **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
 > **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
+> **⚠️ Unblock teammates on Day 3**: Commit a hardcoded `MOCK_ITINERARY` fixture so Minqi and Xuan can develop against a real schema immediately.
 
 - [ ] Implement all 5 tools in `tools/` — each returns typed dict
   - `search.py` — Tavily primary, SerpAPI fallback
@@ -79,6 +79,7 @@ frontend/src/
   - `maps.py` — Build Google Maps Embed/Static URL
 - [ ] Define all Pydantic output models in `agent/schemas.py`
   - `AttractionItem`, `HotelItem`, `FlightItem`, `DayPlan`, `TripItinerary`
+- [ ] **Day 3 — Commit `MOCK_ITINERARY` fixture** (hardcoded `TripItinerary` instance in `tests/fixtures/`) to unblock Minqi and Xuan
 - [ ] Set up Gemini 3 Flash agent in `agent.py`
   - Register all tools
   - Inject system prompt with user preferences placeholder
@@ -92,7 +93,7 @@ frontend/src/
   - **Stub DB** (skip saving messages for now)
   - Accept `ChatRequest`, return `TripItinerary` JSON
 
-#### Phase 2 — Preference Extraction (Week 2–3)
+#### Phase 2 — Preference Extraction (Days 7–12)
 - [ ] Define `user_preferences` table in `db/models/preference.py`
 - [ ] Write Alembic migration for `user_preferences`
 - [ ] Implement `preference_repo.py` — upsert preferences
@@ -104,23 +105,14 @@ frontend/src/
   - Save/update via `preference_repo`
 - [ ] Inject saved preferences into agent system prompt in `agent.py`
 
-#### Phase 3 — Voice UI (Week 3)
+#### Phase 3 — Voice UI (Days 10–14)
 > **⚠️ Feedback Loop Risk**: `useASR` must explicitly mute/pause `useTTS` when recording starts. Add a pulsing mic visual indicator so users can distinguish listening vs. speaking states.
 
 - [ ] `useASR.ts` — Web Speech API, start/stop recording, emit transcript
-- [ ] `useTTS.ts` — Browser `window.speechSynthesis` (Phase 1); upgrade to Gemini TTS or Gemini Live later
+- [ ] `useTTS.ts` — Browser `window.speechSynthesis`
 - [ ] `VoiceButton.tsx` — Mic toggle, visual recording state
 - [ ] `TTSPlayer.tsx` — Auto-play TTS when new assistant message arrives
 - [ ] Wire voice into Chat UI (coordinate with Minqi's `ChatPage`)
-- [ ] **Future upgrade:** Gemini Live API — single multimodal session replacing ASR + agent + TTS hooks
-
-#### Phase 4 — SSE Streaming (Week 4)
-> **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
-
-- [ ] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint
-- [ ] Stream agent thinking steps + tool calls to frontend
-- [ ] Update `useChat.ts` — consume SSE, show intermediate steps in UI
-- [ ] Add 3x auto-retry on SSE disconnect
 
 ### 🧪 Tests to Write
 ```
@@ -172,7 +164,8 @@ backend/app/schemas/
 
 backend/app/services/
 ├── auth_service.py           # Register, login, password verify
-└── message_service.py        # Message persistence (append, get history)
+├── message_service.py        # Message persistence (append, get history)
+└── chat_history_service.py   # append_user_message(), append_agent_message()
 
 backend/app/core/
 └── security.py               # JWT encode/decode, password hashing
@@ -195,7 +188,7 @@ frontend/src/
 
 ### ✅ Task Breakdown
 
-#### Phase 1 — Auth Backend (Week 1–2)
+#### Phase 1 — Auth Backend (Days 1–6)
 - [ ] Define `users` table in `db/models/user.py`
 - [ ] Write Alembic migration for `users`
 - [ ] Implement `security.py`
@@ -208,18 +201,21 @@ frontend/src/
   - `get_db` — async session dependency
   - `get_current_user` — decode JWT, return User
 - [ ] Expose `GET /users/me` in `api/routes/users.py`
+- [ ] **Notify David** once `deps.py` → `get_current_user` is ready so he removes the mock
 
-#### Phase 2 — Chat Persistence (Week 2–3)
+#### Phase 2 — Chat Persistence (Days 7–12)
 - [ ] Define `chat_sessions` + `messages` tables
 - [ ] Write Alembic migrations for both tables
 - [ ] Implement `session_repo.py` — create session, get by user
 - [ ] Implement `message_repo.py` — append message, get history by session
+- [ ] Build `chat_history_service.py` with `append_user_message()` and `append_agent_message()` methods
 - [ ] Update `chat_service.py` (coordinate with David)
   - Save user message before agent call
   - Save assistant response after agent call
 - [ ] Expose session history endpoint: `GET /chat/sessions/{session_id}/messages`
+- [ ] **Notify David** once `message_repo.py` is ready to wire message saving in `chat_service.py`
 
-#### Phase 3 — Auth + Chat UI (Week 3)
+#### Phase 3 — Auth + Chat UI (Days 10–14)
 - [ ] `LoginPage.tsx` — login + register tabs, form validation, error display
 - [ ] `useAuth.ts` — login/logout, persist token in localStorage
 - [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
@@ -227,6 +223,8 @@ frontend/src/
 - [ ] Protected route wrapper — redirect to login if unauthenticated
 - [ ] `ChatPage.tsx` scaffold — message list, input bar (coordinate with David for voice wiring)
 - [ ] `MessageBubble.tsx` — user vs assistant styling
+- [ ] Display fake loading steps ("Searching flights...", "Checking weather...") during POST /chat request
+- [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
 - [ ] Display chat history on session load
 
 ### 🧪 Tests to Write
@@ -287,12 +285,14 @@ frontend/src/
 
 ### ✅ Task Breakdown
 
-#### Phase 1 — Trip Backend (Week 1–2)
+#### Phase 1 — Trip Backend (Days 1–6)
 - [ ] Define `trips` table in `db/models/trip.py`
   - `itinerary_json` as JSONB column
 - [ ] Write Alembic migration for `trips`
 - [ ] Implement `trip_repo.py`
   - `create`, `get_by_id`, `get_by_user`, `delete`
+  - Call `itinerary.model_dump(mode='json')` before saving to SQLAlchemy
+  - Validate back with `TripItinerary.model_validate(db_obj.itinerary_json)` on retrieval
 - [ ] Implement `trip_service.py`
   - `save_trip(user_id, session_id, itinerary: TripItinerary)` — serialize + store
   - `get_trips(user_id)` — list summaries
@@ -303,12 +303,13 @@ frontend/src/
   - `GET /trips/{trip_id}` — full itinerary
   - `DELETE /trips/{trip_id}` — delete
 
-#### Phase 2 — Coordinate with David (Week 2–3)
-- [ ] **Only David** confirms the `TripItinerary` Pydantic schema (defined in `agent/schemas.py`) — no other team member approves schema changes
+#### Phase 2 — Coordinate with David (Days 4–10)
+- [ ] **Day 1 — Align `TripItinerary` schema with David** — schema is owned by David (`agent/schemas.py`), no unilateral changes
+- [ ] Develop against David's `MOCK_ITINERARY` fixture (available Day 3) — no need to wait for real agent
 - [ ] `trip_service.save_trip()` accepts `TripItinerary` directly — no re-parsing
-- [ ] Notify **David** when `trip_service.save_trip()` is ready to wire into `chat_service.py`
+- [ ] **Notify David** when `trip_service.save_trip()` is ready to wire into `chat_service.py`
 
-#### Phase 3 — Trip UI (Week 3)
+#### Phase 3 — Trip UI (Days 10–14)
 - [ ] `TripPage.tsx` — list of saved trips, click to expand detail
 - [ ] `ItineraryCard.tsx` — render `DayPlan[]`, day tabs or accordion
 - [ ] `HotelCard.tsx` — name, price, rating, booking link button
@@ -328,42 +329,34 @@ backend/tests/integration/
 ```
 
 ### 🤝 Handoff to Team
-> Depends on **David** for `TripItinerary` schema — align in Week 1.
+> Depends on **David** for `TripItinerary` schema — align on Day 1, develop against mock from Day 3.
 > Depends on **Minqi** for auth guard on trip routes — use mock `get_current_user` until ready.
 
 ---
 
 ## 🔗 Integration Points & Coordination
 
-| When     | Who           | Action                                                                 |
-| -------- | ------------- | ---------------------------------------------------------------------- |
-| Week 1   | David + Xuan  | Finalize `TripItinerary` Pydantic schema together                      |
-| Week 2   | Minqi → David | `deps.py` ready → David removes mock `get_current_user`                |
-| Week 2–3 | Xuan → David  | `trip_service.save_trip()` ready → David wires into `chat_service.py`  |
-| Week 2–3 | Minqi → David | `message_repo` ready → David wires message saving in `chat_service.py` |
-| Week 3   | David → Minqi | Voice hooks ready → wire into `ChatPage.tsx`                           |
-| Week 4   | All           | SSE upgrade — David upgrades endpoint, Minqi updates `useChat.ts`      |
-
-## 📋 Follow-up Items (Post-SSE Loading UX)
-
-| #   | Owner                | Task                                                                                                                                                                     |
-| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **Frontend (Minqi)** | Display fake loading steps ("Searching flights...", "Checking weather...") during sync POST request to keep user engaged before SSE is ready                             |
-| 2   | **Minqi**            | Build `chat_history_service.py` with `append_user_message()` and `append_agent_message()` methods                                                                        |
-| 3   | **David**            | Import and call `chat_history_service` methods inside `chat_service.py` workflow                                                                                         |
-| 4   | **Xuan**             | `trip_repo`: Call `itinerary.model_dump(mode='json')` before saving to SQLAlchemy; validate back with `TripItinerary.model_validate(db_obj.itinerary_json)` on retrieval |
-| 5   | **Frontend (Minqi)** | Add "Save & Finish Trip" button in UI that explicitly calls `POST /chat/sessions/{id}/end`                                                                               |
+| When       | Who           | Action                                                                 |
+| ---------- | ------------- | ---------------------------------------------------------------------- |
+| Day 1      | David + Xuan  | Finalize `TripItinerary` Pydantic schema together                      |
+| Day 3      | David → All   | Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately  |
+| Days 7–8   | Minqi → David | `deps.py` ready → David removes mock `get_current_user`                |
+| Days 8–10  | Xuan → David  | `trip_service.save_trip()` ready → David wires into `chat_service.py`  |
+| Days 8–10  | Minqi → David | `message_repo` ready → David wires message saving in `chat_service.py` |
+| Day 14     | David → Minqi | Voice hooks ready → wire into `ChatPage.tsx`                           |
+| Days 15–20 | All           | Integration week — full flow testing, bug fixes, demo polish           |
 
 ---
 
-## 📅 Suggested Timeline
+## 📅 Revised Timeline (20 Days)
 
-| Week  | David                                                 | Minqi                                             | Xuan                                              |
-| ----- | ----------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
-| **1** | Agent tools + Pydantic schemas + `agent.py`           | Auth backend (models, JWT, endpoints)             | Trip backend (model, repo, service, CRUD API)     |
-| **2** | `chat_service.py` + `POST /chat` (mocked) + callbacks | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
-| **3** | Preference extraction + Voice UI (ASR/TTS)            | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
-| **4** | SSE streaming + wire real auth + DB                   | Wire message saving + polish Chat UI              | Polish trip UI + integration testing              |
+| Days      | David                                                      | Minqi                                             | Xuan                                              |
+| --------- | ---------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| **1–3**   | Tools + Pydantic schemas + `agent.py` + mock fixture       | Auth backend (models, JWT, endpoints)             | Trip backend (model, repo, service, CRUD API)     |
+| **4–8**   | Real agent loop + `chat_service.py` + callbacks            | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
+| **9–13**  | Preference extraction + Voice UI (ASR/TTS)                 | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
+| **14–17** | Wire real auth + DB into chat, import chat_history_service | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
+| **18–20** | 🔴 Buffer — integration bugs, demo prep                     | 🔴 Buffer — integration bugs, demo prep            | 🔴 Buffer — integration bugs, demo prep            |
 
 ---
 
@@ -375,3 +368,21 @@ backend/tests/integration/
 | **Minqi** | Register/login works; JWT protected routes; chat history persists and loads                                    |
 | **Xuan**  | Trips saved and listed; full itinerary renders with map; booking links work                                    |
 | **All**   | `docker-compose up` → full flow works: login → chat → get itinerary → view trip                                |
+
+---
+
+## 🔮 Future Considerations (Post-Deadline / v2)
+
+> These features are **descoped** from the Apr 16 deadline. Revisit only if all core features are done before Day 15.
+
+### SSE Streaming
+> **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
+
+- [ ] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint
+- [ ] Stream agent thinking steps + tool calls to frontend
+- [ ] Update `useChat.ts` — consume SSE, show intermediate steps in UI
+- [ ] Add 3x auto-retry on SSE disconnect
+
+### Voice Upgrade
+- [ ] Upgrade `useTTS.ts` from `window.speechSynthesis` → Gemini TTS
+- [ ] **Gemini Live API** — single multimodal session replacing ASR + agent + TTS hooks entirely

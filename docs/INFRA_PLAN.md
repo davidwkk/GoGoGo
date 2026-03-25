@@ -101,6 +101,7 @@ gogogo/
 │   │   ├── services/                   # Business logic
 │   │   │   ├── auth_service.py
 │   │   │   ├── chat_service.py          # Agent invocation (David)
+│   │   │   ├── chat_history_service.py  # append_user/agent_message (Minqi)
 │   │   │   ├── message_service.py       # Message persistence (Minqi)
 │   │   │   ├── trip_service.py
 │   │   │   └── preference_service.py
@@ -128,7 +129,7 @@ gogogo/
 │   │   │   └── TripPage.tsx
 │   │   ├── hooks/
 │   │   │   ├── useASR.ts               # Web Speech API hook
-│   │   │   ├── useTTS.ts               # Gemini TTS hook
+│   │   │   ├── useTTS.ts               # Web Speech Synthesis hook
 │   │   │   ├── useChat.ts              # SSE streaming hook + 3x auto-retry
 │   │   │   └── useAuth.ts              # Auth state hook
 │   │   ├── services/
@@ -161,7 +162,7 @@ gogogo/
 | `trips`            | `id`, `user_id`, `session_id`, `title`, `destination`, `itinerary_json`, `created_at` | JSONB structured plan   |
 | `user_preferences` | `id`, `user_id`, `preferences_json`, `updated_at`                                     | Extracted by Flash-Lite |
 
-### Itinerary Structured Output (Pydantic — enforced via `.with_structured_output()`)
+### Itinerary Structured Output (Pydantic — enforced via `generate_content` + `response_json_schema`)
 
 ```python
 class AttractionItem(BaseModel):
@@ -315,7 +316,7 @@ User Input (voice or text)
 
 > **⚠️ SSE + DB Session Risk**: When upgrading to SSE (`StreamingResponse` in FastAPI), keeping the database session open while yielding tokens can lead to connection pool exhaustion or transaction timeouts. **Recommendation**: Save the user message to the DB before the stream starts. Collect the full assistant response in memory during the stream, and save the final assistant message to the DB after the stream finishes using a background task or a separate DB session. Do **not** hold the DB transaction open during LLM generation.
 
-**Phase 1 — Agent Loop (Sync, then SSE)**
+**Phase 1 — Agent Loop with Structured Output**
 ```
 User Message
     │
@@ -323,7 +324,7 @@ User Message
 System Prompt (injected user preferences + session context)
     │
     ▼
-Gemini 3 Flash — Direct API Agent Loop
+Gemini 3 Flash — agent loop with tools
     ├── Tool: web_search        → Tavily (primary) / SerpAPI (flights/hotels)
     ├── Tool: search_flights    → SerpAPI Google Flights
     ├── Tool: search_hotels     → SerpAPI Google Hotels
@@ -331,24 +332,13 @@ Gemini 3 Flash — Direct API Agent Loop
     └── Tool: get_map_url       → Google Maps Static/Embed API
     │
     ▼
-Agent Response (raw text summary)
-```
-
-**Phase 2 — Structured Output (after agent completes)**
-```
-Agent Loop Output (raw text summary)
-    │
-    ▼
-Gemini 3 Flash → TripItinerary (Pydantic via generate_content with response_model)
+Gemini 3 Flash → generate_content with response_json_schema → TripItinerary (Pydantic)
     │
     ▼
 Final structured JSON → Frontend (itinerary display)
 ```
 
-**Why two phases?**
-- Sync POST /chat (Phase 1) — simple, reliable, works immediately
-- SSE streaming (Phase 2) — real-time UX with agent reasoning steps
-- Structured output via google-genai's native response schema support
+**Single-phase approach:** Gemini 3 Flash handles the agent loop and returns a structured `TripItinerary` directly via `generate_content` with `response_json_schema`. No SSE streaming — the POST /chat endpoint returns the complete structured response.
 
 **Preference Extraction (async, per-session-end)**
 ```
@@ -425,7 +415,7 @@ Minimal coverage for demo — focus on agent tools and auth.
 - `schemas.py` — `TripItinerary` validates correctly
 - `security.py` — JWT encode/decode roundtrip
 - `/auth/register`, `/auth/login` — returns token, correct status codes
-- `/chat/stream` — SSE connection, structured output shape
+- `/chat` — POST /chat returns TripItinerary shape
 - `/trips` — CRUD roundtrip
 
 ### What to Skip
@@ -518,7 +508,7 @@ async def health_check():
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | **1 — Infra**       | Git init, Docker Compose, FastAPI skeleton, uv setup, Alembic init, React+Vite+shadcn init, CORS, pydantic-settings, Loguru setup                           | `docker-compose up` with all 3 containers healthy |
 | **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI, unit tests for auth service                                                | Working auth flow end-to-end                      |
-| **3 — Agent Core**  | google-genai direct + Gemini 3 Flash, all 5 tools, structured Pydantic output, SSE streaming, logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
+| **3 — Agent Core**  | google-genai direct + Gemini 3 Flash, all 5 tools, structured Pydantic output via response_json_schema, logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
 | **4 — Persistence** | Chat session + message save, trip save, Flash-Lite extraction on session end                                                                                | Full DB integration                               |
 | **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                                                              | Full working demo                                 |
 | **6 — A+ Polish**   | Weather-aware routing, preference memory injection, UI polish                                                                                               | A+ features                                       |
