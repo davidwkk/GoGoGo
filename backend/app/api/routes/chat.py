@@ -48,11 +48,17 @@ async def chat(
     )
 
     # Invoke agent (David owns this)
+    # Extract preferences dict from body if present
+    prefs_dict = None
+    if body.user_preferences:
+        prefs_dict = body.user_preferences.model_dump()
+
     result = await invoke_agent(
         user_message=body.message,
         user_id=user_id,
         session_id=session.id,
         generate_plan=body.generate_plan,
+        preferences=prefs_dict,
     )
 
     # Save assistant response
