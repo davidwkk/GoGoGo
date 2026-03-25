@@ -21,6 +21,12 @@
             "type": "command",
             "command": "filePath=$(jq -r '.tool_input.file_path // .tool_response.filePath' /dev/stdin 2>/dev/null); ext=\"${filePath##*.}\"; if [[ \"$ext\" != \"py\" && \"$ext\" != \"ts\" && \"$ext\" != \"tsx\" ]]; then npx prettier --write \"$filePath\" 2>/dev/null || true; fi",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read -r f; if [ \"${f%.py}\" != \"$f\" ] || [ \"${f%.tsx}\" != \"$f\" ] || [ \"${f%.ts}\" != \"$f\" ]; then cd backend && uv run pyright \"$f\" 2>&1 || true; fi; }",
+            "timeout": 30,
+            "statusMessage": "Running pyright..."
           }
         ]
       }
