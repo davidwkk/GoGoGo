@@ -42,11 +42,15 @@ class ChatRequest(BaseModel):
     session_id: str | None = (
         None  # None on first message; UUID anonymous token or logged-in session
     )
-    trip_parameters: TripParameters
+    # Gate for expensive agent loop — if False, simple generate_content (no tools)
+    generate_plan: bool = False
+    trip_parameters: TripParameters | None = None  # Required only when generate_plan=True
     user_preferences: UserPreference | None = None  # None if guest
 
 
 class ChatResponse(BaseModel):
     session_id: str  # always returned so frontend can store it
-    itinerary: TripItinerary
+    text: str  # plain text response (used when message_type="chat" or "error")
+    itinerary: TripItinerary | None = None  # populated only when generate_plan=True
+    message_type: str = "chat"  # "chat" | "itinerary" | "error"
     history: list[ChatMessage] = Field(default_factory=list)

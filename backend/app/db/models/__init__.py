@@ -1,5 +1,5 @@
 # Import Base first to avoid circular import issues with relationships
-from app.db.base import Base
+from app.db.base import Base  # noqa: F401
 
 # Import models directly - they use string annotations for relationships
 # to avoid needing the actual class at import time

@@ -20,6 +20,18 @@ docker-compose down -v # Reset database
 
 **Services:** Frontend http://localhost:5173 | Backend http://localhost:8000/docs
 
+## Package Manager
+
+**Use `uv`** for all Python package management — faster than pip, no virtualenv wrapper needed.
+
+```bash
+uv run pytest                    # Run tests
+uv run pyright app/             # Type check
+uv add <package>                 # Install package
+uv add <package> --dev          # Install dev dependency
+uv sync                          # Sync lockfile
+```
+
 ## Backend Commands (run in container)
 
 ```bash

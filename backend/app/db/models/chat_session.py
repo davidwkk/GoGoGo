@@ -8,6 +8,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.models.message import Message
+    from app.db.models.user import User
 
 
 class ChatSession(Base):

@@ -106,7 +106,7 @@ frontend/src/store/
 - [ ] Implement all 7 tools in `tools/` — each returns `dict` (NOT Pydantic models); keep them lightweight mid-loop
   > **Why dict not Pydantic mid-loop**: SDK serializes both equally; Pydantic mid-loop adds validation overhead with no benefit since agent doesn't enforce schemas on tool responses; final output only = Pydantic TripItinerary
   > **⚠️ All tools must use `httpx.AsyncClient`** — do NOT use `requests` (sync, blocks event loop). Use `async with httpx.AsyncClient() as client: response = await client.get(url)`
-  - `transport.py` 🟢 — SerpAPI Google Maps engine → transport options (MTR, bus, taxi, train) between cities/locations **[CORE — Route]** (small — same pattern as flights.py) | ⚠️ Add `@functools.lru_cache(maxsize=128)` on the HTTP fetch function; key = `(from_location, to_location, mode)`; demo period only — quota is low
+  - `transport.py` 🟢 — SerpAPI Google Maps engine → transport options (MTR, bus, taxi, train) between cities/locations **[CORE — Route]** (small — same pattern as flights.py) | ⚠️ **Demo-grade cache**: use module-level `dict` — `lru_cache` does NOT work on async functions (caches coroutine object, not result). Pattern: `_cache: dict[tuple, dict] = {}`; check `if key in _cache` before fetching.
   - `attractions.py` 🟠 — Wikipedia REST API (`/page/summary/{title}`) → enrich attractions with description, thumbnail, coordinates **[CORE — Introduce]** (small — no API key, simple HTTP call)
   - `maps.py` — **URL builder only** (no API calls) — generates Google Maps Embed/Static URLs from coordinates/place names
   - `search.py` — Tavily primary, SerpAPI fallback (httpx.AsyncClient)
@@ -137,6 +137,7 @@ frontend/src/store/
 - [ ] Implement `chat_service.py`
   - Run agent loop → structured `TripItinerary` via `generate_content` with `response_json_schema`
   - Wrap entire agent loop in `asyncio.wait_for(..., timeout=25.0)` — abort and return error text if wall-clock exceeds 25s
+    > ⚠️ **Demo-grade**: acceptable for low-concurrency demo use. All `httpx.AsyncClient` calls use `async with` so connections clean up on cancel. Add comment: `# Demo-grade: acceptable for low-concurrency demo use`
   - Return `ChatResponse` (not bare `TripItinerary`): `ChatResponse(text=str, itinerary=TripItinerary|None, message_type=Literal["chat","itinerary","error"])`
   - **Text fallback**: if TTS fails, return text response as well
   > **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation/google-ai/gemini-api-structured-outputs/)
@@ -159,7 +160,8 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
   - Accept optional `session_id` in request — if absent, create a new session
   - **Stub DB** (skip saving messages for now)
   - Accept `ChatRequest`, return `ChatResponse` (`text`, `itinerary | None`, `message_type`)
-  - `itinerary` is only populated when the user explicitly triggers trip generation (via "Generate Trip Plan" button in frontend); otherwise returns `text` only
+  - `itinerary` is only populated when `generate_plan=True` (user clicks "Generate Trip Plan" button); otherwise returns `text` only
+  - `generate_plan: bool = False` gate in `ChatRequest` — if False, skip full agent loop (cheap chat); if True, run full loop + structured output
 - [ ] Add `ChatResponse` schema in `schemas/chat.py`: `text: str`, `itinerary: TripItinerary | None`, `message_type: Literal["chat", "itinerary", "error"]`
 - [ ] Frontend: add "Generate Trip Plan" button in `ChatPage.tsx` / `InputBar.tsx` — pressing it sends `POST /chat` with a flag indicating full itinerary generation is requested
 - [ ] **Empty preferences fallback**: If `user_preferences` is empty/null (first chat), proceed without preferences — do NOT block or error; inject empty preferences dict into system prompt
@@ -169,8 +171,7 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [ ] Write Alembic migration for `user_preferences`
 - [ ] Implement `preference_repo.py` — upsert preferences
 - [ ] Implement `preference_service.py`
-  - Primary trigger: `POST /chat/sessions/{id}/end` — user explicitly ends session, requests trip plan
-  - Secondary (best-effort only): `sendBeacon` on frontend `beforeunload` / logout — don't architect data pipeline around this; it's unreliable
+  - Trigger: `POST /chat/sessions/{id}/end` — user explicitly ends session, requests trip plan
   - Call Gemini 3.1 Flash-Lite with full conversation history
   - Extract structured preferences from conversation
   - Save/update via `preference_repo`
@@ -426,8 +427,16 @@ backend/tests/integration/
 
 | #   | Severity | Area         | Issue                                                                                                                               |
 | --- | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 3   | 🔴        | Integration  | Mock user_id not safely isolated — use `DEV_USER_ID = 1` constant in `deps.py`; do NOT hardcode `id=1` inline                       |
+| 1   | 🟡        | Backend      | ✅ Fixed — use simple module-level dict cache (see Phase 1B transport.py note)                                                     |
+| 2   | 🟡        | Backend      | ✅ Accepted for demo — keep `wait_for` with demo-grade comment; all httpx clients use `async with` for clean cancel                  |
+| 3   | 🟢        | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                                                |
 | 5   | 🟠        | Coordination | Session ID creation — Minqi creates session on first message; David reads `session_id` from request; document in Integration Points |
+| 17  | 🟡        | Backend      | `session_repo.py` needs `get_active_session_by_user(user_id)` for page refresh resumption                                           |
+| 19  | 🟡        | Coordination | POST /trips ownership conflict — remove from public API; `chat_service.py` calls `trip_service.save_trip()` directly                |
+| 21  | 🟢        | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image                                                       |
+| 24  | 🟡        | Frontend     | `TripPage.tsx` needs empty state: `{trips.length === 0 && (...)}`                                                                   |
+| —   | 🟡        | Frontend     | `chatSlice.ts` vs `useASR.ts` dual voiceAvailable sources — pick one: `useASR.isVoiceSupported()` at init only                      |
+| —   | 🟡        | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts`                                            |
 
 ---
 
