@@ -41,13 +41,13 @@ Frontend (React + Vite)
 
 Backend (FastAPI)
 ├── /auth - JWT register/login
-├── /chat/stream - SSE streaming (Phase 1: agent reasoning)
+├── /chat - POST /chat returns structured TripItinerary
+├── /chat/sessions - Chat session management
 ├── /trips - CRUD itineraries
 ├── /users - preferences
 ├── /health - Docker healthcheck
 └── Agent (google-genai direct)
-    ├── Phase 1: Gemini 3 Flash → SSE stream (thinking, tool calls)
-    └── Phase 2: .with_structured_output() → TripItinerary (Pydantic)
+    └── Single-step: generate_content with response_json_schema → TripItinerary
 ```
 
 ## Key Files
@@ -56,14 +56,14 @@ Backend (FastAPI)
 - `backend/app/main.py` - FastAPI entry, lifespan, routers
 - `backend/app/core/config.py` - pydantic-settings env config
 - `backend/app/core/security.py` - JWT + password hashing
-- `backend/app/agent/agent.py` - google-genai setup, two-phase streaming
+- `backend/app/agent/agent.py` - google-genai setup, structured output
 - `backend/app/agent/tools/` - search, flights, hotels, weather, maps
 - `backend/app/db/models/` - SQLAlchemy models
 - `backend/app/repositories/` - DB access layer
 
 **Frontend:**
 - `frontend/src/pages/ChatPage.tsx` - Main chat UI
-- `frontend/src/hooks/useChat.ts` - SSE streaming hook
+- `frontend/src/hooks/useChat.ts` - Chat request hook
 - `frontend/src/hooks/useASR.ts` - Voice input
 - `frontend/src/hooks/useTTS.ts` - TTS playback
 - `frontend/src/store/` - Zustand state

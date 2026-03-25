@@ -59,8 +59,9 @@ gogogo/
 │   │   │   ├── routes/
 │   │   │   │   ├── auth.py             # /auth/register, /auth/login
 │   │   │   │   ├── chat.py             # POST /chat
-│   │   │   │   ├── trips.py            # /trips CRUD
-│   │   │   │   ├── users.py            # /users/me, preferences
+│   │   │   │   ├── chat_sessions.py   # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages
+│   │   │   │   ├── trips.py            # GET/DELETE /trips (POST is internal service call)
+│   │   │   │   ├── users.py            # /users/me
 │   │   │   │   └── health.py           # /health
 │   │   │   └── deps.py                 # get_current_user, get_db
 │   │   ├── agent/
@@ -315,6 +316,8 @@ User Input (voice or text)
 > **⚠️ Loop Bound (MAX_ITERATIONS = 5)**: Keep the agent loop strictly bounded (e.g., `MAX_ITERATIONS = 5`) to prevent infinite loops if the LLM gets confused or cycles. Implement a hard iteration cap in `agent.py`.
 
 > **⚠️ API Error Handling**: If an external API (like SerpAPI) fails, do **not** throw a 500 error. Instead, catch the exception in the tool and return a string like `{"error": "Flight API timeout, tell the user you cannot fetch flights right now."}`. This allows the LLM to gracefully apologize to the user instead of crashing the app. Each tool must handle its own exceptions and return error dicts.
+
+**Model:** `gemini-3-flash-preview` (agent loop) | `gemini-3.1-flash-lite-preview` (preference extraction)
 
 **Phase 1 — Agent Loop with Structured Output**
 ```

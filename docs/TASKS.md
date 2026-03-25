@@ -1,5 +1,5 @@
 # 👥 `gogogo` — Task Assignment Document
-> Deadline: Apr 16, 2026 (~20 days) | Team: 3 members | Infra: ✅ Already set up
+> Deadline: Apr 16, 2026 (~20 days) | Team: 3 members | Infra: ✅ Already set up (owned by David)
 
 ---
 
@@ -7,6 +7,7 @@
 
 | Area                                      | Owner                                         |
 | ----------------------------------------- | --------------------------------------------- |
+| Infra — Docker, FastAPI skeleton, setup  | **David**                                     |
 | Agent Core, Tools, Structured Output      | **David**                                     |
 | Preference Extraction (Flash-Lite)        | **David**                                     |
 | Voice — ASR + TTS                         | **David**                                     |
@@ -25,7 +26,7 @@ Build the intelligent core of the app: agent loop, all tools, structured output,
 ### 📦 Files Owned
 ```
 backend/app/agent/
-├── agent.py                  # Gemini 3 Flash agent setup
+├── agent.py                  # Gemini 3 Flash agent setup (gemini-3-flash-preview)
 ├── callbacks.py              # Loguru logging callbacks
 ├── schemas.py                # TripItinerary + all Pydantic output models
 └── tools/
@@ -37,8 +38,7 @@ backend/app/agent/
 
 backend/app/services/
 ├── chat_service.py           # Invoke agent, return TripItinerary (David)
-├── message_service.py        # Message persistence (Minqi)
-└── preference_service.py     # Flash-Lite extraction + save preferences
+└── preference_service.py     # Flash-Lite extraction (gemini-3.1-flash-lite-preview) + save preferences
 
 backend/app/db/models/
 └── preference.py             # user_preferences table
@@ -50,7 +50,16 @@ backend/app/schemas/
 └── chat.py                   # ChatRequest / ChatResponse schemas
 
 backend/app/api/routes/
-└── chat.py                   # POST /chat
+├── chat.py                   # POST /chat
+├── chat_sessions.py           # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages
+└── health.py                 # /health
+
+backend/app/core/
+├── config.py                 # pydantic-settings env config
+├── logging.py                # Loguru setup
+└── middleware.py             # CORS setup
+
+backend/app/main.py            # FastAPI app entrypoint
 
 frontend/src/
 ├── hooks/
@@ -62,7 +71,9 @@ frontend/src/
 │   └── TTSPlayer.tsx         # Auto-play TTS on agent response
 └── services/
     └── chatService.ts        # POST /chat API call
-```
+
+frontend/src/store/
+└── chatSlice.ts             # Chat state (session, messages)
 
 ### ✅ Task Breakdown
 
@@ -167,9 +178,9 @@ backend/app/schemas/
 └── user.py                   # UserOut schema
 
 backend/app/services/
-├── auth_service.py           # Register, login, password verify
-├── message_service.py        # Message persistence (append, get history)
-└── chat_history_service.py   # append_user_message(), append_agent_message()
+├── auth_service.py           # Register, login, password verify — owned by Minqi
+├── message_service.py        # Message persistence — owned by Minqi
+└── chat_history_service.py   # append_user/agent_message — owned by Minqi
 
 backend/app/core/
 └── security.py               # JWT encode/decode, password hashing
@@ -182,11 +193,18 @@ backend/app/api/
 
 frontend/src/
 ├── pages/
-│   └── LoginPage.tsx         # Login + Register form
+│   ├── LoginPage.tsx         # Login + Register form
+│   └── ChatPage.tsx          # Message list, input bar (owned by Minqi)
+├── components/
+│   └── chat/
+│       ├── ChatWindow.tsx    # Chat container
+│       ├── MessageBubble.tsx # User vs assistant styling
+│       └── InputBar.tsx     # Text input bar
 ├── hooks/
 │   └── useAuth.ts            # Auth state, login/logout actions
 ├── store/                    # Zustand auth slice
 └── services/
+    ├── api.ts                # Axios base client (shared)
     └── authService.ts        # POST /auth/register, /auth/login
 ```
 
@@ -270,7 +288,7 @@ backend/app/services/
 └── trip_service.py           # Save trip, list trips, get trip by id
 
 backend/app/api/routes/
-└── trips.py                  # GET/POST/DELETE /trips
+└── trips.py                  # GET/DELETE /trips (POST /trips is internal — called by chat_service directly)
 
 frontend/src/
 ├── pages/
@@ -284,7 +302,10 @@ frontend/src/
 │   └── map/
 │       └── MapEmbed.tsx       # Google Maps Embed iframe
 └── services/
-    └── tripService.ts         # GET/POST/DELETE /trips API calls
+    └── tripService.ts         # GET/DELETE /trips API calls (POST /trips is internal — called by chat_service directly)
+
+frontend/src/store/
+└── tripSlice.ts             # Trip state (trip list, current trip)
 ```
 
 ### ✅ Task Breakdown
