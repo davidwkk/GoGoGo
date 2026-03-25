@@ -330,13 +330,13 @@ Gemini 3 Flash — agent loop with tools
     └── Tool: get_map_url       → Google Maps Static/Embed API
     │
     ▼
-Gemini 3 Flash → generate_content with response_json_schema → TripItinerary (Pydantic)
+generate_content with response_json_schema → TripItinerary (Pydantic)
     │
     ▼
 Final structured JSON → Frontend (itinerary display)
 ```
 
-**Single-phase approach:** Gemini 3 Flash handles the agent loop and returns a structured `TripItinerary` directly via `generate_content` with `response_json_schema`. No SSE streaming — the POST /chat endpoint returns the complete structured response.
+**Single-step approach:** The agent loop returns a structured `TripItinerary` directly via `generate_content` with `response_json_schema`. No SSE streaming — the POST /chat endpoint returns the complete structured response.
 
 **Preference Extraction (async, per-session-end)**
 ```
