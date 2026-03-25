@@ -12,7 +12,7 @@ graph TB
     end
 
     subgraph Backend ["Backend (FastAPI + uv)"]
-        API[REST API + SSE Streaming]
+        API[REST API]
         Auth[JWT Auth]
         Agent[Gemini Agent - google-genai direct]
         LiteAgent[Gemini 3.1 Flash-Lite - Preference Extraction]
@@ -34,7 +34,7 @@ graph TB
         Alembic[Alembic Migrations]
     end
 
-    UI <-->|REST + SSE| API
+    UI <-->|REST| API
     STT --> UI
     TTS --> UI
     MAP --> UI
@@ -58,7 +58,7 @@ gogogo/
 │   │   ├── api/
 │   │   │   ├── routes/
 │   │   │   │   ├── auth.py             # /auth/register, /auth/login
-│   │   │   │   ├── chat.py             # /chat (sync, Phase 1) → /chat/stream (SSE, Phase 2)
+│   │   │   │   ├── chat.py             # POST /chat
 │   │   │   │   ├── trips.py            # /trips CRUD
 │   │   │   │   ├── users.py            # /users/me, preferences
 │   │   │   │   └── health.py           # /health
@@ -130,7 +130,7 @@ gogogo/
 │   │   ├── hooks/
 │   │   │   ├── useASR.ts               # Web Speech API hook
 │   │   │   ├── useTTS.ts               # Web Speech Synthesis hook
-│   │   │   ├── useChat.ts              # SSE streaming hook + 3x auto-retry
+│   │   │   ├── useChat.ts              # Chat request hook
 │   │   │   └── useAuth.ts              # Auth state hook
 │   │   ├── services/
 │   │   │   ├── api.ts                  # Axios base client
@@ -308,13 +308,11 @@ User Input (voice or text)
 
 ## 🤖 Agent Design
 
-### Two-Phase Approach
+### Agent Loop
 
 > **⚠️ Loop Bound (MAX_ITERATIONS = 5)**: Keep the agent loop strictly bounded (e.g., `MAX_ITERATIONS = 5`) to prevent infinite loops if the LLM gets confused or cycles. Implement a hard iteration cap in `agent.py`.
 
 > **⚠️ API Error Handling**: If an external API (like SerpAPI) fails, do **not** throw a 500 error. Instead, catch the exception in the tool and return a string like `{"error": "Flight API timeout, tell the user you cannot fetch flights right now."}`. This allows the LLM to gracefully apologize to the user instead of crashing the app. Each tool must handle its own exceptions and return error dicts.
-
-> **⚠️ SSE + DB Session Risk**: When upgrading to SSE (`StreamingResponse` in FastAPI), keeping the database session open while yielding tokens can lead to connection pool exhaustion or transaction timeouts. **Recommendation**: Save the user message to the DB before the stream starts. Collect the full assistant response in memory during the stream, and save the final assistant message to the DB after the stream finishes using a background task or a separate DB session. Do **not** hold the DB transaction open during LLM generation.
 
 **Phase 1 — Agent Loop with Structured Output**
 ```
@@ -354,7 +352,7 @@ Session End → Gemini 3.1 Flash-Lite → extract/update preferences → saved t
 | Layer           | Tool                            | Purpose                               |
 | --------------- | ------------------------------- | ------------------------------------- |
 | **App-level**   | `loguru`                        | API requests, auth, DB ops, errors    |
-| **Agent-level** | Custom `BaseCallbackHandler` | Tool calls, LLM I/O, agent loop steps |
+| **Agent-level** | Custom Loguru callbacks | Tool calls, LLM I/O, agent loop steps |
 
 ### Log Levels by Event
 
@@ -388,7 +386,7 @@ LOG_LEVEL=INFO     # prod
 ### Sample Terminal Output
 
 ```
-10:42:01 | INFO    | api.chat      - [POST /chat/stream] user_id=3 session_id=7
+10:42:01 | INFO    | api.chat      - [POST /chat] user_id=3 session_id=7
 10:42:01 | INFO    | agent.callbacks - [TOOL CALL] search_hotels | {'query': 'hotels in Tokyo'}
 10:42:02 | INFO    | agent.callbacks - [TOOL RESULT] [{'name': 'Shinjuku Granbell', 'price': '$120/night'}]...
 10:42:02 | INFO    | agent.callbacks - [TOOL CALL] get_weather | {'city': 'Tokyo'}
@@ -406,7 +404,7 @@ Minimal coverage for demo — focus on agent tools and auth.
 | Layer           | Scope                                                                                                       | Tools                          |
 | --------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ |
 | **Unit**        | Agent tools (search, flights, hotels, weather, maps), Pydantic schemas, JWT encode/decode, password hashing | `pytest`                       |
-| **Integration** | API endpoints (auth, chat stream, trips), DB operations                                                     | `pytest` + `httpx.AsyncClient` |
+| **Integration** | API endpoints (auth, chat, trips), DB operations                                                     | `pytest` + `httpx.AsyncClient` |
 
 ### What to Test
 
@@ -434,7 +432,7 @@ backend/tests/
 │   └── test_security/        # JWT, password hashing
 ├── integration/
 │   ├── test_auth/            # /register, /login
-│   ├── test_chat/            # /chat/stream
+│   ├── test_chat/            # /chat
 │   └── test_trips/           # CRUD
 └── conftest.py               # Shared fixtures (test db, async client)
 ```
@@ -510,7 +508,7 @@ async def health_check():
 | **2 — Auth**        | User model + migration, register/login endpoints, JWT middleware, login page UI, unit tests for auth service                                                | Working auth flow end-to-end                      |
 | **3 — Agent Core**  | google-genai direct + Gemini 3 Flash, all 5 tools, structured Pydantic output via response_json_schema, logging callbacks, unit tests for tools | Agent returns structured `TripItinerary`          |
 | **4 — Persistence** | Chat session + message save, trip save, Flash-Lite extraction on session end                                                                                | Full DB integration                               |
-| **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Gemini TTS), itinerary display, map embed                                                              | Full working demo                                 |
+| **5 — Frontend**    | Chat UI, voice input (Web Speech API), TTS playback (Web Speech Synthesis), itinerary display, map embed                                                              | Full working demo                                 |
 | **6 — A+ Polish**   | Weather-aware routing, preference memory injection, UI polish                                                                                               | A+ features                                       |
 
 ---
@@ -537,3 +535,21 @@ async def health_check():
 | Containerization          | Docker + Docker Compose                       |
 | Env Config                | pydantic-settings                             |
 | Logging                   | Loguru (app) + Custom Callbacks (agent)       |
+
+---
+
+## 🔮 Future Considerations (Post-Deadline / v2)
+
+> These features are **descoped** from the Apr 16 deadline. Revisit only if all core features are done before Day 15.
+
+### SSE Streaming
+> **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
+
+- [ ] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint
+- [ ] Stream agent thinking steps + tool calls to frontend
+- [ ] Update `useChat.ts` — consume SSE, show intermediate steps in UI
+- [ ] Add 3x auto-retry on SSE disconnect
+
+### Voice Upgrade
+- [ ] Upgrade `useTTS.ts` from `window.speechSynthesis` → Gemini TTS
+- [ ] **Gemini Live API** — single multimodal session replacing ASR + agent + TTS hooks entirely
