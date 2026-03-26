@@ -11,8 +11,6 @@ Key implementation notes:
 
 from __future__ import annotations
 
-import httpx
-
 from google.genai import Client, types
 from loguru import logger
 
@@ -53,11 +51,10 @@ def _get_client() -> Client:
         api_key = settings.GEMINI_API_KEY
         if settings.LLM_PROXY_ENABLED:
             logger.info(f"[AGENT] Using VPN proxy: {settings.SOCKS5_PROXY_URL}")
-            httpx_client = httpx.Client(proxy=settings.SOCKS5_PROXY_URL)
-            _client = Client(
-                api_key=api_key,
-                http_options={"httpx_client": httpx_client},
+            http_opts = types.HttpOptionsDict(
+                client_args={"proxy": settings.SOCKS5_PROXY_URL}
             )
+            _client = Client(api_key=api_key, http_options=http_opts)
         else:
             _client = Client(api_key=api_key)
     return _client

@@ -1,8 +1,5 @@
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 import socket
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from google.genai import Client
 from sqlalchemy.orm import Session
@@ -11,7 +8,12 @@ from app.api.deps import get_current_user_optional, get_db
 from app.core.config import settings
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import invoke_agent
-from app.services.message_service import append_message, create_session, get_or_create_guest, get_session
+from app.services.message_service import (
+    append_message,
+    create_session,
+    get_or_create_guest,
+    get_session,
+)
 
 router = APIRouter()
 
@@ -40,17 +42,6 @@ def _is_proxy_reachable() -> bool:
         return False
 
 
-@asynccontextmanager
-async def _httpx_client() -> AsyncGenerator[httpx.Client, None]:
-    if settings.LLM_PROXY_ENABLED:
-        proxy = settings.SOCKS5_PROXY_URL
-        with httpx.Client(proxy=proxy, timeout=30.0) as client:
-            yield client
-    else:
-        with httpx.Client(timeout=30.0) as client:
-            yield client
-
-
 @router.get("/test-llm")
 async def test_llm() -> dict:
     """
@@ -68,18 +59,22 @@ async def test_llm() -> dict:
             ),
         }
 
-    client = Client(api_key=settings.GEMINI_API_KEY)
+    from google.genai import types
 
-    async with _httpx_client() as httpx_client:
-        http_opts = {"httpx_client": httpx_client} if settings.LLM_PROXY_ENABLED else {}
-        response = client.models.generate_content(
-            model=settings.GEMINI_LITE_MODEL,
-            contents="Say hello in exactly 3 words.",
-            config={
-                "temperature": 0.0,
-                "http_options": http_opts,
-            },
-        )
+    http_opts = (
+        types.HttpOptionsDict(client_args={"proxy": settings.SOCKS5_PROXY_URL})
+        if settings.LLM_PROXY_ENABLED
+        else None
+    )
+    client = Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
+
+    response = client.models.generate_content(
+        model=settings.GEMINI_LITE_MODEL,
+        contents="Say hello in exactly 3 words.",
+        config={
+            "temperature": 0.0,
+        },
+    )
 
     return {
         "model": settings.GEMINI_LITE_MODEL,
@@ -122,7 +117,9 @@ async def chat(
             guest = get_or_create_guest(db, body.session_id)
             # Find the guest's most recent session, or create one
             from sqlalchemy import desc, select
+
             from app.db.models.chat_session import ChatSession
+
             result = db.execute(
                 select(ChatSession)
                 .where(ChatSession.guest_id == guest.id)
