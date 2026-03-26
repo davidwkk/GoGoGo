@@ -90,10 +90,12 @@ async def test_llm() -> dict:
 async def _stream_chat(
     message: str,
     preferences: dict | None = None,
+    max_retries: int = 2,
 ) -> AsyncIterator[str]:
     """
     Stream chat response chunks via SSE.
     Uses generate_content_streaming with tools disabled for simplicity.
+    Retries on transient errors (503, rate limit) with exponential backoff.
     """
     import logging
 
@@ -105,7 +107,7 @@ async def _stream_chat(
 
     if not _is_proxy_reachable() and not settings.LLM_PROXY_ENABLED:
         logger.warning("[_stream_chat] Proxy not reachable, returning error")
-        yield f"data: {json.dumps({'error': 'Proxy not reachable'})}\n\n"
+        yield f"data: {json.dumps({'error': 'Proxy not reachable. Please check your VPN/proxy connection.'})}\n\n"
         return
 
     http_opts = (
@@ -126,37 +128,82 @@ async def _stream_chat(
     )
     logger.info(f"[_stream_chat] System instruction: {system_instruction[:200]}...")
 
-    try:
-        logger.info("[_stream_chat] Starting generate_content_stream")
-        stream = client.models.generate_content_stream(
-            model=settings.GEMINI_LITE_MODEL,
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=[types.Part.from_text(text=message)],
-                )
-            ],
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-            ),
+    def _is_transient_error(e: Exception) -> bool:
+        """Check if error is a transient error that may succeed on retry."""
+        error_str = str(e).lower()
+        return (
+            "503" in error_str
+            or "unavailable" in error_str
+            or "rate limit" in error_str
+            or "429" in error_str
+            or "timeout" in error_str
         )
 
-        chunk_count = 0
-        for chunk in stream:
+    for attempt in range(max_retries + 1):
+        try:
             logger.info(
-                f"[_stream_chat] Received chunk {chunk_count}: {repr(chunk.text)[:100] if chunk.text else 'empty'}"
+                f"[_stream_chat] Starting generate_content_stream (attempt {attempt + 1})"
             )
-            if chunk.text:
-                chunk_count += 1
-                yield f"data: {json.dumps({'chunk': chunk.text})}\n\n"
-                await asyncio.sleep(0)  # Allow other coroutines to run
+            stream = client.models.generate_content_stream(
+                model=settings.GEMINI_LITE_MODEL,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text=message)],
+                    )
+                ],
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                ),
+            )
 
-        logger.info(f"[_stream_chat] Stream complete. Total chunks: {chunk_count}")
-        yield f"data: {json.dumps({'done': True})}\n\n"
+            chunk_count = 0
+            for chunk in stream:
+                logger.info(
+                    f"[_stream_chat] Received chunk {chunk_count}: {repr(chunk.text)[:100] if chunk.text else 'empty'}"
+                )
+                if chunk.text:
+                    chunk_count += 1
+                    yield f"data: {json.dumps({'chunk': chunk.text})}\n\n"
+                    await asyncio.sleep(0)  # Allow other coroutines to run
 
-    except Exception as e:
-        logger.error(f"[_stream_chat] Exception: {type(e).__name__}: {str(e)}")
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            logger.info(f"[_stream_chat] Stream complete. Total chunks: {chunk_count}")
+            yield f"data: {json.dumps({'done': True})}\n\n"
+            return  # Success
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.warning(
+                f"[_stream_chat] Exception on attempt {attempt + 1}: {type(e).__name__}: {error_msg}"
+            )
+
+            if _is_transient_error(e) and attempt < max_retries:
+                wait_time = 2**attempt  # Exponential backoff: 1s, 2s
+                logger.info(
+                    f"[_stream_chat] Transient error, retrying in {wait_time}s..."
+                )
+                yield f"data: {json.dumps({'status': f'Retrying due to high demand ({attempt + 1}/{max_retries + 1})...'})}\n\n"
+                await asyncio.sleep(wait_time)
+                continue
+            else:
+                # Non-transient error or max retries reached
+                if "unavailable" in error_msg.lower() or "503" in error_msg:
+                    user_message = (
+                        "The AI service is temporarily unavailable due to high demand. "
+                        "This is usually temporary - please try again in a few moments."
+                    )
+                elif "rate limit" in error_msg.lower() or "429" in error_msg:
+                    user_message = "You've reached the rate limit. Please wait a moment and try again."
+                else:
+                    user_message = f"An error occurred: {error_msg}"
+                logger.error(
+                    f"[_stream_chat] Non-retryable error: {type(e).__name__}: {error_msg}"
+                )
+                yield f"data: {json.dumps({'error': user_message})}\n\n"
+                return
+
+    # Should not reach here, but handle it
+    yield f"data: {json.dumps({'error': 'Failed after retries. Please try again later.'})}\n\n"
 
 
 @router.post("/stream")
@@ -190,6 +237,7 @@ async def chat_stream(
                 raise HTTPException(status_code=400, detail="Invalid session_id")
             guest = get_or_create_guest(db, body.session_id)
             from sqlalchemy import desc, select
+
             from app.db.models.chat_session import ChatSession
 
             result = db.execute(

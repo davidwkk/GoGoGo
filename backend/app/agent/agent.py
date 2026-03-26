@@ -60,6 +60,26 @@ def _get_client() -> Client:
     return _client
 
 
+def _log_usage(response) -> dict | None:
+    """Extract and log token usage from response."""
+    try:
+        usage = response.usage_metadata
+        if usage:
+            token_usage = {
+                "prompt_tokens": getattr(usage, "prompt_token_count", None),
+                "candidates_tokens": getattr(usage, "candidates_token_count", None),
+                "total_tokens": getattr(usage, "total_token_count", None),
+            }
+            logger.bind(
+                event="token_usage",
+                **token_usage,
+            ).info("Token usage")
+            return token_usage
+    except Exception:
+        pass
+    return None
+
+
 def _build_system_prompt(preferences: dict | None = None) -> str:
     prefs_section = f"User preferences: {preferences}" if preferences else ""
     return (
@@ -177,8 +197,9 @@ async def run_agent(
         else:
             # No function calls — plain text response, loop done
             text = response.text or ""
+            token_usage = _log_usage(response)
             logger.info(f"[AGENT] Final response (text only): {text[:200]}...")
-            log_agent_finish(text)
+            log_agent_finish(text, token_usage)
             return text
 
     # Max iterations reached
@@ -232,6 +253,7 @@ async def run_agent_structured(
             contents=messages,
             config=config,
         )
+        _log_usage(response)
 
         if response.candidates and response.candidates[0].content:
             messages.append(response.candidates[0].content)
@@ -295,7 +317,8 @@ async def run_agent_structured(
 
     raw_text = response.text
     text = raw_text if raw_text is not None else ""
-    log_agent_finish(text)
+    token_usage = _log_usage(response)
+    log_agent_finish(text, token_usage)
 
     try:
         return TripItinerary.model_validate_json(text)

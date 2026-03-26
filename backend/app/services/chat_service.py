@@ -102,10 +102,22 @@ async def invoke_agent(
             message_type="error",
         )
     except Exception as e:
+        error_msg = str(e).lower()
+        if "503" in error_msg or "unavailable" in error_msg:
+            user_message = (
+                "The AI service is temporarily unavailable due to high demand. "
+                "This is usually temporary - please try again in a few moments."
+            )
+        elif "rate limit" in error_msg or "429" in error_msg:
+            user_message = (
+                "You've reached the rate limit. Please wait a moment and try again."
+            )
+        else:
+            user_message = f"An error occurred: {e}"
         logger.error(f"[invoke_agent] Exception: {type(e).__name__}: {str(e)}")
         return ChatResponse(
             session_id=session_id_str,
-            text=f"An error occurred: {e}",
+            text=user_message,
             itinerary=None,
             message_type="error",
         )
