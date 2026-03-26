@@ -10,6 +10,7 @@ export function ChatPage() {
   const navigate = useNavigate();
   const messages = useChatStore(s => s.messages);
   const isLoading = useChatStore(s => s.isLoading);
+  const isThinking = useChatStore(s => s.isThinking);
   const isLoggedIn = !!localStorage.getItem('token');
 
   const testLLM = async () => {
@@ -103,6 +104,15 @@ export function ChatPage() {
               </div>
             </div>
           ))}
+
+          {/* Thinking indicator — shown after user message while waiting for response */}
+          {isThinking && (
+            <div className="flex justify-start">
+              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                <span className="animate-pulse">Thinking...</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input bar */}

@@ -19,6 +19,7 @@ export function InputBar({ disabled }: InputBarProps) {
   const voiceAvailable = useChatStore(s => s.voiceAvailable);
   const isLoading = useChatStore(s => s.isLoading);
   const addMessage = useChatStore(s => s.addMessage);
+  const setThinking = useChatStore(s => s.setThinking);
   const { sendMessage } = useChat({});
   const { isListening, startListening, stopListening } = useASR({
     onTranscript: result => {
@@ -39,12 +40,15 @@ export function InputBar({ disabled }: InputBarProps) {
 
     // Show user's message immediately
     addMessage({ role: 'user', content: trimmed });
+    setThinking(true);
 
     setText(''); // Clear after adding message
     try {
       await sendMessage(trimmed, generatePlan);
     } catch {
       // Error handled by useChat
+    } finally {
+      setThinking(false);
     }
   };
 
