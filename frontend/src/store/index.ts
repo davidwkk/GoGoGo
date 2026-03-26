@@ -22,6 +22,9 @@ export interface ChatState {
   isLoading: boolean;
   isThinking: boolean;
 
+  // Stream cancellation
+  abortController: AbortController | null;
+
   // Actions
   setSessionId: (id: string) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
@@ -29,6 +32,7 @@ export interface ChatState {
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setThinking: (thinking: boolean) => void;
+  setAbortController: (controller: AbortController | null) => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -37,6 +41,7 @@ export const useChatStore = create<ChatState>(set => ({
   voiceAvailable: isVoiceSupported(),
   isLoading: false,
   isThinking: false,
+  abortController: null,
 
   setSessionId: id => set({ sessionId: id }),
 
@@ -60,4 +65,6 @@ export const useChatStore = create<ChatState>(set => ({
   setLoading: loading => set({ isLoading: loading }),
 
   setThinking: thinking => set({ isThinking: thinking }),
+
+  setAbortController: controller => set({ abortController: controller }),
 }));

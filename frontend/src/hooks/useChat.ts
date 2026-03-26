@@ -11,7 +11,7 @@ interface UseChatOptions {
 }
 
 export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
-  const { sessionId, addMessage, setSessionId, setLoading } = useChatStore();
+  const { sessionId, addMessage, setSessionId, setLoading, setAbortController } = useChatStore();
 
   const sendMessage = useCallback(
     async (message: string, generatePlan = false, tripParams?: ChatRequest['trip_parameters']) => {
@@ -52,12 +52,16 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
           let fullText = '';
           let chunkCount = 0;
 
+          // Create abort controller for this stream
+          const abortController = new AbortController();
+          setAbortController(abortController);
+
           // Add empty assistant message and get its ID
           const msgId = addMessage({ role: 'assistant', content: '' });
           console.log('[useChat] Added empty assistant message, id:', msgId);
 
           try {
-            for await (const chunk of chatService.streamMessage(req)) {
+            for await (const chunk of chatService.streamMessage(req, abortController.signal)) {
               chunkCount++;
               fullText += chunk;
               console.log(
@@ -83,6 +87,12 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
               setSessionId(sessionId);
             }
           } catch (err) {
+            // Ignore AbortError — user cancelled the stream
+            if (err instanceof Error && err.name === 'AbortError') {
+              console.log('[useChat] Stream cancelled by user');
+              setAbortController(null);
+              return;
+            }
             let errorMsg = err instanceof Error ? err.message : 'Stream failed';
             // Make "model high demand" errors more user-friendly
             if (errorMsg.includes('high demand') || errorMsg.includes('503')) {
@@ -92,6 +102,8 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             console.error('[useChat] Stream error:', errorMsg);
             useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
             onError?.(errorMsg);
+          } finally {
+            setAbortController(null);
           }
 
           return;

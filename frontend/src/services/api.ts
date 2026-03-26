@@ -52,7 +52,10 @@ export const chatService = {
    * Stream chat response chunks for low-latency updates.
    * Yields text chunks as they arrive from the server.
    */
-  async *streamMessage(req: ChatRequest): AsyncGenerator<string, void, unknown> {
+  async *streamMessage(
+    req: ChatRequest,
+    signal?: AbortSignal
+  ): AsyncGenerator<string, void, unknown> {
     console.log('[streamMessage] Starting stream for message:', req.message.substring(0, 50));
     const token = localStorage.getItem('token');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -64,6 +67,7 @@ export const chatService = {
       method: 'POST',
       headers,
       body: JSON.stringify(req),
+      signal,
     });
 
     console.log('[streamMessage] Response status:', response.status, 'ok:', response.ok);

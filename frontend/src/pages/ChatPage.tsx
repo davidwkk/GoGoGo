@@ -14,8 +14,13 @@ export function ChatPage() {
   const isLoggedIn = !!localStorage.getItem('token');
   const clearMessages = useChatStore(s => s.clearMessages);
   const setSessionId = useChatStore(s => s.setSessionId);
+  const abortController = useChatStore(s => s.abortController);
 
   const startNewChat = () => {
+    // Cancel any in-progress stream first
+    if (abortController) {
+      abortController.abort();
+    }
     clearMessages();
     setSessionId(null);
     localStorage.removeItem('guest_uid');
