@@ -49,3 +49,39 @@ export const chatService = {
   },
 };
 
+// ─── User / Profile ───────────────────────────────────────────────────────────
+
+export interface UserPreferences {
+  travel_style: string;
+  dietary_restriction: string;
+  hotel_tier: string;
+  budget_min_hkd: number;
+  budget_max_hkd: number;
+  max_flight_stops: number;
+}
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  preferences: UserPreferences | null;
+  created_at: string;
+}
+
+export interface UpdateProfileRequest {
+  username?: string;
+  preferences?: Partial<UserPreferences>;
+}
+
+export const userService = {
+  async getProfile(): Promise<UserProfile> {
+    const { data } = await apiClient.get<UserProfile>("/users/me");
+    return data;
+  },
+
+  async updateProfile(req: UpdateProfileRequest): Promise<UserProfile> {
+    const { data } = await apiClient.patch<UserProfile>("/users/me", req);
+    return data;
+  },
+};
+

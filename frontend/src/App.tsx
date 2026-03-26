@@ -1,24 +1,22 @@
-import { Button } from "@/components/ui/button";
+// App — Root component with routing
+
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+import { ChatPage } from "@/pages/ChatPage";
+import { LoginPage } from "@/pages/LoginPage";
+import { ProfilePage } from "@/pages/ProfilePage";
+import { TripPage } from "@/pages/TripPage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/chat" replace />} />
-        <Route path="/login" element={<div>Login Page (TODO)</div>} />
-        <Route
-          path="/chat"
-          element={
-            <div className="flex gap-2 p-4">
-              <Button>Default</Button>
-              <Button variant="outline">Outline</Button>
-              <Button variant="destructive">Destructive</Button>
-              <Button variant="ghost">Ghost</Button>
-            </div>
-          }
-        />
-        <Route path="/trips" element={<div>Trips Page (TODO)</div>} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/trips" element={<TripPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
     </BrowserRouter>
   );
