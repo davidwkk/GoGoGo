@@ -17,9 +17,13 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
     async (message: string, generatePlan = false, tripParams?: ChatRequest['trip_parameters']) => {
       setLoading(true);
       try {
+        // Use guest_uid from localStorage for unauthenticated users
+        const guestUid = localStorage.getItem('guest_uid');
+        const effectiveSessionId = sessionId ?? guestUid ?? undefined;
+
         const req: ChatRequest = {
           message,
-          session_id: sessionId ?? undefined,
+          session_id: effectiveSessionId,
           generate_plan: generatePlan,
           trip_parameters: tripParams,
         };

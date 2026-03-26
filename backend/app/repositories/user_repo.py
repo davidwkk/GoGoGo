@@ -1,11 +1,13 @@
 """User repository — DB access for users table."""
 
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from app.db.models.user import User
 
 
-def get_user_by_id(db: Session, user_id: int) -> User | None:
+def get_user_by_id(db: Session, user_id: UUID) -> User | None:
     """Fetch a user by their ID."""
     return db.query(User).filter(User.id == user_id).first()
 
@@ -24,7 +26,7 @@ def create_user(db: Session, username: str, email: str, hashed_password: str) ->
     return user
 
 
-def update_username(db: Session, user_id: int, username: str) -> User | None:
+def update_username(db: Session, user_id: UUID, username: str) -> User | None:
     """Update a user's username. Returns the updated user or None if not found."""
     user = get_user_by_id(db, user_id)
     if not user:

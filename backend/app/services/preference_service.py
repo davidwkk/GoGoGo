@@ -6,6 +6,7 @@ Extracts structured preferences from conversation and saves via preference_repo.
 """
 
 from __future__ import annotations
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -28,7 +29,7 @@ SYSTEM_PROMPT = (
 
 async def extract_and_save_preferences(
     db: Session,
-    user_id: int,
+    user_id: UUID,
     conversation_history: list[dict],
 ) -> UserPreference:
     """

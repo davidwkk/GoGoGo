@@ -38,8 +38,8 @@ services:
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
-      # VPN Proxy settings (optional - only used when LLM_PROXY_ENABLED=1)
-      LLM_PROXY_ENABLED: ${LLM_PROXY_ENABLED:-0}
+      # VPN Proxy settings (optional - only used when LLM_PROXY_ENABLED=true)
+      LLM_PROXY_ENABLED: ${LLM_PROXY_ENABLED:-false}
       SOCKS5_PROXY_URL: ${SOCKS5_PROXY_URL:-socks5://vpn-proxy:1080}
     networks:
       - gogogo-shared

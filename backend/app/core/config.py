@@ -1,3 +1,6 @@
+from typing import Any
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +21,18 @@ class Settings(BaseSettings):
     # Proxy settings for LLM calls (optional)
     LLM_PROXY_ENABLED: bool = False
     SOCKS5_PROXY_URL: str = "socks5://host.docker.internal:1080"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _parse_env_strings(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            for field in ("LLM_PROXY_ENABLED",):
+                if field in data:
+                    v = data[field]
+                    if isinstance(v, str):
+                        data[field] = v.lower() in ("true", "1", "yes")
+            return data
+        return data
 
     model_config = SettingsConfigDict(env_file=".env")
 
