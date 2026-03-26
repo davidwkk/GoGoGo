@@ -1,6 +1,6 @@
 // ChatPage — Main chat UI with AI travel agent
 
-import { LogIn, MessageSquare, Zap } from 'lucide-react';
+import { MessageSquare, Settings, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/store';
 import { InputBar } from '@/components/chat/InputBar';
@@ -59,13 +59,21 @@ export function ChatPage() {
                 </p>
               </div>
               {!isLoggedIn && (
-                <button
-                  onClick={() => navigate('/login')}
-                  className="mt-1 flex items-center gap-1.5 h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
-                >
-                  <LogIn className="size-3.5" />
-                  Sign in
-                </button>
+                <div className="flex items-center gap-2 mt-1">
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    onClick={() => navigate('/preferences')}
+                    className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-4 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <Settings className="size-3.5" />
+                    Set preferences
+                  </button>
+                </div>
               )}
             </div>
           )}

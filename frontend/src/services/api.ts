@@ -49,6 +49,43 @@ export const chatService = {
   },
 };
 
+// ─── Guest Preferences (localStorage) ─────────────────────────────────────────
+
+export interface GuestPreferences {
+  travel_style: string;
+  dietary_restriction: string;
+  hotel_tier: string;
+  budget_min_hkd: number;
+  budget_max_hkd: number;
+  max_flight_stops: number;
+}
+
+const GUEST_PREFS_KEY = 'guest_preferences';
+
+export const DEFAULT_GUEST_PREFERENCES: GuestPreferences = {
+  travel_style: 'relaxing',
+  dietary_restriction: 'none',
+  hotel_tier: 'mid_range',
+  budget_min_hkd: 5000,
+  budget_max_hkd: 20000,
+  max_flight_stops: 1,
+};
+
+export const guestPreferences = {
+  get(): GuestPreferences {
+    try {
+      const stored = localStorage.getItem(GUEST_PREFS_KEY);
+      return stored ? JSON.parse(stored) : DEFAULT_GUEST_PREFERENCES;
+    } catch {
+      return DEFAULT_GUEST_PREFERENCES;
+    }
+  },
+
+  set(prefs: GuestPreferences): void {
+    localStorage.setItem(GUEST_PREFS_KEY, JSON.stringify(prefs));
+  },
+};
+
 // ─── User / Profile ───────────────────────────────────────────────────────────
 
 export interface UserPreferences {
