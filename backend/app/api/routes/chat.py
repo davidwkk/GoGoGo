@@ -17,8 +17,9 @@ router = APIRouter()
 
 
 def _is_proxy_reachable() -> bool:
+    """Returns True if a proxy is configured and the SOCKS5 proxy is reachable."""
     if not settings.LLM_PROXY_ENABLED:
-        return True
+        return False  # No proxy — direct call not allowed
     proxy_url = settings.SOCKS5_PROXY_URL
     try:
         host = proxy_url.split("://")[1].rsplit(":", 1)[0]
@@ -55,12 +56,16 @@ async def test_llm() -> dict:
     """
     Simple test endpoint that calls Gemini 3.1 flash lite preview directly.
     """
-    if settings.LLM_PROXY_ENABLED and not _is_proxy_reachable():
+    if not _is_proxy_reachable():
         return {
             "model": settings.GEMINI_LITE_MODEL,
             "response": None,
-            "proxy_enabled": True,
-            "error": "Proxy not reachable. Check your VPN/proxy connection.",
+            "proxy_enabled": settings.LLM_PROXY_ENABLED,
+            "error": (
+                "Proxy not reachable. Check your VPN/proxy connection."
+                if settings.LLM_PROXY_ENABLED
+                else "No proxy configured. Set LLM_PROXY_ENABLED=true and SOCKS5_PROXY_URL to use the LLM."
+            ),
         }
 
     client = Client(api_key=settings.GEMINI_API_KEY)
