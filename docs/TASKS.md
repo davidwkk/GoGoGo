@@ -87,23 +87,23 @@ frontend/src/store/
 > **⚠️ Feedback Loop Risk**: `useASR` must explicitly mute/pause `useTTS` when recording starts. Add a pulsing mic visual indicator so users can distinguish listening vs. speaking states.
 > **⚠️ Text Fallback**: Every voice interaction must have a text fallback — if ASR fails or TTS is unavailable, fall back to on-screen text input/display.
 
-- [ ] `useASR.ts` — Web Speech API, start/stop recording, emit transcript
+- [x] `useASR.ts` — Web Speech API, start/stop recording, emit transcript ✅
   - Must emit partial transcripts in real-time
   - Must handle browser permission denial gracefully → fall back to text input
   - Export `isVoiceSupported(): boolean` — checks `window.SpeechRecognition ?? window.webkitSpeechRecognition` for browser support
-- [ ] `useTTS.ts` — Browser `window.speechSynthesis`
+- [x] `useTTS.ts` — Browser `window.speechSynthesis` ✅
   - Must fall back to text display if TTS unavailable
   - Export `isTTSAvailable(): boolean` — checks `window.speechSynthesis` support
-- [ ] `VoiceButton.tsx` — Mic toggle, pulsing recording indicator (only rendered if `isVoiceSupported()`)
-- [ ] `TTSPlayer.tsx` — Auto-play TTS when new assistant message arrives; if TTS fails, show text instead
-- [ ] `chatSlice.ts` — add `voiceAvailable: boolean` flag; initialize with `isVoiceSupported()` on app load; gate voice UI on this flag
-- [ ] `useChat.ts` — wire VoiceButton → `chatService.ts` → `POST /chat`; handle `ChatResponse` (text + itinerary + message_type); needed for Phase 1A voice integration
+- [x] `VoiceButton.tsx` — Mic toggle, pulsing recording indicator (only rendered if `isVoiceSupported()`) ✅
+- [x] `TTSPlayer.tsx` — Auto-play TTS when new assistant message arrives; if TTS fails, show text instead ✅
+- [x] `chatSlice.ts` — add `voiceAvailable: boolean` flag; initialize with `isVoiceSupported()` on app load; gate voice UI on this flag ✅ (as `store/index.ts`)
+- [x] `useChat.ts` — wire VoiceButton → `chatService.ts` → `POST /chat`; handle `ChatResponse` (text + itinerary + message_type); needed for Phase 1A voice integration ✅
 
 #### Phase 1B — Live Search Tools (Days 1–6)
 > **⚠️ No Hallucination**: Every itinerary item must be fetched via live API — the agent MUST call at least one tool for every flight, hotel, attraction, transport, or weather data point. Pure LLM generation without tool calls is not acceptable.
 > **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
 
-- [ ] Implement all 7 tools in `tools/` — each returns `dict` (NOT Pydantic models); keep them lightweight mid-loop
+- [x] Implement all 7 tools in `tools/` — each returns `dict` (NOT Pydantic models); keep them lightweight mid-loop ✅
   > **Why dict not Pydantic mid-loop**: SDK serializes both equally; Pydantic mid-loop adds validation overhead with no benefit since agent doesn't enforce schemas on tool responses; final output only = Pydantic TripItinerary
   > **⚠️ All tools must use `httpx.AsyncClient`** — do NOT use `requests` (sync, blocks event loop). Use `async with httpx.AsyncClient() as client: response = await client.get(url)`
   - `transport.py` 🟢 — SerpAPI Google Maps engine → transport options (MTR, bus, taxi, train) between cities/locations **[CORE — Route]** (small — same pattern as flights.py) | ⚠️ **Demo-grade cache**: use module-level `dict` — `lru_cache` does NOT work on async functions (caches coroutine object, not result). Pattern: `_cache: dict[tuple, dict] = {}`; check `if key in _cache` before fetching.
@@ -113,13 +113,13 @@ frontend/src/store/
   - `flights.py` — SerpAPI Google Flights (httpx.AsyncClient)
   - `hotels.py` — SerpAPI Google Hotels (httpx.AsyncClient)
   - `weather.py` — OpenWeatherMap current weather (httpx.AsyncClient)
-- [ ] Define all Pydantic output models in `agent/schemas.py`
+- [x] Define all Pydantic output models in `agent/schemas.py` ✅
   > **⚠️ Pydantic type rules**: ✅ `str`, `int`, `float`, `bool`, `list[str]`, `enum`, nested `BaseModel` | ⚠️ `dict[str, int]` — not well supported, avoid | ❌ Raw `dict` types not supported by Gemini schema
   - `AttractionItem` (with `description`, `thumbnail_url`, `coordinates` from Wikipedia) **[CORE — Introduce]**
   - `HotelItem`, `FlightItem`, `TransportOption` (with `from_location`, `to_location`, `transport_type`, `duration`, `cost`) **[CORE — Route]**
   - `DayPlan` (includes `TransportOption[]` for between-location routing), `TripItinerary` **[CORE — Plan]**
-- [ ] **Day 3 — Commit `MOCK_ITINERARY` fixture** (hardcoded `TripItinerary` instance in `tests/fixtures/`) to unblock Minqi and Xuan
-- [ ] Set up Gemini 3 Flash agent in `agent.py`
+- [x] **Day 3 — Commit `MOCK_ITINERARY` fixture** (hardcoded `TripItinerary` instance in `tests/fixtures/`) to unblock Minqi and Xuan ✅
+- [x] Set up Gemini 3 Flash agent in `agent.py` ✅
   - Register all tools
   - System prompt: `prefs_section = f"User preferences: {preferences}" if preferences else ""` then `f"You are a travel planning assistant. {prefs_section}..."` — **never** use `{preferences or ""}` or direct None interpolation (it literally injects the word "None")
   - System prompt enforces: **every response item must come from a tool call** — no pure LLM text for facts/prices/times
@@ -133,8 +133,8 @@ frontend/src/store/
 > **⚠️ History management**: You must manually append both model turns and tool responses to the `messages` list between iterations — Gemini does not auto-manage conversation history.
 > **⚠️ Pydantic bridging**: Use `response_json_schema=TripItinerary.model_json_schema()` (pass the raw dict, NOT a string) with `response_mime_type="application/json"`. Validate response with `TripItinerary.model_validate_json(response.text)`. Union types are supported — see the ModerationResult example in the codebase.
 
-- [ ] Implement `callbacks.py` — Loguru logging for tool calls + agent finish
-- [ ] Implement `chat_service.py`
+- [x] Implement `callbacks.py` — Loguru logging for tool calls + agent finish ✅
+- [x] Implement `chat_service.py` ✅
   - Run agent loop → structured `TripItinerary` via `generate_content` with `response_json_schema`
   - Wrap entire agent loop in `asyncio.wait_for(..., timeout=25.0)` — abort and return error text if wall-clock exceeds 25s
     > ⚠️ **Demo-grade**: acceptable for low-concurrency demo use. All `httpx.AsyncClient` calls use `async with` so connections clean up on cancel. Add comment: `# Demo-grade: acceptable for low-concurrency demo use`
@@ -155,27 +155,27 @@ response = client.models.generate_content(
 )
 result = TripItinerary.model_validate_json(response.text)  # validate response
 ```
-- [ ] Expose `POST /chat` in `api/routes/chat.py`
+- [x] Expose `POST /chat` in `api/routes/chat.py` ✅
   - Use **mocked auth** (`get_current_user` returns dummy user)
   - Accept optional `session_id` in request — if absent, create a new session
   - **Stub DB** (skip saving messages for now)
   - Accept `ChatRequest`, return `ChatResponse` (`text`, `itinerary | None`, `message_type`)
   - `itinerary` is only populated when `generate_plan=True` (user clicks "Generate Trip Plan" button); otherwise returns `text` only
   - `generate_plan: bool = False` gate in `ChatRequest` — if False, skip full agent loop (cheap chat); if True, run full loop + structured output
-- [ ] Add `ChatResponse` schema in `schemas/chat.py`: `text: str`, `itinerary: TripItinerary | None`, `message_type: Literal["chat", "itinerary", "error"]`
-- [ ] Frontend: add "Generate Trip Plan" button in `ChatPage.tsx` / `InputBar.tsx` — pressing it sends `POST /chat` with a flag indicating full itinerary generation is requested
-- [ ] **Empty preferences fallback**: If `user_preferences` is empty/null (first chat), proceed without preferences — do NOT block or error; inject empty preferences dict into system prompt
+- [x] Add `ChatResponse` schema in `schemas/chat.py`: `text: str`, `itinerary: TripItinerary | None`, `message_type: Literal["chat", "itinerary", "error"]` ✅
+- [x] Frontend: add "Generate Trip Plan" button in `ChatPage.tsx` / `InputBar.tsx` — pressing it sends `POST /chat` with a flag indicating full itinerary generation is requested ✅ (as `InputBar.tsx` in `components/chat/`)
+- [x] **Empty preferences fallback**: If `user_preferences` is empty/null (first chat), proceed without preferences — do NOT block or error; inject empty preferences dict into system prompt ✅
 
 #### Phase 2 — Preference Extraction (Days 9–13)
-- [ ] Define `user_preferences` table in `db/models/preference.py`
-- [ ] Write Alembic migration for `user_preferences`
-- [ ] Implement `preference_repo.py` — upsert preferences
-- [ ] Implement `preference_service.py`
+- [x] Define `user_preferences` table in `db/models/preference.py` ✅
+- [x] Write Alembic migration for `user_preferences` ✅
+- [x] Implement `preference_repo.py` — upsert preferences ✅
+- [x] Implement `preference_service.py` ✅
   - Trigger: `POST /chat/sessions/{id}/end` — user explicitly ends session, requests trip plan
   - Call Gemini 3.1 Flash-Lite with full conversation history
   - Extract structured preferences from conversation
   - Save/update via `preference_repo`
-- [ ] Inject saved preferences into agent system prompt in `agent.py`
+- [x] Inject saved preferences into agent system prompt in `agent.py` ✅
 
 #### Phase 3 — Auth Wiring + Integration (Days 13–20)
 - [ ] Remove mock `get_current_user` once Minqi's JWT middleware is ready
@@ -190,12 +190,13 @@ backend/tests/unit/
 │   ├── test_search.py        # Returns expected shape
 │   ├── test_flights.py
 │   ├── test_hotels.py
-│   ├── test_weather.py
-│   ├── test_maps.py
+│   ├── test_weather.py       ✅ (3 tests)
+│   ├── test_maps.py          ✅ (5 tests)
 │   ├── test_transport.py     # SerpAPI Google Maps returns transport options
-│   └── test_attractions.py   # Wikipedia API returns summary + thumbnail
+│   └── test_attractions.py   ✅ (3 tests)
 └── test_schemas/
-    └── test_trip_itinerary.py  # TripItinerary validates correctly
+    └── test_trip_itinerary.py  ✅ DONE — 9 tests covering roundtrip, validation, constraints
+```
 
 backend/tests/integration/
 └── test_chat/
@@ -432,11 +433,12 @@ backend/tests/integration/
 | 3   | 🟢        | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                                                |
 | 5   | 🟠        | Coordination | Session ID creation — Minqi creates session on first message; David reads `session_id` from request; document in Integration Points |
 | 17  | 🟡        | Backend      | `session_repo.py` needs `get_active_session_by_user(user_id)` for page refresh resumption                                           |
-| 19  | 🟡        | Coordination | POST /trips ownership conflict — remove from public API; `chat_service.py` calls `trip_service.save_trip()` directly                |
+| 19  | 🟡        | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly              |
 | 21  | 🟢        | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image                                                       |
 | 24  | 🟡        | Frontend     | `TripPage.tsx` needs empty state: `{trips.length === 0 && (...)}`                                                                   |
-| —   | 🟡        | Frontend     | `chatSlice.ts` vs `useASR.ts` dual voiceAvailable sources — pick one: `useASR.isVoiceSupported()` at init only                      |
+| —   | 🟡        | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`                    |
 | —   | 🟡        | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts`                                            |
+| —   | 🔴        | User Feature | Implement full user profile: DB model, repo, service, route (GET/PATCH /users/me), frontend ProfilePage with shadcn/ui |
 
 ---
 
