@@ -72,13 +72,39 @@ async def test_llm() -> dict:
     )
     client = Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
 
-    response = client.models.generate_content(
-        model=settings.GEMINI_LITE_MODEL,
-        contents="Say hello in exactly 3 words.",
-        config={
-            "temperature": 0.0,
-        },
-    )
+    try:
+        response = client.models.generate_content(
+            model=settings.GEMINI_LITE_MODEL,
+            contents="Say hello in exactly 3 words.",
+            config={
+                "temperature": 0.0,
+            },
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "503" in error_msg or "unavailable" in error_msg.lower():
+            return {
+                "model": settings.GEMINI_LITE_MODEL,
+                "response": None,
+                "proxy_enabled": settings.LLM_PROXY_ENABLED,
+                "error": (
+                    "The AI service is temporarily unavailable due to high demand. "
+                    "This is usually temporary - please try again in a few moments."
+                ),
+            }
+        elif "rate limit" in error_msg.lower() or "429" in error_msg:
+            return {
+                "model": settings.GEMINI_LITE_MODEL,
+                "response": None,
+                "proxy_enabled": settings.LLM_PROXY_ENABLED,
+                "error": "You've reached the rate limit. Please wait a moment and try again.",
+            }
+        return {
+            "model": settings.GEMINI_LITE_MODEL,
+            "response": None,
+            "proxy_enabled": settings.LLM_PROXY_ENABLED,
+            "error": f"LLM error: {error_msg}",
+        }
 
     return {
         "model": settings.GEMINI_LITE_MODEL,
@@ -130,19 +156,25 @@ async def _stream_chat(
 
     def _is_transient_error(e: Exception) -> bool:
         """Check if error is a transient error that may succeed on retry."""
-        error_str = str(e).lower()
+        error_type = type(e).__name__
+        error_str = str(e)
+        # Explicitly handle ServerError from google.genai (contains "503 UNAVAILABLE")
+        if error_type == "ServerError":
+            return True
+        error_lower = error_str.lower()
         return (
             "503" in error_str
-            or "unavailable" in error_str
-            or "rate limit" in error_str
+            or "unavailable" in error_lower
+            or "rate limit" in error_lower
             or "429" in error_str
-            or "timeout" in error_str
+            or "timeout" in error_lower
+            or error_type.endswith("Timeout")
         )
 
     for attempt in range(max_retries + 1):
         try:
             logger.info(
-                f"[_stream_chat] Starting generate_content_stream (attempt {attempt + 1})"
+                f"[_stream_chat] Starting generate_content_stream (attempt {attempt + 1}/{max_retries + 1})"
             )
             stream = client.models.generate_content_stream(
                 model=settings.GEMINI_LITE_MODEL,
@@ -173,33 +205,39 @@ async def _stream_chat(
 
         except Exception as e:
             error_msg = str(e)
+            is_transient = _is_transient_error(e)
             logger.warning(
-                f"[_stream_chat] Exception on attempt {attempt + 1}: {type(e).__name__}: {error_msg}"
+                f"[_stream_chat] Exception on attempt {attempt + 1}/{max_retries + 1}: "
+                f"{type(e).__name__}: {error_msg[:200]} | transient={is_transient}"
             )
 
-            if _is_transient_error(e) and attempt < max_retries:
+            if is_transient and attempt < max_retries:
                 wait_time = 2**attempt  # Exponential backoff: 1s, 2s
                 logger.info(
-                    f"[_stream_chat] Transient error, retrying in {wait_time}s..."
+                    f"[_stream_chat] Transient error detected, retrying in {wait_time}s..."
                 )
                 yield f"data: {json.dumps({'status': f'Retrying due to high demand ({attempt + 1}/{max_retries + 1})...'})}\n\n"
                 await asyncio.sleep(wait_time)
                 continue
             else:
                 # Non-transient error or max retries reached
-                if "unavailable" in error_msg.lower() or "503" in error_msg:
+                error_lower = error_msg.lower()
+                if "unavailable" in error_lower or "503" in error_msg:
                     user_message = (
                         "The AI service is temporarily unavailable due to high demand. "
                         "This is usually temporary - please try again in a few moments."
                     )
-                elif "rate limit" in error_msg.lower() or "429" in error_msg:
+                elif "rate limit" in error_lower or "429" in error_msg:
                     user_message = "You've reached the rate limit. Please wait a moment and try again."
                 else:
-                    user_message = f"An error occurred: {error_msg}"
+                    user_message = "An error occurred. Please try again."
                 logger.error(
-                    f"[_stream_chat] Non-retryable error: {type(e).__name__}: {error_msg}"
+                    f"[_stream_chat] Non-retryable error after {attempt + 1} attempt(s): "
+                    f"{type(e).__name__}: {error_msg[:200]}"
                 )
+                # Yield error AND done to ensure frontend receives it
                 yield f"data: {json.dumps({'error': user_message})}\n\n"
+                yield f"data: {json.dumps({'done': True, 'error': user_message})}\n\n"
                 return
 
     # Should not reach here, but handle it
@@ -226,6 +264,14 @@ async def chat_stream(
         )
 
     user_id = current_user["user_id"] if current_user else None
+
+    # Verify user exists in DB (token may be valid but user deleted)
+    if user_id is not None:
+        from app.repositories.user_repo import get_user_by_id
+
+        if get_user_by_id(db, user_id) is None:
+            # User no longer exists — treat as unauthenticated (guest)
+            user_id = None
 
     # Get or create session
     session = None
@@ -259,7 +305,10 @@ async def chat_stream(
         if user_id is not None:
             session = create_session(db, user_id=user_id)
         else:
-            guest_uid = body.session_id or ""
+            # Generate new guest UID if none provided
+            from uuid import uuid4
+
+            guest_uid = body.session_id or str(uuid4())
             guest = get_or_create_guest(db, guest_uid)
             session = create_session(db, user_id=None, guest_id=guest.id)
 
@@ -305,6 +354,14 @@ async def chat(
     """
     user_id = current_user["user_id"] if current_user else None
 
+    # Verify user exists in DB (token may be valid but user deleted)
+    if user_id is not None:
+        from app.repositories.user_repo import get_user_by_id
+
+        if get_user_by_id(db, user_id) is None:
+            # User no longer exists — treat as unauthenticated (guest)
+            user_id = None
+
     # Get or create session
     # session_id can be:
     #   - integer str (DB pk) for registered users
@@ -343,9 +400,12 @@ async def chat(
         if user_id is not None:
             session = create_session(db, user_id=user_id)
         else:
-            # Guest with no session_id — this shouldn't happen with proper frontend,
-            # but handle it by requiring guest_uid
-            raise HTTPException(status_code=400, detail="guest_uid required for guests")
+            # Generate new guest UID if none provided
+            from uuid import uuid4
+
+            guest_uid = body.session_id or str(uuid4())
+            guest = get_or_create_guest(db, guest_uid)
+            session = create_session(db, user_id=None, guest_id=guest.id)
 
     # Save user message
     append_message(

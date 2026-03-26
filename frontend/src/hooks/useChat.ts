@@ -61,6 +61,19 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
 
           try {
             for await (const chunk of chatService.streamMessage(req, abortController.signal)) {
+              // Handle error marker from streamMessage (async generators don't propagate throws)
+              if (typeof chunk === 'string' && chunk.startsWith('__ERROR__:')) {
+                const errorMsg = chunk.slice('__ERROR__:'.length);
+                setThinking(false);
+                if (msgId !== null) {
+                  useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
+                } else {
+                  addMessage({ role: 'assistant', content: `Error: ${errorMsg}` });
+                }
+                onError?.(errorMsg);
+                setAbortController(null);
+                return;
+              }
               chunkCount++;
               fullText += chunk;
               console.log(

@@ -128,7 +128,9 @@ export const chatService = {
                 typeof data.error === 'string'
                   ? data.error
                   : data.error?.message || JSON.stringify(data.error);
-              throw new Error(errorMsg);
+              // Yield error as special marker instead of throwing
+              // because async generators don't propagate thrown exceptions to for-await
+              yield `__ERROR__:${errorMsg}`;
             } else if (data.done) {
               console.log('[streamMessage] Stream done signal received');
               return;
