@@ -1,4 +1,5 @@
 # GoGoGo
+
 Final Project for CSCI3280 2025-26 Sem2 — AI-powered travel agent
 
 ## Quick Start
@@ -34,13 +35,13 @@ docker-compose up --build
 
 Get free API keys and add them to your `.env`:
 
-| Service | Purpose | Sign Up |
-| ------- | ------- | ------- |
-| `GEMINI_API_KEY` | AI agent + TTS | https://aistudio.google.com/ |
-| `SERPAPI_KEY` | Flights, hotels, search | https://serpapi.com/ |
-| `TAVILY_API_KEY` | Web search (primary) | https://tavily.com/ |
-| `OPENWEATHER_API_KEY` | Weather data | https://openweathermap.org/ |
-| `GOOGLE_MAPS_API_KEY` | Map display | https://console.cloud.google.com/ |
+| Service               | Purpose                 | Sign Up                           |
+| --------------------- | ----------------------- | --------------------------------- |
+| `GEMINI_API_KEY`      | AI agent + TTS          | https://aistudio.google.com/      |
+| `SERPAPI_KEY`         | Flights, hotels, search | https://serpapi.com/              |
+| `TAVILY_API_KEY`      | Web search (primary)    | https://tavily.com/               |
+| `OPENWEATHER_API_KEY` | Weather data            | https://openweathermap.org/       |
+| `GOOGLE_MAPS_API_KEY` | Map display             | https://console.cloud.google.com/ |
 
 > **Demo cost:** $0 (all services have generous free tiers)
 
@@ -48,13 +49,13 @@ Get free API keys and add them to your `.env`:
 
 ## Tech Stack
 
-| Layer | Stack |
-| ----- | ----- |
-| Backend | FastAPI, SQLAlchemy, PostgreSQL 16, Alembic |
-| Frontend | React, Vite, shadcn/ui, Zustand |
-| AI | Gemini 3 Flash, Gemini 3.1 Flash-Lite |
-| APIs | SerpAPI, Tavily, OpenWeatherMap, Google Maps |
-| Tooling | Ruff, Docker, Docker Compose |
+| Layer    | Stack                                        |
+| -------- | -------------------------------------------- |
+| Backend  | FastAPI, SQLAlchemy, PostgreSQL 16, Alembic  |
+| Frontend | React, Vite, shadcn/ui, Zustand              |
+| AI       | Gemini 3 Flash, Gemini 3.1 Flash-Lite        |
+| APIs     | SerpAPI, Tavily, OpenWeatherMap, Google Maps |
+| Tooling  | Ruff, Docker, Docker Compose                 |
 
 ---
 
@@ -70,6 +71,7 @@ Tools checked by `./scripts/check-deps.sh`:
 - **Ruff** — `pip install ruff` (optional, for linting)
 
 Run without `--install` to just check:
+
 ```bash
 ./scripts/check-deps.sh
 ```
@@ -103,10 +105,10 @@ gogogo/
 
 ## Group Members
 
-| Name | Student ID |
-| ---- | ---------- |
+| Name          | Student ID |
+| ------------- | ---------- |
 | Wong Kwok Kam | 1155192018 |
-| Peng Minqi | 1155191548 |
+| Peng Minqi    | 1155191548 |
 | Lim Xuan Qing | 1155264390 |
 
 ---
@@ -118,6 +120,7 @@ gogogo/
 ### Service Management
 
 Use `./dev.sh` for an interactive launcher with:
+
 - **Build modes:** quick restart, build with cache, build without cache, full rebuild
 - **Health checks:** waits for all services (frontend, backend, db) to be healthy
 - **Log viewer:** tail logs for any service after startup
@@ -136,6 +139,7 @@ docker-compose logs -f backend                       # Watch logs
 ### Backend IDE Setup (optional)
 
 For local autocomplete in your IDE:
+
 ```bash
 cd backend
 uv venv
