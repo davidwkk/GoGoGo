@@ -11,6 +11,7 @@ export function ChatPage() {
   const messages = useChatStore(s => s.messages);
   const isLoading = useChatStore(s => s.isLoading);
   const isThinking = useChatStore(s => s.isThinking);
+  const setThinking = useChatStore(s => s.setThinking);
   const isLoggedIn = !!localStorage.getItem('token');
   const clearMessages = useChatStore(s => s.clearMessages);
   const setSessionId = useChatStore(s => s.setSessionId);
@@ -129,17 +130,14 @@ export function ChatPage() {
             </div>
           ))}
 
-          {/* Thinking indicator — shown while waiting for response */}
-          {isLoading &&
-            messages.length > 0 &&
-            messages[messages.length - 1].role === 'assistant' &&
-            messages[messages.length - 1].content === '' && (
-              <div className="flex justify-start">
-                <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
-                  <span className="animate-pulse">Thinking...</span>
-                </div>
+          {/* Thinking indicator — shown while waiting for first content */}
+          {isThinking && (
+            <div className="flex justify-start">
+              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                <span className="animate-pulse">Thinking...</span>
               </div>
-            )}
+            </div>
+          )}
         </div>
 
         {/* Input bar */}

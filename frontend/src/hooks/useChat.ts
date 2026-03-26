@@ -11,7 +11,8 @@ interface UseChatOptions {
 }
 
 export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
-  const { sessionId, addMessage, setSessionId, setLoading, setAbortController } = useChatStore();
+  const { sessionId, addMessage, setSessionId, setLoading, setAbortController, setThinking } =
+    useChatStore();
 
   const sendMessage = useCallback(
     async (message: string, generatePlan = false, tripParams?: ChatRequest['trip_parameters']) => {
@@ -51,14 +52,12 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
         if (!generatePlan) {
           let fullText = '';
           let chunkCount = 0;
+          let msgId: string | null = null;
 
           // Create abort controller for this stream
           const abortController = new AbortController();
           setAbortController(abortController);
-
-          // Add empty assistant message and get its ID
-          const msgId = addMessage({ role: 'assistant', content: '' });
-          console.log('[useChat] Added empty assistant message, id:', msgId);
+          setThinking(true);
 
           try {
             for await (const chunk of chatService.streamMessage(req, abortController.signal)) {
@@ -72,8 +71,14 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                 '| fullText length:',
                 fullText.length
               );
-              // Update the assistant message with accumulated text
-              useChatStore.getState().updateStreamingMessage(msgId, fullText);
+              // On first chunk, create the assistant message
+              if (msgId === null) {
+                msgId = addMessage({ role: 'assistant', content: chunk });
+                setThinking(false);
+              } else {
+                // Update the assistant message with accumulated text
+                useChatStore.getState().updateStreamingMessage(msgId, fullText);
+              }
             }
             console.log(
               '[useChat] Stream complete. Total chunks:',
@@ -90,6 +95,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             // Ignore AbortError — user cancelled the stream
             if (err instanceof Error && err.name === 'AbortError') {
               console.log('[useChat] Stream cancelled by user');
+              setThinking(false);
               setAbortController(null);
               return;
             }
@@ -100,9 +106,16 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                 'The AI is experiencing high demand right now. Please try again in a few moments.';
             }
             console.error('[useChat] Stream error:', errorMsg);
-            useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
+            setThinking(false);
+            // If we already have a message, update it; otherwise create one with the error
+            if (msgId !== null) {
+              useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
+            } else {
+              addMessage({ role: 'assistant', content: `Error: ${errorMsg}` });
+            }
             onError?.(errorMsg);
           } finally {
+            setThinking(false);
             setAbortController(null);
           }
 
@@ -150,7 +163,16 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
         console.log('[useChat] setLoading(false) called');
       }
     },
-    [sessionId, addMessage, setSessionId, setLoading, onItinerary, onError]
+    [
+      sessionId,
+      addMessage,
+      setSessionId,
+      setLoading,
+      setAbortController,
+      setThinking,
+      onItinerary,
+      onError,
+    ]
   );
 
   return { sendMessage };
