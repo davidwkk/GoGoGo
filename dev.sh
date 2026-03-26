@@ -24,7 +24,7 @@ error()   { echo -e "${RED}[$(date +%H:%M:%S)] ✘ $*${RESET}";   }
 cleanup() {
   echo ""
   warn "Interrupt received. Stopping all services..."
-  docker compose down --remove-orphans
+  docker compose -f docker-compose.yml -f docker-compose.vpn.yml down --remove-orphans
   success "All services stopped. Goodbye!"
   exit 0
 }
@@ -54,7 +54,28 @@ success ".env file found."
 
 export LOG_LEVEL=DEBUG
 
-# ── 3. Build mode menu ───────────────────────────────────────
+# ── 3. Ensure gogogo-shared network exists ────────────────────
+if ! docker network inspect gogogo-shared > /dev/null 2>&1; then
+  log "Creating gogogo-shared network..."
+  docker network create gogogo-shared
+  success "Network created."
+else
+  success "Network gogogo-shared already exists."
+fi
+
+# ── 4. VPN option ─────────────────────────────────────────────
+echo -e ""
+echo -e "  ${BOLD}Build VPN proxy service?${RESET}"
+echo -e "  ${YELLOW}(Requires: vpn/nordvpn_creds.txt)${RESET}"
+echo -e ""
+echo -e "  ${CYAN}[1]${RESET} No  ${YELLOW}(default)${RESET}"
+echo -e "  ${CYAN}[2]${RESET} Yes"
+echo -e ""
+read -rn 1 -p "  Enter choice [1-2] (default: 1): " VPN_CHOICE
+echo ""
+VPN_CHOICE="${VPN_CHOICE:-1}"
+
+# ── 5. Build mode menu ───────────────────────────────────────
 echo -e ""
 echo -e "  ${BOLD}Select a build mode:${RESET}"
 echo -e ""
@@ -69,30 +90,36 @@ echo ""
 BUILD_CHOICE="${BUILD_CHOICE:-1}"
 
 
-# ── 4. Prune dangling images ──────────────────────────────────
+# ── 6. Prune dangling images ──────────────────────────────────
 log "Removing dangling images..."
 docker image prune -f
 success "Dangling images removed."
 
-# ── 5. Execute build mode ─────────────────────────────────────
+# ── 7. Execute build mode ─────────────────────────────────────
+BASE_COMPOSE="docker compose -f docker-compose.yml"
+if [ "$VPN_CHOICE" = "2" ]; then
+  BASE_COMPOSE="$BASE_COMPOSE -f docker-compose.vpn.yml"
+  warn "VPN proxy will be started alongside main services."
+fi
+
 case "$BUILD_CHOICE" in
   1)
     log "Quick restart: bringing down existing containers..."
-    docker compose down --remove-orphans
+    $BASE_COMPOSE down --remove-orphans
     success "Containers removed. Volumes kept."
     log "Starting services..."
-    docker compose up --remove-orphans -d "$@"
+    $BASE_COMPOSE up --remove-orphans -d "$@"
     ;;
   2)
     log "Building with cache and starting services..."
-    docker compose up --build --remove-orphans -d "$@"
+    $BASE_COMPOSE up --build --remove-orphans -d "$@"
     ;;
   3)
     log "Building without cache..."
-    docker compose build --no-cache
+    $BASE_COMPOSE build --no-cache
     success "Build complete."
     log "Starting services..."
-    docker compose up --remove-orphans -d "$@"
+    $BASE_COMPOSE up --remove-orphans -d "$@"
     ;;
   4)
     warn "Build from scratch will remove all volumes including the database!"
@@ -100,13 +127,13 @@ case "$BUILD_CHOICE" in
     echo ""
     if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
       log "Bringing down containers and volumes..."
-      docker compose down --remove-orphans -v
+      $BASE_COMPOSE down --remove-orphans -v
       success "Containers and volumes removed."
       log "Building without cache..."
-      docker compose build --no-cache
+      $BASE_COMPOSE build --no-cache
       success "Build complete."
       log "Starting services..."
-      docker compose up --remove-orphans -d "$@"
+      $BASE_COMPOSE up --remove-orphans -d "$@"
     else
       warn "Aborted. Exiting."
       exit 0
@@ -114,7 +141,7 @@ case "$BUILD_CHOICE" in
     ;;
   5)
     log "Starting services without build..."
-    docker compose up --remove-orphans -d "$@"
+    $BASE_COMPOSE up --remove-orphans -d "$@"
     ;;
   *)
     error "Invalid choice: '$BUILD_CHOICE'. Exiting."
@@ -124,7 +151,7 @@ esac
 
 success "Services started."
 
-# ── 6. Per-service health check ───────────────────────────────
+# ── 8. Per-service health check ───────────────────────────────
 check_service_health() {
   local SERVICE="$1"
   local LABEL="$2"
@@ -134,7 +161,7 @@ check_service_health() {
 
   while true; do
     local CONTAINER_ID
-    CONTAINER_ID=$(docker compose ps -q "$SERVICE" 2>/dev/null | head -1)
+    CONTAINER_ID=$($BASE_COMPOSE ps -q "$SERVICE" 2>/dev/null | head -1)
 
     STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
       "$CONTAINER_ID" 2>/dev/null || echo "unknown")
@@ -145,7 +172,7 @@ check_service_health() {
         return 0
         ;;
       unhealthy)
-        error "${LABEL} is unhealthy. Run: docker compose logs ${SERVICE}"
+        error "${LABEL} is unhealthy. Run: $BASE_COMPOSE logs ${SERVICE}"
         return 1
         ;;
       none)
@@ -185,11 +212,11 @@ check_service_health "db"       "Database (db)" || FAILED=1
 echo ""
 if [ "$FAILED" -eq 1 ]; then
   error "One or more services failed. Bringing down all containers..."
-  docker compose down --remove-orphans
+  $BASE_COMPOSE down --remove-orphans
   exit 1
 fi
 
-# ── 7. Access URLs ────────────────────────────────────────────
+# ── 9. Access URLs ────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${GREEN}║              Services are running!               ║${RESET}"
@@ -198,7 +225,7 @@ echo -e "${BOLD}${GREEN}║  🌐 Frontend  →  http://localhost:5173          
 echo -e "${BOLD}${GREEN}║  ⚙️  Backend   →  http://localhost:8000           ║${RESET}"
 echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}\n"
 
-# ── 8. Seed DB ───────────────────────────────────────────────
+# ── 10. Seed DB ───────────────────────────────────────────────
 echo -e "${YELLOW}Seed the database with sample users?${RESET}"
 echo -e "  ${CYAN}[1]${RESET} Yes, seed sample users  ${YELLOW}(alice, bob, charlie / password123)${RESET} ${GREEN}[default]${RESET}"
 echo -e "  ${CYAN}[2]${RESET} No, skip seeding"
@@ -210,7 +237,7 @@ SEED_CHOICE="${SEED_CHOICE:-1}"
 case "$SEED_CHOICE" in
   1)
     log "Seeding database..."
-    docker compose exec backend python /app/scripts/seed_db.py
+    $BASE_COMPOSE exec backend python /app/scripts/seed_db.py
     success "Database seeded."
     ;;
   2)
@@ -221,7 +248,7 @@ case "$SEED_CHOICE" in
     ;;
 esac
 
-# ── 9. Log viewer ─────────────────────────────────────────────
+# ── 11. Log viewer ─────────────────────────────────────────────
 echo -e "${YELLOW}View service logs?${RESET}"
 echo -e "  ${CYAN}[1]${RESET} All          ${GREEN}[default]${RESET}"
 echo -e "  ${CYAN}[2]${RESET} Frontend (fn)"
@@ -235,10 +262,10 @@ LOG_CHOICE="${LOG_CHOICE:-1}"
 
 
 case "$LOG_CHOICE" in
-  1) log "Showing all logs (Ctrl+C to exit)...";       docker compose logs -f           ;;
-  2) log "Showing Frontend logs (Ctrl+C to exit)...";  docker compose logs -f frontend  ;;
-  3) log "Showing Backend logs (Ctrl+C to exit)...";   docker compose logs -f backend   ;;
-  4) log "Showing Database logs (Ctrl+C to exit)...";  docker compose logs -f db        ;;
+  1) log "Showing all logs (Ctrl+C to exit)...";       $BASE_COMPOSE logs -f           ;;
+  2) log "Showing Frontend logs (Ctrl+C to exit)...";  $BASE_COMPOSE logs -f frontend  ;;
+  3) log "Showing Backend logs (Ctrl+C to exit)...";   $BASE_COMPOSE logs -f backend   ;;
+  4) log "Showing Database logs (Ctrl+C to exit)...";  $BASE_COMPOSE logs -f db        ;;
   5) log "Skipping log view. All done!" ;;
   *) log "Invalid choice. Skipping log view." ;;
 esac

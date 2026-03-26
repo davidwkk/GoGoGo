@@ -1,12 +1,54 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from google.genai import Client
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.core.config import settings
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import invoke_agent
 from app.services.message_service import append_message, create_session, get_session
 
 router = APIRouter()
+
+
+@asynccontextmanager
+async def _httpx_client() -> AsyncGenerator[httpx.Client, None]:
+    if settings.LLM_PROXY_ENABLED:
+        proxy = settings.SOCKS5_PROXY_URL
+        with httpx.Client(proxy=proxy, timeout=30.0) as client:
+            yield client
+    else:
+        with httpx.Client(timeout=30.0) as client:
+            yield client
+
+
+@router.get("/test-llm")
+async def test_llm() -> dict:
+    """
+    Simple test endpoint that calls Gemini 3.1 flash lite preview directly.
+    """
+    client = Client(api_key=settings.GEMINI_API_KEY)
+
+    async with _httpx_client() as httpx_client:
+        http_opts = {"httpx_client": httpx_client} if settings.LLM_PROXY_ENABLED else {}
+        response = client.models.generate_content(
+            model=settings.GEMINI_LITE_MODEL,
+            contents="Say hello in exactly 3 words.",
+            config={
+                "temperature": 0.0,
+                "http_options": http_opts,
+            },
+        )
+
+    return {
+        "model": settings.GEMINI_LITE_MODEL,
+        "response": response.text,
+        "proxy_enabled": settings.LLM_PROXY_ENABLED,
+    }
 
 
 @router.post("", response_model=ChatResponse)

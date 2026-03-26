@@ -1,6 +1,6 @@
 # Pre-commit hooks for GoGoGo project
 #
-# Install: pre-commit install
+# Install: uv pip install pre-commit && pre-commit install
 # Run manually: pre-commit run --all-files
 
 repos:

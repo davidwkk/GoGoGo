@@ -1,14 +1,24 @@
 // ChatPage — Main chat UI with AI travel agent
 
-import { LogIn, MessageSquare } from 'lucide-react';
+import { LogIn, MessageSquare, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/store';
 import { InputBar } from '@/components/chat/InputBar';
+import { apiClient } from '@/services/api';
 
 export function ChatPage() {
   const navigate = useNavigate();
   const messages = useChatStore(s => s.messages);
   const isLoading = useChatStore(s => s.isLoading);
+
+  const testLLM = async () => {
+    try {
+      const res = await apiClient.get('/chat/test-llm');
+      alert(`Model: ${res.data.model}\nResponse: ${res.data.response}\nProxy: ${res.data.proxy_enabled}`);
+    } catch (e) {
+      alert('LLM test failed: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -22,6 +32,15 @@ export function ChatPage() {
           <div>
             <h1 className="text-sm font-semibold">GoGoGo</h1>
             <p className="text-xs text-muted-foreground">AI Travel Agent</p>
+          </div>
+          <div className="ml-auto">
+            <button
+              onClick={testLLM}
+              className="flex items-center gap-1.5 h-8 rounded-xl bg-yellow-500 text-black px-3 text-xs font-medium hover:bg-yellow-400 transition-colors"
+            >
+              <Zap className="size-3" />
+              Test LLM
+            </button>
           </div>
         </header>
 
