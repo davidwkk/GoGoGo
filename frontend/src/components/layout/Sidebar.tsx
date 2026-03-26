@@ -1,7 +1,7 @@
 // Sidebar — Left navigation bar with icon links
 
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Map, User, Plane } from "lucide-react";
+import { MessageSquare, Map, User } from "lucide-react";
 
 const navItems = [
   { icon: MessageSquare, label: "Chat", path: "/chat" },
@@ -44,10 +44,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom — placeholder for future user avatar */}
-      <div className="flex items-center justify-center rounded-xl bg-muted size-10 text-muted-foreground">
-        <Plane className="size-4 rotate-45" />
-      </div>
     </aside>
   );
 }

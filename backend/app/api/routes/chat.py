@@ -62,12 +62,23 @@ async def chat(
         db=db,
     )
 
-    # Save assistant response
+    # Save assistant response — store text content only
+    # (itinerary is returned in the API response separately, not in chat history)
+    message_content = result.text
+    if result.message_type == "itinerary" and result.itinerary:
+        # Show a brief summary in the chat history instead of empty message
+        message_content = (
+            f"✅ Trip plan generated for {result.itinerary.destination}! "
+            f"View the full itinerary in your trips."
+        )
+    elif result.message_type == "error":
+        message_content = result.text or "An error occurred."
+
     append_message(
         db,
         session_id=session.id,
         role="assistant",
-        content=result.model_dump_json(),
+        content=message_content,
     )
 
     return result

@@ -178,10 +178,10 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] Inject saved preferences into agent system prompt in `agent.py` ✅
 
 #### Phase 3 — Auth Wiring + Integration (Days 13–20)
-- [ ] Remove mock `get_current_user` once Minqi's JWT middleware is ready
-- [ ] Wire message saving once Minqi's `message_repo.py` is ready
-- [ ] Wire `save_trip` once Xuan's `trip_service.py` is ready
-- [ ] Wire voice into Chat UI (coordinate with Minqi's `ChatPage`)
+- [x] Remove mock `get_current_user` — deps.py now uses real JWT decode, returns `user_id` int from token ✅
+- [x] Wire message saving — chat.py calls `append_message` before/after `invoke_agent` ✅
+- [x] Wire `save_trip` — `chat_service.invoke_agent` calls `trip_service.save_trip` when `generate_plan=True` ✅
+- [x] Wire voice into Chat UI — ChatPage/InputBar already integrate VoiceButton + useASR/useTTS ✅
 
 ### 🧪 Tests to Write
 ```
@@ -256,9 +256,13 @@ backend/app/api/
 └── deps.py                   # get_current_user, get_db
 
 frontend/src/
+├── components/layout/
+│   └── Sidebar.tsx           # Left sidebar — nav icons only; rest of page is content area
 ├── pages/
 │   ├── LoginPage.tsx         # Login + Register form
 │   └── ChatPage.tsx          # Message list, input bar (owned by Minqi)
+
+> **📐 Layout Design Rule**: All main app pages (Chat, Trips, Profile) share a single fixed sidebar on the left (56px wide, black `GG` logo top, icon nav). The remaining full-width area is the page's content. LoginPage is full-screen with no sidebar.
 ├── components/
 │   └── chat/
 │       ├── ChatWindow.tsx    # Chat container
@@ -303,7 +307,7 @@ frontend/src/
 - [ ] **Notify David** once `message_repo.py` is ready to wire message saving in `chat_service.py`
 
 #### Phase 3 — Auth + Chat UI (Days 10–14)
-- [ ] `LoginPage.tsx` — login + register tabs, form validation, error display
+- [x] `LoginPage.tsx` — login + register tabs, form validation, error display; full-screen centered card, no sidebar ✅
 - [ ] `useAuth.ts` — login/logout, persist token in localStorage
 - [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
 - [ ] `authService.ts` — API calls with Axios
@@ -357,7 +361,7 @@ backend/app/api/routes/
 
 frontend/src/
 ├── pages/
-│   └── TripPage.tsx          # Trip history list + detail view
+│   └── TripPage.tsx          # Trip history list + detail view (uses Sidebar layout)
 ├── components/
 │   ├── trip/
 │   │   ├── ItineraryCard.tsx  # Day-by-day plan display
@@ -431,14 +435,14 @@ backend/tests/integration/
 | 1   | 🟡        | Backend      | ✅ Fixed — use simple module-level dict cache (see Phase 1B transport.py note)                                                     |
 | 2   | 🟡        | Backend      | ✅ Accepted for demo — keep `wait_for` with demo-grade comment; all httpx clients use `async with` for clean cancel                  |
 | 3   | 🟢        | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                                                |
-| 5   | 🟠        | Coordination | Session ID creation — Minqi creates session on first message; David reads `session_id` from request; document in Integration Points |
-| 17  | 🟡        | Backend      | `session_repo.py` needs `get_active_session_by_user(user_id)` for page refresh resumption                                           |
+| 5   | 🟠        | Coordination | ✅ Fixed — `chat.py` creates session on first message when `session_id` is null                             |
+| 17  | 🟡        | Backend      | `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (not yet implemented)                    |
 | 19  | 🟡        | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly              |
-| 21  | 🟢        | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image                                                       |
-| 24  | 🟡        | Frontend     | `TripPage.tsx` needs empty state: `{trips.length === 0 && (...)}`                                                                   |
+| 21  | 🟢        | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image (Xuan)                                               |
+| 24  | 🟡        | Frontend     | `TripPage.tsx` needs full implementation with trip listing/detail (Xuan)                                                            |
 | —   | 🟡        | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`                    |
-| —   | 🟡        | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts`                                            |
-| —   | 🔴        | User Feature | Implement full user profile: DB model, repo, service, route (GET/PATCH /users/me), frontend ProfilePage with shadcn/ui |
+| —   | 🟡        | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                           |
+| —   | 🔴        | User Feature | ✅ Fixed — ProfilePage.tsx implemented with shadcn/ui; backend model/repo/service/routes all complete                  |
 
 ---
 
@@ -446,14 +450,14 @@ backend/tests/integration/
 
 | When       | Who           | Action                                                                                                                                              |
 | ---------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Day 1      | David + Xuan  | Finalize `TripItinerary` Pydantic schema together                                                                                                   |
-| Day 1      | David + Minqi | Define session ID creation flow: Minqi creates session on first message; `POST /chat` accepts optional `session_id`; if absent, backend creates one |
-| Day 3      | David → All   | Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                                                                               |
-| Days 4–6   | Minqi → David | `deps.py` ready → David removes mock `get_current_user`                                                                                             |
-| Days 4–9   | Xuan → David  | `trip_service.save_trip()` ready → David wires into `chat_service.py`                                                                               |
-| Days 4–9   | Minqi → David | `message_repo` ready → David wires message saving in `chat_service.py`                                                                              |
-| Day 4      | David → Minqi | Voice hooks ready → wire into `ChatPage.tsx`                                                                                                        |
-| Days 13–20 | All           | Integration week — full flow testing, bug fixes, demo polish                                                                                        |
+| Day 1      | David + Xuan  | ✅ Finalize `TripItinerary` Pydantic schema together                                                                                                   |
+| Day 1      | David + Minqi | ✅ Session ID creation flow — `chat.py` creates session on first message when `session_id` is null |
+| Day 3      | David → All   | ✅ Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                                                                               |
+| Days 4–6   | Minqi → David | ✅ `deps.py` uses real JWT decode with `user_id` in token payload                                                                                    |
+| Days 4–9   | David         | ✅ `trip_service` + `trip_repo` created; wired into `chat_service.py`                                                                               |
+| Days 4–9   | Minqi → David | ✅ `message_service` wired into `chat.py` for message persistence                                                                              |
+| Day 4      | David → Minqi | ✅ Voice hooks (useASR, useTTS, VoiceButton) integrated into ChatPage/InputBar                                                                        |
+| Days 13–20 | All           | 🔄 Integration week — full flow testing, bug fixes, demo polish                                                                                        |
 
 ---
 
