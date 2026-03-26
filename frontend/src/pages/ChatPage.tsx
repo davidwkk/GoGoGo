@@ -1,6 +1,6 @@
 // ChatPage — Main chat UI with AI travel agent
 
-import { MessageSquare, Settings, Zap } from 'lucide-react';
+import { MessageSquare, Settings, Zap, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/store';
 import { InputBar } from '@/components/chat/InputBar';
@@ -12,6 +12,14 @@ export function ChatPage() {
   const isLoading = useChatStore(s => s.isLoading);
   const isThinking = useChatStore(s => s.isThinking);
   const isLoggedIn = !!localStorage.getItem('token');
+  const clearMessages = useChatStore(s => s.clearMessages);
+  const setSessionId = useChatStore(s => s.setSessionId);
+
+  const startNewChat = () => {
+    clearMessages();
+    setSessionId(null);
+    localStorage.removeItem('guest_uid');
+  };
 
   const testLLM = async () => {
     try {
@@ -37,7 +45,16 @@ export function ChatPage() {
             <h1 className="text-sm font-semibold">GoGoGo</h1>
             <p className="text-xs text-muted-foreground">AI Travel Agent</p>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                onClick={startNewChat}
+                className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <PlusCircle className="size-3" />
+                New Chat
+              </button>
+            )}
             <button
               onClick={testLLM}
               className="flex items-center gap-1.5 h-8 rounded-xl bg-yellow-500 text-black px-3 text-xs font-medium hover:bg-yellow-400 transition-colors"
