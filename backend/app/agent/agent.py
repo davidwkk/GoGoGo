@@ -109,7 +109,7 @@ async def run_agent(
         )
 
         response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
+            model=settings.GEMINI_LITE_MODEL,
             contents=messages,
             config=config,
         )

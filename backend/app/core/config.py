@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-3.0-flash-preview"
+    GEMINI_MODEL: str = "gemini-3-flash-preview"
     GEMINI_LITE_MODEL: str = "gemini-3.1-flash-lite-preview"
     GEMINI_TTS_MODEL: str = "gemini-2.5-flash-preview-tts"
     SERPAPI_KEY: str

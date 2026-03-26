@@ -18,6 +18,7 @@ export function InputBar({ disabled }: InputBarProps) {
   const [text, setText] = useState('');
   const voiceAvailable = useChatStore(s => s.voiceAvailable);
   const isLoading = useChatStore(s => s.isLoading);
+  const addMessage = useChatStore(s => s.addMessage);
   const { sendMessage } = useChat({});
   const { isListening, startListening, stopListening } = useASR({
     onTranscript: result => {
@@ -35,7 +36,11 @@ export function InputBar({ disabled }: InputBarProps) {
   const handleSend = async (generatePlan: boolean) => {
     const trimmed = text.trim();
     if (!trimmed || disabled || isLoading) return;
-    setText(''); // Clear before sending for better UX
+
+    // Show user's message immediately
+    addMessage({ role: 'user', content: trimmed });
+
+    setText(''); // Clear after adding message
     try {
       await sendMessage(trimmed, generatePlan);
     } catch {
