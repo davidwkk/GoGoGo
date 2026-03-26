@@ -1,4 +1,5 @@
 """Simple tests for weather tool."""
+
 import unittest.mock
 
 import pytest
@@ -36,7 +37,9 @@ async def test_get_weather_returns_expected_keys():
 @pytest.mark.asyncio
 async def test_get_weather_handles_error():
     """Weather returns error dict on network failure."""
-    with unittest.mock.patch("app.agent.tools.weather.httpx.AsyncClient") as mock_client_cls:
+    with unittest.mock.patch(
+        "app.agent.tools.weather.httpx.AsyncClient"
+    ) as mock_client_cls:
         mock_client = unittest.mock.MagicMock()
         mock_client.__aenter__.return_value.get.side_effect = Exception("Network error")
         mock_client_cls.return_value = mock_client
@@ -56,5 +59,3 @@ async def test_get_weather_missing_api_key():
 
     assert "error" in result
     assert "not configured" in result["error"]
-
-

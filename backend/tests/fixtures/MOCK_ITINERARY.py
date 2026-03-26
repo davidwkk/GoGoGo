@@ -3,6 +3,7 @@
 This fixture provides a realistic 3-day Tokyo trip that can be used
 for UI development and testing before the real agent is ready.
 """
+
 from __future__ import annotations
 
 from app.schemas.enums import FlightDirection
@@ -10,7 +11,6 @@ from app.schemas.itinerary import (
     Activity,
     DayPlan,
     FlightInfo,
-    FlightStop,
     HotelInfo,
     TripItinerary,
 )

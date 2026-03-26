@@ -1,4 +1,5 @@
 """Tests for TripItinerary schema validation."""
+
 import pytest
 
 from app.schemas.enums import FlightDirection

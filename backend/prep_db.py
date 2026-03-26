@@ -11,18 +11,20 @@ For ongoing schema management, use Alembic:
     docker-compose exec backend alembic upgrade head
     docker-compose exec backend alembic revision --autogenerate -m "description"
 """
+
 from __future__ import annotations
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from app.db.base import Base
-from app.db.session import engine
+from app.db.base import Base  # noqa: E402
+from app.db.session import engine  # noqa: E402
 
 
 def main() -> None:
-    print(f"Connecting to database...")
-    print(f"Creating all tables...")
+    print("Connecting to database...")
+    print("Creating all tables...")
     Base.metadata.create_all(bind=engine)
     print("Done. All tables created successfully.")
 

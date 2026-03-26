@@ -4,6 +4,7 @@ Revision ID: 9d79d5025f14
 Revises:
 Create Date: 2026-03-25 19:06:45.864839
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -12,7 +13,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9d79d5025f14'
+revision: str = "9d79d5025f14"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -44,7 +45,9 @@ def upgrade() -> None:
         "chat_sessions",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("title", sa.String(length=200), nullable=False, server_default="New Chat"),
+        sa.Column(
+            "title", sa.String(length=200), nullable=False, server_default="New Chat"
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

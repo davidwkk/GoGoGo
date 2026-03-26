@@ -37,9 +37,7 @@ def get_trip_by_id(db: Session, trip_id: int) -> Trip | None:
 def get_trips_by_user(db: Session, user_id: int) -> list[Trip]:
     """Fetch all trips for a user, ordered by created_at descending."""
     result = db.execute(
-        select(Trip)
-        .where(Trip.user_id == user_id)
-        .order_by(Trip.created_at.desc())
+        select(Trip).where(Trip.user_id == user_id).order_by(Trip.created_at.desc())
     )
     return list(result.scalars().all())
 

@@ -14,7 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# Python packaging output
+/libs/
 lib64/
 parts/
 sdist/
