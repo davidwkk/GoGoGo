@@ -16,9 +16,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(
-    () => localStorage.getItem('rememberMe') === 'true'
-  );
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('rememberMe') === 'true');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -184,7 +182,10 @@ export function LoginPage() {
                   onChange={e => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-input accent-black"
                 />
-                <label htmlFor="rememberMe" className="text-xs text-muted-foreground cursor-pointer">
+                <label
+                  htmlFor="rememberMe"
+                  className="text-xs text-muted-foreground cursor-pointer"
+                >
                   Remember me
                 </label>
               </div>

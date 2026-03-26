@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Generator
 
 # Set test environment variables BEFORE any app imports
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
@@ -47,7 +48,7 @@ def test_engine():
 
 
 @pytest.fixture
-def db_session(test_engine) -> Session:
+def db_session(test_engine) -> Generator[Session, None, None]:
     """Provide a transactional db session for each test."""
     TestSession = sessionmaker(bind=test_engine, expire_on_commit=False)
     session = TestSession()

@@ -128,7 +128,7 @@ async def _stream_chat(
 
     try:
         logger.info("[_stream_chat] Starting generate_content_streaming")
-        stream = client.models.generate_content_streaming(
+        stream = client.models.generate_content_streaming(  # type: ignore[attr-defined]
             model=settings.GEMINI_LITE_MODEL,
             contents=[
                 types.Content(

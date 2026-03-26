@@ -1,28 +1,43 @@
 # Pre-commit hooks for GoGoGo project
 #
-# Install: uv pip install pre-commit && pre-commit install
-# Run manually: pre-commit run --all-files
+# Install: uv run pre-commit install
+# Run manually: uv run pre-commit run --all-files
 
 repos:
-  # Python: ruff check and format
+  # Python: pyright type check and ruff check/format
   - repo: local
     hooks:
+      - id: pyright
+        name: pyright (type check)
+        entry: bash -c 'cd backend && uv run pyright'
+        language: system
+        types_or: [python]
+        pass_filenames: true
+        always_run: false
+        description: 'Run pyright type check on Python files'
+        language: system
+        types_or: [python]
+        pass_filenames: true
+        always_run: false
+
       - id: ruff-check
         name: ruff (check)
-        entry: ruff check
+        entry: uv run ruff check
         description: 'Run ruff check on Python files'
         language: system
         types_or: [python]
         pass_filenames: true
+        always_run: false
 
       - id: ruff-format
         name: ruff (format)
-        entry: ruff format
+        entry: uv run ruff format
         description: 'Run ruff format on Python files'
         language: system
         types_or: [python]
         pass_filenames: false
         require_serial: true
+        always_run: false
 
   # Frontend: ESLint + Prettier (TypeScript/JavaScript)
   - repo: local
@@ -34,16 +49,18 @@ repos:
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
-        pass_filenames: false
+        pass_filenames: true
+        always_run: false
 
       - id: frontend-format
         name: frontend format
-        entry: bash -c 'cd frontend && npx prettier --write "src/**/*.{ts,tsx}"'
+        entry: npx prettier --write
         description: 'Format frontend files with Prettier'
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
-        pass_filenames: false
+        pass_filenames: true
+        always_run: false
 
   # Prettier: format all other files (JSON, YAML, MD, etc.)
   - repo: local
@@ -55,3 +72,4 @@ repos:
         language: system
         pass_filenames: false
         require_serial: true
+        always_run: false

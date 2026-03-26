@@ -130,7 +130,7 @@ async def run_agent(
 
         # Append model content as-is (preserves thought_signature)
         if response.candidates and response.candidates[0].content:
-            logger.debug(f"[AGENT] Appending candidate content to history")
+            logger.debug("[AGENT] Appending candidate content to history")
             messages.append(response.candidates[0].content)
 
         # Handle function calls

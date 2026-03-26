@@ -13,11 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import {
-  guestPreferences,
-  GuestPreferences,
-  DEFAULT_GUEST_PREFERENCES,
-} from '@/services/api';
+import { guestPreferences, GuestPreferences, DEFAULT_GUEST_PREFERENCES } from '@/services/api';
 
 const TRAVEL_STYLES = [
   { value: 'adventure', label: 'Adventure' },
@@ -78,7 +74,8 @@ export function PreferencesPage() {
       </div>
 
       <p className="text-sm text-muted-foreground -mt-4">
-        These preferences help us personalize your trip plans. They are saved locally on this device.
+        These preferences help us personalize your trip plans. They are saved locally on this
+        device.
       </p>
 
       <div className="space-y-6">
@@ -89,12 +86,17 @@ export function PreferencesPage() {
               value={prefs.travel_style}
               onValueChange={v => setPrefs(p => ({ ...p, travel_style: v }))}
             >
-              <SelectTrigger id="travel-style" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
+              <SelectTrigger
+                id="travel-style"
+                className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {TRAVEL_STYLES.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -106,12 +108,17 @@ export function PreferencesPage() {
               value={prefs.dietary_restriction}
               onValueChange={v => setPrefs(p => ({ ...p, dietary_restriction: v }))}
             >
-              <SelectTrigger id="dietary" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
+              <SelectTrigger
+                id="dietary"
+                className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {DIETARY_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -123,12 +130,17 @@ export function PreferencesPage() {
               value={prefs.hotel_tier}
               onValueChange={v => setPrefs(p => ({ ...p, hotel_tier: v }))}
             >
-              <SelectTrigger id="hotel-tier" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
+              <SelectTrigger
+                id="hotel-tier"
+                className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {HOTEL_TIERS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -140,12 +152,17 @@ export function PreferencesPage() {
               value={String(prefs.max_flight_stops)}
               onValueChange={v => setPrefs(p => ({ ...p, max_flight_stops: Number(v) }))}
             >
-              <SelectTrigger id="max-stops" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
+              <SelectTrigger
+                id="max-stops"
+                className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {MAX_STOPS_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -182,8 +199,12 @@ export function PreferencesPage() {
 
       <div className="flex items-center gap-3">
         <Button onClick={handleSave}>{saved ? 'Saved!' : 'Save Preferences'}</Button>
-        <Button variant="outline" onClick={handleReset}>Reset</Button>
-        {saved && <p className="text-sm text-green-600 dark:text-green-400">Preferences saved locally.</p>}
+        <Button variant="outline" onClick={handleReset}>
+          Reset
+        </Button>
+        {saved && (
+          <p className="text-sm text-green-600 dark:text-green-400">Preferences saved locally.</p>
+        )}
       </div>
     </div>
   );
