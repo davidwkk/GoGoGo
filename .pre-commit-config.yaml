@@ -9,7 +9,7 @@ repos:
     hooks:
       - id: ruff-check
         name: ruff (check)
-        entry: uv run ruff check
+        entry: ruff check
         description: 'Run ruff check on Python files'
         language: system
         types_or: [python]
@@ -17,7 +17,7 @@ repos:
 
       - id: ruff-format
         name: ruff (format)
-        entry: uv run ruff format
+        entry: ruff format
         description: 'Run ruff format on Python files'
         language: system
         types_or: [python]
