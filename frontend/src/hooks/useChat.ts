@@ -1,7 +1,7 @@
 // useChat — wire VoiceButton → chatService → POST /chat
 // Handles ChatResponse (text + itinerary + message_type)
 
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { chatService, ChatRequest, guestPreferences } from '@/services/api';
 import { useChatStore } from '@/store';
 

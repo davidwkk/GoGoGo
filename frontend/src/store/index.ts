@@ -26,7 +26,7 @@ export interface ChatState {
   abortController: AbortController | null;
 
   // Actions
-  setSessionId: (id: string) => void;
+  setSessionId: (id: string | null) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
   updateStreamingMessage: (id: string, content: string) => void;
   clearMessages: () => void;
