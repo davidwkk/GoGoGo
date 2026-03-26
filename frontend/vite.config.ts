@@ -14,11 +14,26 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     proxy: {
-      "/auth": "http://localhost:8000",
-      "/chat": "http://localhost:8000",
-      "/trips": "http://localhost:8000",
-      "/users": "http://localhost:8000",
-      "/health": "http://localhost:8000",
+      "/auth": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+      },
+      "/chat": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+      },
+      "/trips": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+      },
+      "/users": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+      },
+      "/health": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+      },
     },
   },
 });
