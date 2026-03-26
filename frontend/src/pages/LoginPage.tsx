@@ -1,6 +1,6 @@
 // LoginPage — Authentication with login / sign-up tabs
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '@/services/api';
 
@@ -16,10 +16,18 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+
+  // Auto-redirect to chat if already logged in
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      navigate('/chat');
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +41,7 @@ export function LoginPage() {
           password,
         });
         localStorage.setItem('token', data.access_token);
+        localStorage.setItem('rememberMe', String(rememberMe));
         navigate('/chat');
       } else {
         const { data } = await apiClient.post<AuthResponse>('/auth/register', {
@@ -41,6 +50,7 @@ export function LoginPage() {
           password,
         });
         localStorage.setItem('token', data.access_token);
+        localStorage.setItem('rememberMe', String(rememberMe));
         navigate('/chat');
       }
     } catch (err: unknown) {
@@ -137,13 +147,27 @@ export function LoginPage() {
                 type="password"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 required
-                minLength={8}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
+
+            {mode === 'login' && (
+              <div className="flex items-center gap-2">
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-black"
+                />
+                <label htmlFor="rememberMe" className="text-xs text-muted-foreground cursor-pointer">
+                  Remember me
+                </label>
+              </div>
+            )}
 
             {error && <p className="text-xs text-destructive text-center">{error}</p>}
 

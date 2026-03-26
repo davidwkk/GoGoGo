@@ -136,6 +136,9 @@ async def chat(
             session = get_session(db, session_pk)
             if session is None:
                 raise HTTPException(status_code=404, detail="Session not found")
+            # Security: verify the session belongs to the authenticated user
+            if session.user_id != user_id:
+                raise HTTPException(status_code=403, detail="Forbidden")
     else:
         if user_id is not None:
             session = create_session(db, user_id=user_id)
