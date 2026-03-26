@@ -64,6 +64,7 @@ class FlightInfo(BaseModel):
     departure_time: str = Field(description="ISO 8601 datetime")
     arrival_time: str = Field(description="ISO 8601 datetime")
     stops: list[FlightStop] = Field(default_factory=list, max_length=2)
+    booking_url: str | None = None
 
 
 # ─────────────────────────────────────────

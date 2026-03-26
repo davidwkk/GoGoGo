@@ -11,8 +11,16 @@ interface UseChatOptions {
 }
 
 export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
-  const { sessionId, addMessage, setSessionId, setLoading, setAbortController, setThinking } =
-    useChatStore();
+  const {
+    sessionId,
+    addMessage,
+    setSessionId,
+    setLoading,
+    setAbortController,
+    setThinking,
+    addThinkingStep,
+    clearThinkingSteps,
+  } = useChatStore();
 
   const sendMessage = useCallback(
     async (message: string, generatePlan = false, tripParams?: ChatRequest['trip_parameters']) => {
@@ -61,19 +69,43 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
 
           try {
             for await (const chunk of chatService.streamMessage(req, abortController.signal)) {
-              // Handle error marker from streamMessage (async generators don't propagate throws)
-              if (typeof chunk === 'string' && chunk.startsWith('__ERROR__:')) {
-                const errorMsg = chunk.slice('__ERROR__:'.length);
-                setThinking(false);
-                if (msgId !== null) {
-                  useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
-                } else {
-                  addMessage({ role: 'assistant', content: `Error: ${errorMsg}` });
+              // Handle special prefixed events from agent thought streaming
+              if (typeof chunk === 'string') {
+                if (chunk.startsWith('__ERROR__:')) {
+                  const errorMsg = chunk.slice('__ERROR__:'.length);
+                  setThinking(false);
+                  clearThinkingSteps();
+                  if (msgId !== null) {
+                    useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
+                  } else {
+                    addMessage({ role: 'assistant', content: `Error: ${errorMsg}` });
+                  }
+                  onError?.(errorMsg);
+                  setAbortController(null);
+                  return;
                 }
-                onError?.(errorMsg);
-                setAbortController(null);
-                return;
+                if (chunk.startsWith('__THOUGHT__:')) {
+                  const step = chunk.slice('__THOUGHT__:'.length);
+                  addThinkingStep(step);
+                  continue;
+                }
+                if (chunk.startsWith('__TOOL_CALL__:')) {
+                  const toolName = chunk.slice('__TOOL_CALL__:'.length);
+                  addThinkingStep(`🔧 Calling ${toolName}...`);
+                  continue;
+                }
+                if (chunk.startsWith('__TOOL_RESULT__:')) {
+                  const toolName = chunk.slice('__TOOL_RESULT__:'.length);
+                  addThinkingStep(`✅ ${toolName} done`);
+                  continue;
+                }
+                if (chunk.startsWith('__STATUS__:')) {
+                  const status = chunk.slice('__STATUS__:'.length);
+                  addThinkingStep(status);
+                  continue;
+                }
               }
+
               chunkCount++;
               fullText += chunk;
               console.log(
@@ -84,8 +116,9 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                 '| fullText length:',
                 fullText.length
               );
-              // On first chunk, create the assistant message
+              // On first text chunk, create the assistant message and clear thinking steps
               if (msgId === null) {
+                clearThinkingSteps();
                 msgId = addMessage({ role: 'assistant', content: chunk });
                 setThinking(false);
               } else {
@@ -109,6 +142,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             if (err instanceof Error && err.name === 'AbortError') {
               console.log('[useChat] Stream cancelled by user');
               setThinking(false);
+              clearThinkingSteps();
               setAbortController(null);
               return;
             }
@@ -120,6 +154,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             }
             console.error('[useChat] Stream error:', errorMsg);
             setThinking(false);
+            clearThinkingSteps();
             // If we already have a message, update it; otherwise create one with the error
             if (msgId !== null) {
               useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
@@ -129,6 +164,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             onError?.(errorMsg);
           } finally {
             setThinking(false);
+            clearThinkingSteps();
             setAbortController(null);
           }
 

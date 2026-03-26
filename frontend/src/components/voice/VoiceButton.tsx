@@ -23,7 +23,7 @@ export function VoiceButton({ isListening, onToggle, disabled }: VoiceButtonProp
 
       <Button
         variant={isListening ? 'destructive' : 'outline'}
-        size="icon"
+        size="icon-lg"
         onClick={onToggle}
         disabled={disabled}
         aria-label={isListening ? 'Stop recording' : 'Start recording'}

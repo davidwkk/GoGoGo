@@ -13,7 +13,7 @@ Returns:
                 "arrival": "...",
                 "duration": "...",
                 "price": "...",
-                "booking_url": "..."
+                "booking_url": "..."  # constructed Google Flights search URL
             },
             ...
         ]
@@ -65,6 +65,12 @@ async def search_flights(
         flight_lists = data.get("flights") or data.get("best_flights", [])
 
         for f in flight_lists[:10]:
+            # Build a Google Flights search URL for this route
+            route_query = f"{departure}+to+{arrival}".replace(" ", "+")
+            booking_url = (
+                f"https://www.google.com/travel/flights/search?q={route_query}&hl=en"
+            )
+
             flights.append(
                 {
                     "airline": f.get("airline", "Unknown"),
@@ -73,7 +79,7 @@ async def search_flights(
                     "arrival": arrival,
                     "duration": f.get("duration", ""),
                     "price": f.get("price", "N/A"),
-                    "booking_url": f.get("booking_url", ""),
+                    "booking_url": booking_url,
                 }
             )
 

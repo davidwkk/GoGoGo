@@ -113,26 +113,34 @@ async def test_llm() -> dict:
     }
 
 
-async def _stream_chat(
+MAX_RETRIES = 3  # 1 initial attempt + 2 retries = 3 total attempts
+
+
+async def _stream_agent_thoughts(
     message: str,
     preferences: dict | None = None,
-    max_retries: int = 2,
+    max_retries: int = MAX_RETRIES,
 ) -> AsyncIterator[str]:
     """
-    Stream chat response chunks via SSE.
-    Uses generate_content_streaming with tools disabled for simplicity.
+    Stream agent thinking + tool calls + text via SSE.
+
+    Runs the full Gemini agent loop with tools and yields SSE events for each step:
+      - thought:    model is thinking / deciding what to do
+      - tool_call:  tool name + args being executed
+      - tool_result: tool response (or error)
+      - chunk:      text content from the model
+      - done:       stream complete
+
     Retries on transient errors (503, rate limit) with exponential backoff.
     """
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.info(f"[_stream_chat] Starting stream for message: {message[:100]}...")
-    logger.info(f"[_stream_chat] Preferences: {preferences}")
-    logger.info(f"[_stream_chat] LLM_PROXY_ENABLED: {settings.LLM_PROXY_ENABLED}")
-    logger.info(f"[_stream_chat] Proxy reachable: {_is_proxy_reachable()}")
+    logger.info(f"[_stream_agent_thoughts] Starting for message: {message[:100]}...")
+    logger.info(f"[_stream_agent_thoughts] Preferences: {preferences}")
 
     if not _is_proxy_reachable() and not settings.LLM_PROXY_ENABLED:
-        logger.warning("[_stream_chat] Proxy not reachable, returning error")
+        logger.warning("[_stream_agent_thoughts] Proxy not reachable")
         yield f"data: {json.dumps({'error': 'Proxy not reachable. Please check your VPN/proxy connection.'})}\n\n"
         return
 
@@ -141,24 +149,50 @@ async def _stream_chat(
         if settings.LLM_PROXY_ENABLED
         else None
     )
-    logger.info(
-        f"[_stream_chat] Creating client with model: {settings.GEMINI_CASUAL_MODEL}"
-    )
     client = Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
 
     prefs_section = f"User preferences: {preferences}" if preferences else ""
     system_instruction = (
-        "You are a helpful travel planning assistant. "
-        "Keep responses concise and friendly. "
+        "You are a helpful travel planning assistant backed by real-time data. "
+        "IMPORTANT: Use tools to fetch live information — flights, hotels, attractions, weather. "
+        "Never invent prices or times. "
         f"{prefs_section}"
     )
-    logger.info(f"[_stream_chat] System instruction: {system_instruction[:200]}...")
+
+    # Import tools from agent to reuse the same tool map
+    from app.agent.tools import (
+        ALL_TOOLS,
+        build_embed_url,
+        get_attraction,
+        get_transport,
+        get_weather,
+        search_flights,
+        search_hotels,
+        search_web,
+    )
+
+    tool_map = {
+        "get_attraction": get_attraction,
+        "get_weather": get_weather,
+        "search_web": search_web,
+        "search_flights": search_flights,
+        "search_hotels": search_hotels,
+        "get_transport": get_transport,
+        "build_embed_url": build_embed_url,
+    }
+
+    messages: list[types.Content] = [
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=message)],
+        )
+    ]
+
+    MAX_ITERATIONS = 5
 
     def _is_transient_error(e: Exception) -> bool:
-        """Check if error is a transient error that may succeed on retry."""
         error_type = type(e).__name__
         error_str = str(e)
-        # Explicitly handle ServerError from google.genai (contains "503 UNAVAILABLE")
         if error_type == "ServerError":
             return True
         error_lower = error_str.lower()
@@ -171,76 +205,132 @@ async def _stream_chat(
             or error_type.endswith("Timeout")
         )
 
-    for attempt in range(max_retries + 1):
+    def _user_message(msg: str) -> str:
+        if "unavailable" in msg.lower() or "503" in msg:
+            return (
+                "The AI service is temporarily unavailable due to high demand. "
+                "This is usually temporary - please try again in a few moments."
+            )
+        if "rate limit" in msg.lower() or "429" in msg:
+            return "You've reached the rate limit. Please wait a moment and try again."
+        return "An error occurred. Please try again."
+
+    for attempt in range(max_retries):
         try:
             logger.info(
-                f"[_stream_chat] Starting generate_content_stream (attempt {attempt + 1}/{max_retries + 1})"
-            )
-            stream = client.models.generate_content_stream(
-                model=settings.GEMINI_CASUAL_MODEL,
-                contents=[
-                    types.Content(
-                        role="user",
-                        parts=[types.Part.from_text(text=message)],
-                    )
-                ],
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                ),
+                f"[_stream_agent_thoughts] Iteration attempt {attempt + 1}/{max_retries + 1}"
             )
 
-            chunk_count = 0
-            for chunk in stream:
+            for iteration in range(MAX_ITERATIONS):
                 logger.info(
-                    f"[_stream_chat] Received chunk {chunk_count}: {repr(chunk.text)[:100] if chunk.text else 'empty'}"
+                    f"[_stream_agent_thoughts] Iteration {iteration + 1}/{MAX_ITERATIONS}"
                 )
-                if chunk.text:
-                    chunk_count += 1
-                    yield f"data: {json.dumps({'chunk': chunk.text})}\n\n"
-                    await asyncio.sleep(0)  # Allow other coroutines to run
 
-            logger.info(f"[_stream_chat] Stream complete. Total chunks: {chunk_count}")
+                # Notify frontend we're thinking
+                yield f"data: {json.dumps({'thought': f'Thinking (step {iteration + 1})...'})}\n\n"
+
+                config = types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    tools=ALL_TOOLS,
+                    thinking_config=types.ThinkingConfig(
+                        thinking_level=types.ThinkingLevel.MINIMAL
+                    ),
+                )
+
+                response = client.models.generate_content(
+                    model=settings.GEMINI_LITE_MODEL,
+                    contents=messages,
+                    config=config,
+                )
+
+                # Append model content as-is to preserve thought_signature
+                if response.candidates and response.candidates[0].content:
+                    messages.append(response.candidates[0].content)
+
+                if response.function_calls:
+                    for fc in response.function_calls:
+                        tool_name = fc.name or ""
+                        if not tool_name:
+                            continue
+                        args = dict(fc.args) if fc.args else {}
+
+                        logger.info(
+                            f"[_stream_agent_thoughts] Tool call: {tool_name} | args: {str(args)[:200]}"
+                        )
+                        yield f"data: {json.dumps({'tool_call': tool_name, 'args': args})}\n\n"
+
+                        tool_fn = tool_map.get(tool_name)
+                        if tool_fn:
+                            try:
+                                result = await tool_fn(**args)
+                            except Exception as e:
+                                logger.error(
+                                    f"[_stream_agent_thoughts] Tool {tool_name} exception: {e}"
+                                )
+                                result = {"error": str(e)}
+                        else:
+                            result = {"error": f"Unknown tool: {tool_name}"}
+
+                        # Truncate result for streaming
+                        result_preview = (
+                            str(result)[:300] + "..."
+                            if len(str(result)) > 300
+                            else str(result)
+                        )
+                        logger.info(
+                            f"[_stream_agent_thoughts] Tool {tool_name} result: {result_preview}"
+                        )
+                        yield f"data: {json.dumps({'tool_result': tool_name, 'result': result})}\n\n"
+
+                        fn_response = types.Part.from_function_response(
+                            name=tool_name,
+                            response=result,
+                        )
+                        tool_content = types.Content(role="tool", parts=[fn_response])
+                        messages.append(tool_content)
+                        await asyncio.sleep(0)
+                else:
+                    # No more tool calls — final text response
+                    final_text = response.text or ""
+                    logger.info(
+                        f"[_stream_agent_thoughts] Final response: {final_text[:200]}"
+                    )
+                    if final_text:
+                        yield f"data: {json.dumps({'chunk': final_text})}\n\n"
+                    yield f"data: {json.dumps({'done': True})}\n\n"
+                    return
+
+            # Max iterations reached
+            logger.warning("[_stream_agent_thoughts] Max iterations reached")
+            yield f"data: {json.dumps({'chunk': 'I ran out of time planning your trip. Please try again.'})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
-            return  # Success
+            return
 
         except Exception as e:
             error_msg = str(e)
             is_transient = _is_transient_error(e)
             logger.warning(
-                f"[_stream_chat] Exception on attempt {attempt + 1}/{max_retries + 1}: "
+                f"[_stream_agent_thoughts] Exception attempt {attempt + 1}/{max_retries + 1}: "
                 f"{type(e).__name__}: {error_msg[:200]} | transient={is_transient}"
             )
 
             if is_transient and attempt < max_retries:
-                wait_time = 2**attempt  # Exponential backoff: 1s, 2s
+                wait_time = 2**attempt  # Exponential backoff: 1s, 2s, 4s
                 logger.info(
-                    f"[_stream_chat] Transient error detected, retrying in {wait_time}s..."
+                    f"[_stream_agent_thoughts] Transient error, retrying in {wait_time}s..."
                 )
-                yield f"data: {json.dumps({'status': f'Retrying due to high demand ({attempt + 1}/{max_retries + 1})...'})}\n\n"
+                yield f"data: {json.dumps({'status': f'Retrying ({attempt + 2}/{max_retries + 1}) due to high demand...'})}\n\n"
                 await asyncio.sleep(wait_time)
                 continue
             else:
-                # Non-transient error or max retries reached
-                error_lower = error_msg.lower()
-                if "unavailable" in error_lower or "503" in error_msg:
-                    user_message = (
-                        "The AI service is temporarily unavailable due to high demand. "
-                        "This is usually temporary - please try again in a few moments."
-                    )
-                elif "rate limit" in error_lower or "429" in error_msg:
-                    user_message = "You've reached the rate limit. Please wait a moment and try again."
-                else:
-                    user_message = "An error occurred. Please try again."
+                user_msg = _user_message(error_msg)
                 logger.error(
-                    f"[_stream_chat] Non-retryable error after {attempt + 1} attempt(s): "
-                    f"{type(e).__name__}: {error_msg[:200]}"
+                    f"[_stream_agent_thoughts] Failed after {attempt + 1} attempt(s): {error_msg[:200]}"
                 )
-                # Yield error AND done to ensure frontend receives it
-                yield f"data: {json.dumps({'error': user_message})}\n\n"
-                yield f"data: {json.dumps({'done': True, 'error': user_message})}\n\n"
+                yield f"data: {json.dumps({'error': user_msg})}\n\n"
+                yield f"data: {json.dumps({'done': True, 'error': user_msg})}\n\n"
                 return
 
-    # Should not reach here, but handle it
     yield f"data: {json.dumps({'error': 'Failed after retries. Please try again later.'})}\n\n"
 
 
@@ -325,7 +415,7 @@ async def chat_stream(
         prefs_dict = body.user_preferences.model_dump()
 
     return StreamingResponse(
-        _stream_chat(message=body.message, preferences=prefs_dict),
+        _stream_agent_thoughts(message=body.message, preferences=prefs_dict),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

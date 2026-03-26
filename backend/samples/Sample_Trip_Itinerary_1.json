@@ -1,0 +1,163 @@
+{
+  "destination": "Tokyo, Japan",
+  "duration_days": 4,
+  "summary": "A 4-day relaxing getaway to Tokyo, focusing on cultural landmarks, leisure strolls, and mid-range comfort within a budget of HKD 5,000 to 20,000.",
+  "days": [
+    {
+      "day_number": 1,
+      "date": "2024-05-15",
+      "morning": [
+        {
+          "name": "Arrival at Narita Airport",
+          "description": "Arrive and take the Skyliner to Central Tokyo.",
+          "location": "Narita International Airport",
+          "map_url": "https://maps.app.goo.gl/dummy1",
+          "estimated_duration_minutes": 90
+        }
+      ],
+      "afternoon": [
+        {
+          "name": "Check-in and Shinjuku Gyoen National Garden",
+          "description": "Relaxing stroll through one of Tokyo's largest and most popular parks.",
+          "location": "11 Naitomachi, Shinjuku City, Tokyo",
+          "map_url": "https://maps.app.goo.gl/dummy2",
+          "estimated_duration_minutes": 120
+        }
+      ],
+      "evening": [
+        {
+          "name": "Dinner in Shinjuku",
+          "description": "Casual dinner at a local izakaya.",
+          "location": "Shinjuku City, Tokyo",
+          "map_url": null,
+          "estimated_duration_minutes": 90
+        }
+      ]
+    },
+    {
+      "day_number": 2,
+      "date": "2024-05-16",
+      "morning": [
+        {
+          "name": "Meiji Jingu Shrine",
+          "description": "A peaceful walk through the forested grounds of Tokyo's most famous Shinto shrine.",
+          "location": "1-1 Yoyogikamizonocho, Shibuya City",
+          "map_url": "https://maps.app.goo.gl/dummy3",
+          "estimated_duration_minutes": 90
+        }
+      ],
+      "afternoon": [
+        {
+          "name": "Omotesando Exploration",
+          "description": "Leisurely window shopping and cafe hopping in the 'Champs-Élysées' of Tokyo.",
+          "location": "Jingumae, Shibuya City",
+          "map_url": null,
+          "estimated_duration_minutes": 180
+        }
+      ],
+      "evening": [
+        {
+          "name": "Shibuya Crossing and Dinner",
+          "description": "Witness the famous scramble crossing and enjoy a mid-range sushi dinner.",
+          "location": "Shibuya, Tokyo",
+          "map_url": null,
+          "estimated_duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "day_number": 3,
+      "date": "2024-05-17",
+      "morning": [
+        {
+          "name": "Senso-ji Temple",
+          "description": "Exploring the ancient Buddhist temple in Asakusa.",
+          "location": "2-3-1 Asakusa, Taito City",
+          "map_url": "https://maps.app.goo.gl/dummy4",
+          "estimated_duration_minutes": 120
+        }
+      ],
+      "afternoon": [
+        {
+          "name": "Sumida River Cruise",
+          "description": "A relaxing boat ride from Asakusa to Odaiba with views of the skyline.",
+          "location": "Asakusa Pier",
+          "map_url": null,
+          "estimated_duration_minutes": 60
+        }
+      ],
+      "evening": [
+        {
+          "name": "Odaiba Seaside Park",
+          "description": "Watching the sunset over the Rainbow Bridge and dinner at the waterfront.",
+          "location": "Daiba, Minato City",
+          "map_url": null,
+          "estimated_duration_minutes": 150
+        }
+      ]
+    },
+    {
+      "day_number": 4,
+      "date": "2024-05-18",
+      "morning": [
+        {
+          "name": "Ueno Park Museums",
+          "description": "A slow morning visiting the Tokyo National Museum or walking by the Shinobazu Pond.",
+          "location": "Ueno-koen, Taito City",
+          "map_url": null,
+          "estimated_duration_minutes": 180
+        }
+      ],
+      "afternoon": [
+        {
+          "name": "Last Minute Souvenirs at Ameyoko",
+          "description": "A quick walk through the bustling market street for snacks and gifts.",
+          "location": "Ueno, Taito City",
+          "map_url": null,
+          "estimated_duration_minutes": 90
+        }
+      ],
+      "evening": [
+        {
+          "name": "Departure for Narita",
+          "description": "Take the Skyliner back for the flight home.",
+          "location": "Ueno Station",
+          "map_url": null,
+          "estimated_duration_minutes": 60
+        }
+      ]
+    }
+  ],
+  "hotels": [
+    {
+      "name": "Hotel Sunroute Plaza Shinjuku",
+      "check_in_date": "2024-05-15",
+      "check_out_date": "2024-05-18",
+      "price_per_night_min_hkd": 1200,
+      "price_per_night_max_hkd": 1800
+    }
+  ],
+  "flights": [
+    {
+      "direction": "outbound",
+      "airline": "Cathay Pacific",
+      "flight_number": "CX520",
+      "departure_airport": "HKG",
+      "arrival_airport": "NRT",
+      "departure_time": "2024-05-15T10:30:00",
+      "arrival_time": "2024-05-15T16:05:00",
+      "stops": []
+    },
+    {
+      "direction": "return",
+      "airline": "Cathay Pacific",
+      "flight_number": "CX505",
+      "departure_airport": "NRT",
+      "arrival_airport": "HKG",
+      "departure_time": "2024-05-18T18:30:00",
+      "arrival_time": "2024-05-18T22:25:00",
+      "stops": []
+    }
+  ],
+  "weather_summary": "Mild and pleasant spring weather with temperatures ranging from 15°C to 23°C. Perfect for outdoor strolls."
+}

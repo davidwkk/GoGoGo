@@ -176,6 +176,7 @@ MOCK_ITINERARY = TripItinerary(
             departure_time="2025-06-01T08:30:00",
             arrival_time="2025-06-01T13:00:00",
             stops=[],
+            booking_url="https://www.google.com/flights/NH847",
         ),
         FlightInfo(
             direction=FlightDirection.RETURN,
@@ -186,6 +187,7 @@ MOCK_ITINERARY = TripItinerary(
             departure_time="2025-06-05T15:00:00",
             arrival_time="2025-06-05T18:30:00",
             stops=[],
+            booking_url="https://www.google.com/flights/NH846",
         ),
     ],
     weather_summary="Mild spring weather, 18-26°C. Occasional light rain. Comfortable for walking.",

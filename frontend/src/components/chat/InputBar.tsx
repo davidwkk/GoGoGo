@@ -91,7 +91,7 @@ export function InputBar({ disabled }: InputBarProps) {
 
         {/* Send button — simple chat */}
         <Button
-          size="sm"
+          size="lg"
           variant="secondary"
           onClick={() => handleSend(false)}
           disabled={!text.trim() || disabled || isLoading}
@@ -99,12 +99,10 @@ export function InputBar({ disabled }: InputBarProps) {
         >
           <Send className="size-4" />
         </Button>
-      </div>
 
-      {/* Generate Trip Plan row */}
-      <div className="flex justify-end">
+        {/* Generate Trip Plan button */}
         <Button
-          size="sm"
+          size="lg"
           variant="default"
           onClick={() => handleSend(true)}
           disabled={!text.trim() || disabled || isLoading}
