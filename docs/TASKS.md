@@ -1,19 +1,20 @@
 # 👥 `gogogo` — Task Assignment Document
+
 > Deadline: Apr 16, 2026 (~20 days) | Team: 3 members | Infra: ✅ Already set up (owned by David)
 
 ---
 
 ## 🧭 Ownership Overview
 
-| Area                                      | Owner                                                                                                              |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Infra — Docker, FastAPI skeleton, setup   | **David**                                                                                                          |
-| Agent Core, Tools, Structured Output      | **David**                                                                                                          |
-| Preference Extraction (Flash-Lite)        | **David**                                                                                                          |
-| Voice — ASR + TTS                         | **David**                                                                                                          |
-| Auth — Register/Login, JWT, Login UI      | **Minqi**                                                                                                          |
-| Chat — Session, Message History, Chat UI  | **Minqi**                                                                                                          |
-| Trip — CRUD, Itinerary Display, Map Embed | **Xuan**                                                                                                           |
+| Area                                      | Owner                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------ |
+| Infra — Docker, FastAPI skeleton, setup   | **David**                                                          |
+| Agent Core, Tools, Structured Output      | **David**                                                          |
+| Preference Extraction (Flash-Lite)        | **David**                                                          |
+| Voice — ASR + TTS                         | **David**                                                          |
+| Auth — Register/Login, JWT, Login UI      | **Minqi**                                                          |
+| Chat — Session, Message History, Chat UI  | **Minqi**                                                          |
+| Trip — CRUD, Itinerary Display, Map Embed | **Xuan**                                                           |
 | DB Models + Migrations (all tables)       | **David** (owns all migrations and all models to remove conflicts) |
 
 ---
@@ -21,10 +22,12 @@
 ## 🙋 David — Agent Core + Voice
 
 ### 🎯 Goal
+
 Build the intelligent core of the app: agent loop, all tools, structured output, preference extraction, and voice I/O.
 
 ### 📦 Files Owned
-```
+
+````
 backend/app/agent/
 ├── agent.py                  # Gemini 3 Flash agent setup (gemini-3-flash-preview)
 ├── callbacks.py              # Loguru logging callbacks
@@ -154,7 +157,8 @@ response = client.models.generate_content(
     },
 )
 result = TripItinerary.model_validate_json(response.text)  # validate response
-```
+````
+
 - [x] Expose `POST /chat` in `api/routes/chat.py` ✅
   - Use **mocked auth** (`get_current_user` returns dummy user)
   - Accept optional `session_id` in request — if absent, create a new session
@@ -167,6 +171,7 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] **Empty preferences fallback**: If `user_preferences` is empty/null (first chat), proceed without preferences — do NOT block or error; inject empty preferences dict into system prompt ✅
 
 #### Phase 2 — Preference Extraction (Days 9–13)
+
 - [x] Define `user_preferences` table in `db/models/preference.py` ✅
 - [x] Write Alembic migration for `user_preferences` ✅
 - [x] Implement `preference_repo.py` — upsert preferences ✅
@@ -178,12 +183,14 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] Inject saved preferences into agent system prompt in `agent.py` ✅
 
 #### Phase 3 — Auth Wiring + Integration (Days 13–20)
+
 - [x] Remove mock `get_current_user` — deps.py now uses real JWT decode, returns `user_id` int from token ✅
 - [x] Wire message saving — chat.py calls `append_message` before/after `invoke_agent` ✅
 - [x] Wire `save_trip` — `chat_service.invoke_agent` calls `trip_service.save_trip` when `generate_plan=True` ✅
 - [x] Wire voice into Chat UI — ChatPage/InputBar already integrate VoiceButton + useASR/useTTS ✅
 
 ### 🧪 Tests to Write
+
 ```
 backend/tests/unit/
 ├── test_tools/
@@ -200,8 +207,9 @@ backend/tests/unit/
 
 backend/tests/integration/
 └── test_chat/
-    └── test_chat_endpoint.py   # POST /chat returns TripItinerary shape
-```
+└── test_chat_endpoint.py # POST /chat returns TripItinerary shape
+
+````
 
 ### ⚠️ Mocking Strategy (Unblock yourself)
 ```python
@@ -215,7 +223,8 @@ async def get_current_user(
 # ⚠️ Swap the body only — keep the function signature identical when removing mock.
 # Minqi: your real get_current_user MUST return User(id, username, email) shape.
 # Do NOT change the return type or field names or David's routes break silently.
-```
+````
+
 > Remove mock once Minqi's JWT middleware is ready.
 
 ---
@@ -223,9 +232,11 @@ async def get_current_user(
 ## 🙋 Minqi — Auth + Chat
 
 ### 🎯 Goal
+
 Own the full authentication flow and chat session/message persistence, end-to-end from DB to UI.
 
 ### 📦 Files Owned
+
 ```
 backend/app/db/models/
 ├── user.py                   # users table
@@ -279,6 +290,7 @@ frontend/src/
 ### ✅ Task Breakdown
 
 #### Phase 1 — Auth Backend (Days 1–6)
+
 - [ ] Define `users` table in `db/models/user.py`
 - [ ] Write Alembic migration for `users`
 - [ ] Implement `security.py`
@@ -295,6 +307,7 @@ frontend/src/
 - [ ] **Notify David** once `deps.py` → `get_current_user` is ready so he removes the mock
 
 #### Phase 2 — Chat Persistence (Days 7–12)
+
 - [ ] Define `chat_sessions` + `messages` tables
 - [ ] Write Alembic migrations for both tables
 - [ ] Implement `session_repo.py` — create session, get by user
@@ -307,6 +320,7 @@ frontend/src/
 - [ ] **Notify David** once `message_repo.py` is ready to wire message saving in `chat_service.py`
 
 #### Phase 3 — Auth + Chat UI (Days 10–14)
+
 - [x] `LoginPage.tsx` — login + register tabs, form validation, error display; full-screen centered card, no sidebar ✅
 - [x] "Continue as Guest" button — bypasses auth, stores `guest_uid` in localStorage, navigates to chat; `useChat.ts` sends guest_uid as session_id; backend resolves guest sessions ✅
 - [ ] `useAuth.ts` — login/logout, persist token in localStorage
@@ -320,6 +334,7 @@ frontend/src/
 - [ ] Display chat history on session load
 
 ### 🧪 Tests to Write
+
 ```
 backend/tests/unit/
 └── test_security/
@@ -333,6 +348,7 @@ backend/tests/integration/
 ```
 
 ### 🤝 Handoff to Team
+
 > Once `deps.py` → `get_current_user` is ready, notify **David** to remove the mock.
 > Once `message_repo.py` is ready, notify **David** to wire message saving in `chat_service.py`.
 
@@ -341,9 +357,11 @@ backend/tests/integration/
 ## 🙋 Xuan — Trip + Itinerary Display
 
 ### 🎯 Goal
+
 Own the full trip persistence and display flow — saving structured itineraries, CRUD API, and the rich frontend itinerary/map UI.
 
 ### 📦 Files Owned
+
 ```
 backend/app/db/models/
 └── trip.py                   # trips table (itinerary_json as JSONB)
@@ -381,6 +399,7 @@ frontend/src/store/
 ### ✅ Task Breakdown
 
 #### Phase 1 — Trip Backend (Days 1–6)
+
 - [ ] Define `trips` table in `db/models/trip.py`
   - `itinerary_json` as JSONB column
 - [ ] Write Alembic migration for `trips`
@@ -399,12 +418,14 @@ frontend/src/store/
   - `DELETE /trips/{trip_id}` — delete
 
 #### Phase 2 — Coordinate with David (Days 4–10)
+
 - [ ] **Day 1 — Align `TripItinerary` schema with David** — schema is owned by David (`agent/schemas.py`), no unilateral changes
 - [ ] Develop against David's `MOCK_ITINERARY` fixture (available Day 3) — no need to wait for real agent
 - [ ] `trip_service.save_trip()` accepts `TripItinerary` directly — no re-parsing
 - [ ] **Notify David** when `trip_service.save_trip()` is ready to wire into `chat_service.py`
 
 #### Phase 3 — Trip UI (Days 10–14)
+
 - [ ] `TripPage.tsx` — list of saved trips, click to expand detail
 - [ ] `ItineraryCard.tsx` — render `DayPlan[]`, day tabs or accordion
 - [ ] `HotelCard.tsx` — name, price, rating, booking link button
@@ -415,6 +436,7 @@ frontend/src/store/
 - [ ] Wire `TripPage` into app routing (coordinate with Minqi's auth guard)
 
 ### 🧪 Tests to Write
+
 ```
 backend/tests/integration/
 └── test_trips/
@@ -424,6 +446,7 @@ backend/tests/integration/
 ```
 
 ### 🤝 Handoff to Team
+
 > Depends on **David** for `TripItinerary` schema — align on Day 1, develop against mock from Day 3.
 > Depends on **Minqi** for auth guard on trip routes — use mock `get_current_user` until ready.
 
@@ -431,35 +454,35 @@ backend/tests/integration/
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area         | Issue                                                                                                                               |
-| --- | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 🟡        | Backend      | ✅ Fixed — use simple module-level dict cache (see Phase 1B transport.py note)                                                     |
-| 2   | 🟡        | Backend      | ✅ Accepted for demo — keep `wait_for` with demo-grade comment; all httpx clients use `async with` for clean cancel                  |
-| 3   | 🟢        | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                                                |
-| 5   | 🟠        | Coordination | ✅ Fixed — `chat.py` creates session on first message when `session_id` is null                             |
-| 17  | 🟡        | Backend      | `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (not yet implemented)                    |
-| 19  | 🟡        | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly              |
-| 21  | 🟢        | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image (Xuan)                                               |
-| 24  | 🟡        | Frontend     | `TripPage.tsx` needs full implementation with trip listing/detail (Xuan)                                                            |
-| 25  | 🔴        | Security     | ✅ Fixed — `POST /chat` now verifies `session.user_id == user_id` before use; returns 403 Forbidden if mismatch |
-| —   | 🟡        | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`                    |
-| —   | 🟡        | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                           |
-| —   | 🔴        | User Feature | ✅ Fixed — ProfilePage.tsx implemented with shadcn/ui; backend model/repo/service/routes all complete                  |
+| #   | Severity | Area         | Issue                                                                                                               |
+| --- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| 1   | 🟡       | Backend      | ✅ Fixed — use simple module-level dict cache (see Phase 1B transport.py note)                                      |
+| 2   | 🟡       | Backend      | ✅ Accepted for demo — keep `wait_for` with demo-grade comment; all httpx clients use `async with` for clean cancel |
+| 3   | 🟢       | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                               |
+| 5   | 🟠       | Coordination | ✅ Fixed — `chat.py` creates session on first message when `session_id` is null                                     |
+| 17  | 🟡       | Backend      | `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (not yet implemented)     |
+| 19  | 🟡       | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly         |
+| 21  | 🟢       | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image (Xuan)                                |
+| 24  | 🟡       | Frontend     | `TripPage.tsx` needs full implementation with trip listing/detail (Xuan)                                            |
+| 25  | 🔴       | Security     | ✅ Fixed — `POST /chat` now verifies `session.user_id == user_id` before use; returns 403 Forbidden if mismatch     |
+| —   | 🟡       | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`               |
+| —   | 🟡       | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)             |
+| —   | 🔴       | User Feature | ✅ Fixed — ProfilePage.tsx implemented with shadcn/ui; backend model/repo/service/routes all complete               |
 
 ---
 
 ## 🔗 Integration Points & Coordination
 
-| When       | Who           | Action                                                                                                                                              |
-| ---------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Day 1      | David + Xuan  | ✅ Finalize `TripItinerary` Pydantic schema together                                                                                                   |
+| When       | Who           | Action                                                                                             |
+| ---------- | ------------- | -------------------------------------------------------------------------------------------------- |
+| Day 1      | David + Xuan  | ✅ Finalize `TripItinerary` Pydantic schema together                                               |
 | Day 1      | David + Minqi | ✅ Session ID creation flow — `chat.py` creates session on first message when `session_id` is null |
-| Day 3      | David → All   | ✅ Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                                                                               |
-| Days 4–6   | Minqi → David | ✅ `deps.py` uses real JWT decode with `user_id` in token payload                                                                                    |
-| Days 4–9   | David         | ✅ `trip_service` + `trip_repo` created; wired into `chat_service.py`                                                                               |
-| Days 4–9   | Minqi → David | ✅ `message_service` wired into `chat.py` for message persistence                                                                              |
-| Day 4      | David → Minqi | ✅ Voice hooks (useASR, useTTS, VoiceButton) integrated into ChatPage/InputBar                                                                        |
-| Days 13–20 | All           | 🔄 Integration week — full flow testing, bug fixes, demo polish                                                                                        |
+| Day 3      | David → All   | ✅ Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                           |
+| Days 4–6   | Minqi → David | ✅ `deps.py` uses real JWT decode with `user_id` in token payload                                  |
+| Days 4–9   | David         | ✅ `trip_service` + `trip_repo` created; wired into `chat_service.py`                              |
+| Days 4–9   | Minqi → David | ✅ `message_service` wired into `chat.py` for message persistence                                  |
+| Day 4      | David → Minqi | ✅ Voice hooks (useASR, useTTS, VoiceButton) integrated into ChatPage/InputBar                     |
+| Days 13–20 | All           | 🔄 Integration week — full flow testing, bug fixes, demo polish                                    |
 
 ---
 
@@ -472,7 +495,7 @@ backend/tests/integration/
 | **4–9**   | Agent loop + `chat_service.py` + callbacks + `POST /chat`                             | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
 | **9–13**  | Preference extraction + auth wiring                                                   | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
 | **13–17** | Wire real auth + DB into chat, import chat_history_service                            | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
-| **18–20** | 🔴 Buffer — integration bugs, demo prep                                                | 🔴 Buffer — integration bugs, demo prep            | 🔴 Buffer — integration bugs, demo prep            |
+| **18–20** | 🔴 Buffer — integration bugs, demo prep                                               | 🔴 Buffer — integration bugs, demo prep           | 🔴 Buffer — integration bugs, demo prep           |
 
 ---
 
@@ -492,6 +515,7 @@ backend/tests/integration/
 > These features are **descoped** from the Apr 16 deadline. Revisit only if all core features are done before Day 15.
 
 ### SSE Streaming
+
 > **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
 
 - [ ] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint
@@ -500,5 +524,6 @@ backend/tests/integration/
 - [ ] Add 3x auto-retry on SSE disconnect
 
 ### Voice Upgrade
+
 - [ ] Upgrade `useTTS.ts` from `window.speechSynthesis` → Gemini TTS
 - [ ] **Gemini Live API** — single multimodal session replacing ASR + agent + TTS hooks entirely

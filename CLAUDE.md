@@ -65,6 +65,7 @@ Backend (FastAPI)
 ## Key Files
 
 **Backend:**
+
 - `backend/app/main.py` - FastAPI entry, lifespan, routers
 - `backend/app/core/config.py` - pydantic-settings env config
 - `backend/app/core/security.py` - JWT + password hashing
@@ -74,6 +75,7 @@ Backend (FastAPI)
 - `backend/app/repositories/` - DB access layer
 
 **Frontend:**
+
 - `frontend/src/pages/ChatPage.tsx` - Main chat UI
 - `frontend/src/hooks/useChat.ts` - Chat request hook
 - `frontend/src/hooks/useASR.ts` - Voice input

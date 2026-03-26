@@ -9,25 +9,25 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /home/davidwsl/projects/GoGoGo && uv run ruff check --fix && uv run ruff format",
-            "timeout": 30,
-            "statusMessage": "Running ruff check/format..."
-          },
-          {
-            "type": "command",
-            "command": "cd /home/davidwsl/projects/GoGoGo/frontend && npm run lint && npm run format",
-            "timeout": 30,
-            "statusMessage": "Running frontend lint/format..."
-          },
-          {
-            "type": "command",
-            "command": "cd /home/davidwsl/projects/GoGoGo && npx prettier --write --ignore-unknown .",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && npx prettier --write --ignore-unknown .",
             "timeout": 30,
             "statusMessage": "Running prettier..."
           },
           {
             "type": "command",
-            "command": "cd /home/davidwsl/projects/GoGoGo/backend && uv run pyright app/",
+            "command": "cd \"$(git rev-parse --show-toplevel)/frontend\" && npm run lint",
+            "timeout": 30,
+            "statusMessage": "Running frontend lint/format..."
+          },
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && uv run ruff check --fix && uv run ruff format",
+            "timeout": 30,
+            "statusMessage": "Running ruff check/format..."
+          },
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel)/backend\" && uv run pyright app/",
             "timeout": 60,
             "statusMessage": "Running pyright type check..."
           }
