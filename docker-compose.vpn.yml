@@ -4,6 +4,12 @@ secrets:
   NORDVPN_CREDS:
     file: ./vpn/nordvpn_creds.txt
 
+networks:
+  default:
+    name: gogogo-vpn_default
+  gogogo-shared:
+    external: true
+
 services:
   vpn-proxy:
     image: docker.io/edgd1er/nordvpn-proxy:latest
@@ -31,6 +37,8 @@ services:
       - OPENVPN_PARAMETERS=--tun-mtu 1500 --mssfix 1400
     secrets:
       - NORDVPN_CREDS
+    networks:
+      - gogogo-shared
     healthcheck:
       test:
         [
