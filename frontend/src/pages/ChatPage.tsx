@@ -1,17 +1,62 @@
 // ChatPage — Main chat UI with AI travel agent
 
+import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Settings, Zap, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/store';
 import { InputBar } from '@/components/chat/InputBar';
 import { apiClient } from '@/services/api';
 
+function StreamingMessage({ content }: { content: string }) {
+  const [displayedWords, setDisplayedWords] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    // Reset when content changes
+    setDisplayedWords(0);
+
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    const words = content.split(/\s+/);
+    if (words.length === 0) return;
+
+    // Reveal 1 word every 50ms for natural "talking" feel
+    intervalRef.current = setInterval(() => {
+      setDisplayedWords(prev => {
+        if (prev >= words.length) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 50);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [content]);
+
+  const words = content.split(/\s+/);
+  const displayed = words.slice(0, displayedWords).join(' ');
+  const remaining = words.slice(displayedWords).join(' ');
+
+  return (
+    <>
+      {displayed}
+      {remaining && <span className="animate-pulse">{remaining[0]}</span>}
+      {remaining.slice(1)}
+    </>
+  );
+}
+
 export function ChatPage() {
   const navigate = useNavigate();
   const messages = useChatStore(s => s.messages);
   const isLoading = useChatStore(s => s.isLoading);
   const isThinking = useChatStore(s => s.isThinking);
-  const setThinking = useChatStore(s => s.setThinking);
   const isLoggedIn = !!localStorage.getItem('token');
   const clearMessages = useChatStore(s => s.clearMessages);
   const setSessionId = useChatStore(s => s.setSessionId);
@@ -37,6 +82,10 @@ export function ChatPage() {
       alert('LLM test failed: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
+
+  // Determine if the last message is still streaming
+  const lastMsg = messages[messages.length - 1];
+  const isStreaming = isLoading && lastMsg?.role === 'assistant';
 
   return (
     <div className="flex h-screen bg-background">
@@ -113,22 +162,29 @@ export function ChatPage() {
             </div>
           )}
 
-          {messages.map(msg => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+          {messages.map((msg, idx) => {
+            const isLastAssistant = idx === messages.length - 1 && msg.role === 'assistant';
+            return (
               <div
-                className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
-                  msg.role === 'user'
-                    ? 'bg-black text-white rounded-br-md'
-                    : 'bg-muted text-foreground rounded-bl-md'
-                }`}
+                key={msg.id}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {msg.content}
+                <div
+                  className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                    msg.role === 'user'
+                      ? 'bg-black text-white rounded-br-md'
+                      : 'bg-muted text-foreground rounded-bl-md'
+                  }`}
+                >
+                  {isLastAssistant && isStreaming ? (
+                    <StreamingMessage content={msg.content} />
+                  ) : (
+                    msg.content
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Thinking indicator — shown while waiting for first content */}
           {isThinking && (
