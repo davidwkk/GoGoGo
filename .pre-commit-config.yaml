@@ -15,10 +15,6 @@ repos:
         pass_filenames: true
         always_run: false
         description: 'Run pyright type check on Python files'
-        language: system
-        types_or: [python]
-        pass_filenames: true
-        always_run: false
 
       - id: ruff-check
         name: ruff (check)
