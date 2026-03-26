@@ -61,7 +61,7 @@ export interface UserPreferences {
 }
 
 export interface UserProfile {
-  id: number;
+  id: string;
   username: string;
   email: string;
   preferences: UserPreferences | null;

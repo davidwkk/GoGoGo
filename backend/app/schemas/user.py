@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.enums import DietaryRestriction, HotelTier, MaxStops, TravelStyle
@@ -28,7 +30,7 @@ class UserCreate(BaseModel):
 
     email: EmailStr
     username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=8)
+    password: str
 
 
 class UserUpdate(BaseModel):
@@ -41,7 +43,7 @@ class UserUpdate(BaseModel):
 class UserResponse(BaseModel):
     """Safe public schema — no password exposed."""
 
-    id: int
+    id: UUID
     email: EmailStr
     username: str
     preferences: UserPreference | None = None

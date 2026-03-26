@@ -16,6 +16,12 @@ export function TripPage() {
         <>
           <h1 className="text-xl font-semibold">My Trips</h1>
           <p className="text-xs text-muted-foreground">Your saved trips will appear here...</p>
+          <button
+            onClick={() => navigate('/chat')}
+            className="mt-2 h-9 rounded-xl bg-black text-white px-5 text-sm font-medium hover:opacity-80 transition-opacity"
+          >
+            Go chat and generate a trip!
+          </button>
         </>
       ) : (
         <>
