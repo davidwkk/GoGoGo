@@ -39,7 +39,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
     # Create token with user_id so deps.py can use it for DB lookups
     token = create_access_token(
-        {"sub": body.email, "user_id": user.id},
+        {"sub": body.email, "user_id": str(user.id)},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return TokenResponse(access_token=token)
@@ -64,7 +64,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
     # Create token with user_id so deps.py can use it for DB lookups
     token = create_access_token(
-        {"sub": body.email, "user_id": user.id},
+        {"sub": body.email, "user_id": str(user.id)},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return TokenResponse(access_token=token)

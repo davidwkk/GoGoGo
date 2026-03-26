@@ -157,6 +157,19 @@ export function LoginPage() {
           </form>
         </div>
 
+        <button
+          type="button"
+          onClick={() => {
+            if (!localStorage.getItem('guest_uid')) {
+              localStorage.setItem('guest_uid', crypto.randomUUID());
+            }
+            navigate('/chat');
+          }}
+          className="h-9 w-full rounded-xl border border-border bg-background text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+        >
+          Continue as Guest
+        </button>
+
         <p className="text-center text-xs text-muted-foreground">
           By continuing, you agree to our Terms of Service
         </p>

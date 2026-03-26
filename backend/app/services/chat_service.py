@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from app.agent.agent import run_agent, run_agent_structured
 from app.schemas.chat import ChatResponse
@@ -17,7 +18,7 @@ TIMEOUT_SECONDS = 30.0
 
 async def invoke_agent(
     user_message: str,
-    user_id: int,
+    user_id: UUID | None,
     session_id: int | None = None,
     generate_plan: bool = False,
     preferences: dict | None = None,
@@ -42,8 +43,8 @@ async def invoke_agent(
                 timeout=TIMEOUT_SECONDS,
             )
 
-            # Save trip to DB if db session provided
-            if db is not None and itinerary is not None:
+            # Save trip to DB if db session provided and user is authenticated
+            if db is not None and itinerary is not None and user_id is not None:
                 from app.services import trip_service
 
                 trip_service.save_trip(

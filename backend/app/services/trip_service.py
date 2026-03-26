@@ -1,5 +1,7 @@
 """Trip service — business logic for trip CRUD operations."""
 
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from app.repositories.trip_repo import (
@@ -12,7 +14,7 @@ from app.schemas.itinerary import TripItinerary
 
 def save_trip(
     db: Session,
-    user_id: int,
+    user_id: UUID,
     session_id: int | None,
     itinerary: TripItinerary,
 ) -> dict:
@@ -39,13 +41,13 @@ def save_trip(
     return _trip_to_response(trip)
 
 
-def get_trips(db: Session, user_id: int) -> list[dict]:
+def get_trips(db: Session, user_id: UUID) -> list[dict]:
     """List all trips for a user as summary dicts."""
     trips = get_trips_by_user(db, user_id)
     return [_trip_to_response(t) for t in trips]
 
 
-def get_trip(db: Session, trip_id: int, user_id: int) -> dict | None:
+def get_trip(db: Session, trip_id: int, user_id: UUID) -> dict | None:
     """Get a single trip by ID. Returns None if not found or not owned."""
     trip = get_trip_by_id(db, trip_id)
     if trip is None or trip.user_id != user_id:

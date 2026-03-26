@@ -1,10 +1,26 @@
 """Message persistence service — Minqi owns this."""
 
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.models.message import Message
 from app.db.models.chat_session import ChatSession
+from app.db.models.guest import Guest
+from app.db.models.message import Message
+
+
+def get_or_create_guest(db: Session, guest_uid: str) -> Guest:
+    """Get an existing guest or create a new one."""
+    guest_uuid = UUID(guest_uid)
+    result = db.execute(select(Guest).where(Guest.id == guest_uuid))
+    guest = result.scalar_one_or_none()
+    if guest is None:
+        guest = Guest(id=guest_uuid)
+        db.add(guest)
+        db.commit()
+        db.refresh(guest)
+    return guest
 
 
 def append_message(
@@ -40,13 +56,15 @@ def get_session_messages(
 
 def create_session(
     db: Session,
-    user_id: int,
+    user_id: int | None = None,
     title: str = "New Chat",
+    guest_id: UUID | None = None,
 ) -> ChatSession:
     """Create a new chat session."""
     session = ChatSession(
         user_id=user_id,
         title=title,
+        guest_id=guest_id,
     )
     db.add(session)
     db.commit()

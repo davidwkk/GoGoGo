@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, ForeignKey, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -14,7 +15,7 @@ class UserPreference(Base):
     __tablename__ = "user_preferences"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), unique=True)
     preferences_json: Mapped[dict] = mapped_column(JSON, default=dict)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

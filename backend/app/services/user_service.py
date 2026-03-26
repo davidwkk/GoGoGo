@@ -1,5 +1,7 @@
 """User service — business logic for user profile operations."""
 
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from app.repositories.preference_repo import get_preferences, upsert_preferences
@@ -7,7 +9,7 @@ from app.repositories.user_repo import get_user_by_id, update_username
 from app.schemas.user import UserPreference
 
 
-def get_user_profile(db: Session, user_id: int) -> dict | None:
+def get_user_profile(db: Session, user_id: UUID) -> dict | None:
     """
     Fetch full user profile including preferences.
     Returns a dict suitable for UserResponse schema.
@@ -36,7 +38,7 @@ def get_user_profile(db: Session, user_id: int) -> dict | None:
 
 def update_user_profile(
     db: Session,
-    user_id: int,
+    user_id: UUID,
     username: str | None = None,
     preferences: dict | None = None,
 ) -> dict | None:

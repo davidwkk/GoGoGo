@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String, Uuid, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,7 +16,7 @@ class Trip(Base):
     __tablename__ = "trips"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     session_id: Mapped[int | None] = mapped_column(
         ForeignKey("chat_sessions.id"), nullable=True
     )

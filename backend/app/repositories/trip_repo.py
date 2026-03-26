@@ -1,5 +1,7 @@
 """Trip repository — DB access for trips table."""
 
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -8,7 +10,7 @@ from app.db.models.trip import Trip
 
 def create_trip(
     db: Session,
-    user_id: int,
+    user_id: UUID,
     session_id: int | None,
     title: str,
     destination: str,
@@ -34,7 +36,7 @@ def get_trip_by_id(db: Session, trip_id: int) -> Trip | None:
     return result.scalar_one_or_none()
 
 
-def get_trips_by_user(db: Session, user_id: int) -> list[Trip]:
+def get_trips_by_user(db: Session, user_id: UUID) -> list[Trip]:
     """Fetch all trips for a user, ordered by created_at descending."""
     result = db.execute(
         select(Trip).where(Trip.user_id == user_id).order_by(Trip.created_at.desc())
@@ -42,7 +44,7 @@ def get_trips_by_user(db: Session, user_id: int) -> list[Trip]:
     return list(result.scalars().all())
 
 
-def delete_trip(db: Session, trip_id: int, user_id: int) -> bool:
+def delete_trip(db: Session, trip_id: int, user_id: UUID) -> bool:
     """Delete a trip. Returns True if deleted, False if not found or not owned."""
     trip = get_trip_by_id(db, trip_id)
     if trip is None or trip.user_id != user_id:
