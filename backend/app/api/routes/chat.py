@@ -142,7 +142,7 @@ async def _stream_chat(
         else None
     )
     logger.info(
-        f"[_stream_chat] Creating client with model: {settings.GEMINI_LITE_MODEL}"
+        f"[_stream_chat] Creating client with model: {settings.GEMINI_CASUAL_MODEL}"
     )
     client = Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
 
@@ -177,7 +177,7 @@ async def _stream_chat(
                 f"[_stream_chat] Starting generate_content_stream (attempt {attempt + 1}/{max_retries + 1})"
             )
             stream = client.models.generate_content_stream(
-                model=settings.GEMINI_LITE_MODEL,
+                model=settings.GEMINI_CASUAL_MODEL,
                 contents=[
                     types.Content(
                         role="user",
