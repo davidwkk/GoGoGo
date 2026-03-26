@@ -1,0 +1,43 @@
+name: gogogo-vpn
+
+secrets:
+  NORDVPN_CREDS:
+    file: ./vpn/nordvpn_creds.txt
+
+services:
+  vpn-proxy:
+    image: docker.io/edgd1er/nordvpn-proxy:latest
+    container_name: gogogo-vpn-proxy
+    restart: unless-stopped
+    ports:
+      - '1080:1080' # SOCKS5 proxy
+      - '8888:8888' # HTTP proxy (optional)
+    devices:
+      - /dev/net/tun
+    cap_add:
+      - SYS_MODULE
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=2
+    environment:
+      - TZ=UTC
+      - NORDVPN_COUNTRY=singapore
+      - NORDVPN_PROTOCOL=tcp
+      - NORDVPN_CATEGORY=p2p
+      - NORDVPN_SERVER=sg475.nordvpn.com
+      - DANTE_LOGLEVEL=connect
+      - DANTE_ERRORLOG=/dev/stdout
+      # TCP is more reliable for HTTPS/TLS
+      - OPENVPN_PARAMETERS=--tun-mtu 1500 --mssfix 1400
+    secrets:
+      - NORDVPN_CREDS
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "curl -x socks5://localhost:1080 -s -o /dev/null -w '%{http_code}' https://generativelanguage.googleapis.com || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

@@ -32,7 +32,7 @@ async def get_weather(city: str) -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(
                 "https://api.openweathermap.org/data/2.5/weather",
                 params=params,

@@ -24,7 +24,7 @@ async def get_attraction(attraction_name: str) -> dict:
     url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(url)
             if response.status_code == 404:
                 return {

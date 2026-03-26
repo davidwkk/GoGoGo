@@ -48,7 +48,7 @@ async def search_hotels(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(
                 "https://serpapi.com/search.json",
                 params=params,

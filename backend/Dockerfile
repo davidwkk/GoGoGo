@@ -19,6 +19,10 @@ ENV PATH="/venv/bin:$PATH"
 COPY . .
 RUN mkdir -p logs
 
+# Copy startup script
+COPY startup.sh /startup.sh
+RUN chmod +x /startup.sh
+
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/startup.sh"]

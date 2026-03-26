@@ -14,7 +14,7 @@
 | Auth — Register/Login, JWT, Login UI      | **Minqi**                                                                                                          |
 | Chat — Session, Message History, Chat UI  | **Minqi**                                                                                                          |
 | Trip — CRUD, Itinerary Display, Map Embed | **Xuan**                                                                                                           |
-| DB Models + Migrations (all tables)       | **David** (owns all migrations; each member defines their own models but David manages the Alembic revision chain) |
+| DB Models + Migrations (all tables)       | **David** (owns all migrations and all models to remove conflicts) |
 
 ---
 

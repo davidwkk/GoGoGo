@@ -11,9 +11,8 @@ from app.schemas.chat import ChatResponse
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
-# Demo-grade timeout: acceptable for low-concurrency demo use.
-# All httpx.AsyncClient calls use async with so connections clean up on cancel.
-TIMEOUT_SECONDS = 25.0
+# LLM call timeout (30s for agent responses)
+TIMEOUT_SECONDS = 30.0
 
 
 async def invoke_agent(

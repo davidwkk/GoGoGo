@@ -226,3 +226,5 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 .claude/settings.local.json
+
+vpn/

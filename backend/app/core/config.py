@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     GOOGLE_MAPS_API_KEY: str
     LOG_LEVEL: str = "DEBUG"
 
+    # Proxy settings for LLM calls (optional)
+    LLM_PROXY_ENABLED: bool = False
+    SOCKS5_PROXY_URL: str = "socks5://host.docker.internal:1080"
+
     model_config = SettingsConfigDict(env_file=".env")
 
 
