@@ -1,11 +1,11 @@
 // Zustand store for app state
 
-import { create } from "zustand";
-import { isVoiceSupported } from "@/hooks/useASR";
+import { create } from 'zustand';
+import { isVoiceSupported } from '@/hooks/useASR';
 
 export interface Message {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   timestamp: number;
 }
@@ -23,21 +23,21 @@ export interface ChatState {
 
   // Actions
   setSessionId: (id: string) => void;
-  addMessage: (msg: Omit<Message, "id" | "timestamp">) => void;
+  addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>(set => ({
   sessionId: null,
   messages: [],
   voiceAvailable: isVoiceSupported(),
   isLoading: false,
 
-  setSessionId: (id) => set({ sessionId: id }),
+  setSessionId: id => set({ sessionId: id }),
 
-  addMessage: (msg) =>
-    set((state) => ({
+  addMessage: msg =>
+    set(state => ({
       messages: [
         ...state.messages,
         {
@@ -50,6 +50,5 @@ export const useChatStore = create<ChatState>((set) => ({
 
   clearMessages: () => set({ messages: [] }),
 
-  setLoading: (loading) => set({ isLoading: loading }),
+  setLoading: loading => set({ isLoading: loading }),
 }));
-

@@ -10,7 +10,7 @@ repos:
       - id: ruff-check
         name: ruff (check)
         entry: uv run ruff check
-        description: "Run ruff check on Python files"
+        description: 'Run ruff check on Python files'
         language: system
         types_or: [python]
         pass_filenames: true
@@ -18,20 +18,40 @@ repos:
       - id: ruff-format
         name: ruff (format)
         entry: uv run ruff format
-        description: "Run ruff format on Python files"
+        description: 'Run ruff format on Python files'
         language: system
         types_or: [python]
         pass_filenames: false
         require_serial: true
 
-  # Frontend: npm lint (TypeScript/JavaScript)
+  # Frontend: ESLint + Prettier (TypeScript/JavaScript)
   - repo: local
     hooks:
       - id: frontend-lint
         name: frontend lint
         entry: bash -c 'cd frontend && npm run lint'
-        description: "Run ESLint on frontend TypeScript files"
+        description: 'Run ESLint on frontend TypeScript files'
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
         pass_filenames: false
+
+      - id: frontend-format
+        name: frontend format
+        entry: bash -c 'cd frontend && npx prettier --write "src/**/*.{ts,tsx}"'
+        description: 'Format frontend files with Prettier'
+        language: system
+        files: ^frontend/src/
+        types_or: [ts, tsx]
+        pass_filenames: false
+
+  # Prettier: format all other files (JSON, YAML, MD, etc.)
+  - repo: local
+    hooks:
+      - id: prettier-format
+        name: prettier format
+        entry: npx prettier --write --ignore-unknown
+        description: 'Format non-Python files with Prettier'
+        language: system
+        pass_filenames: false
+        require_serial: true

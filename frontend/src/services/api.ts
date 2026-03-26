@@ -1,17 +1,17 @@
 // API service layer — Axios base client
 
-import axios from "axios";
+import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
-  headers: { "Content-Type": "application/json" },
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // Attach JWT token if present
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+apiClient.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -38,13 +38,13 @@ export interface ChatResponse {
   session_id: string;
   text: string;
   itinerary: unknown | null;
-  message_type: "chat" | "itinerary" | "error";
+  message_type: 'chat' | 'itinerary' | 'error';
   history?: Array<{ role: string; content: string; created_at: string }>;
 }
 
 export const chatService = {
   async sendMessage(req: ChatRequest): Promise<ChatResponse> {
-    const { data } = await apiClient.post<ChatResponse>("/chat", req);
+    const { data } = await apiClient.post<ChatResponse>('/chat', req);
     return data;
   },
 };
@@ -75,13 +75,12 @@ export interface UpdateProfileRequest {
 
 export const userService = {
   async getProfile(): Promise<UserProfile> {
-    const { data } = await apiClient.get<UserProfile>("/users/me");
+    const { data } = await apiClient.get<UserProfile>('/users/me');
     return data;
   },
 
   async updateProfile(req: UpdateProfileRequest): Promise<UserProfile> {
-    const { data } = await apiClient.patch<UserProfile>("/users/me", req);
+    const { data } = await apiClient.patch<UserProfile>('/users/me', req);
     return data;
   },
 };
-

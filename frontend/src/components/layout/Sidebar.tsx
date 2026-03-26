@@ -1,12 +1,12 @@
 // Sidebar — Left navigation bar with icon links
 
-import { useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Map, User } from "lucide-react";
+import { useLocation, useNavigate } from 'react-router-dom';
+import { MessageSquare, Map, User } from 'lucide-react';
 
 const navItems = [
-  { icon: MessageSquare, label: "Chat", path: "/chat" },
-  { icon: Map, label: "Trips", path: "/trips" },
-  { icon: User, label: "Profile", path: "/profile" },
+  { icon: MessageSquare, label: 'Chat', path: '/chat' },
+  { icon: Map, label: 'Trips', path: '/trips' },
+  { icon: User, label: 'Profile', path: '/profile' },
 ];
 
 export function Sidebar() {
@@ -17,7 +17,7 @@ export function Sidebar() {
     <aside className="flex flex-col items-center gap-6 py-6 w-14 bg-background border-r">
       {/* Logo */}
       <button
-        onClick={() => navigate("/chat")}
+        onClick={() => navigate('/chat')}
         className="mb-2 flex items-center justify-center rounded-xl bg-black text-white size-10 font-semibold text-sm hover:opacity-80 transition-opacity"
       >
         GG
@@ -34,8 +34,8 @@ export function Sidebar() {
               title={label}
               className={`flex items-center justify-center rounded-xl size-10 transition-all ${
                 active
-                  ? "bg-black text-white"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? 'bg-black text-white'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               <Icon className="size-5" />
@@ -43,7 +43,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
     </aside>
   );
 }

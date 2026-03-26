@@ -1,9 +1,9 @@
 // useChat — wire VoiceButton → chatService → POST /chat
 // Handles ChatResponse (text + itinerary + message_type)
 
-import { useCallback } from "react";
-import { chatService, ChatRequest } from "@/services/api";
-import { useChatStore } from "@/store";
+import { useCallback } from 'react';
+import { chatService, ChatRequest } from '@/services/api';
+import { useChatStore } from '@/store';
 
 interface UseChatOptions {
   onItinerary?: (itinerary: unknown) => void;
@@ -14,11 +14,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
   const { sessionId, addMessage, setSessionId, setLoading } = useChatStore();
 
   const sendMessage = useCallback(
-    async (
-      message: string,
-      generatePlan = false,
-      tripParams?: ChatRequest["trip_parameters"]
-    ) => {
+    async (message: string, generatePlan = false, tripParams?: ChatRequest['trip_parameters']) => {
       setLoading(true);
       try {
         const req: ChatRequest = {
@@ -37,8 +33,8 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
 
         // Add assistant message
         addMessage({
-          role: "assistant",
-          content: response.text || JSON.stringify(response.itinerary || ""),
+          role: 'assistant',
+          content: response.text || JSON.stringify(response.itinerary || ''),
         });
 
         // If itinerary returned, notify caller
@@ -47,15 +43,15 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
         }
 
         // If error, notify caller
-        if (response.message_type === "error" && onError) {
-          onError(response.text || "An error occurred");
+        if (response.message_type === 'error' && onError) {
+          onError(response.text || 'An error occurred');
         }
 
         return response;
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Request failed";
+        const message = err instanceof Error ? err.message : 'Request failed';
         onError?.(message);
-        addMessage({ role: "assistant", content: `Error: ${message}` });
+        addMessage({ role: 'assistant', content: `Error: ${message}` });
         throw err;
       } finally {
         setLoading(false);
@@ -66,4 +62,3 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
 
   return { sendMessage };
 }
-

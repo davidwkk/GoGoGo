@@ -1,6 +1,6 @@
 // Trip service — API calls for trip CRUD operations
 
-import { apiClient } from "@/services/api";
+import { apiClient } from '@/services/api';
 
 export interface TripSummary {
   id: number;
@@ -16,7 +16,7 @@ export interface TripDetail extends TripSummary {
 export const tripService = {
   /** List all trips for the current user */
   async getTrips(): Promise<TripSummary[]> {
-    const { data } = await apiClient.get<TripSummary[]>("/trips");
+    const { data } = await apiClient.get<TripSummary[]>('/trips');
     return data;
   },
 

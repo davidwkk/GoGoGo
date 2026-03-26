@@ -1,8 +1,8 @@
 // TTSPlayer — Auto-play TTS when new assistant message arrives
 // If TTS fails, shows text fallback
 
-import { useEffect } from "react";
-import { isTTSAvailable, useTTS } from "@/hooks/useTTS";
+import { useEffect } from 'react';
+import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
 
 interface TTSPlayerProps {
   text: string;
@@ -11,7 +11,7 @@ interface TTSPlayerProps {
 
 export function TTSPlayer({ text, onError }: TTSPlayerProps) {
   const { speak, stop } = useTTS({
-    onError: (e) => onError?.(e),
+    onError: e => onError?.(e),
   });
 
   useEffect(() => {
