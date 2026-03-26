@@ -198,7 +198,30 @@ echo -e "${BOLD}${GREEN}║  🌐 Frontend  →  http://localhost:5173          
 echo -e "${BOLD}${GREEN}║  ⚙️  Backend   →  http://localhost:8000           ║${RESET}"
 echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}\n"
 
-# ── 8. Log viewer ─────────────────────────────────────────────
+# ── 8. Seed DB ───────────────────────────────────────────────
+echo -e "${YELLOW}Seed the database with sample users?${RESET}"
+echo -e "  ${CYAN}[1]${RESET} Yes, seed sample users  ${YELLOW}(alice, bob, charlie / password123)${RESET} ${GREEN}[default]${RESET}"
+echo -e "  ${CYAN}[2]${RESET} No, skip seeding"
+echo -e "${YELLOW}Enter choice (1-2): ${RESET}\c"
+read -r -n 1 SEED_CHOICE
+echo ""
+SEED_CHOICE="${SEED_CHOICE:-1}"
+
+case "$SEED_CHOICE" in
+  1)
+    log "Seeding database..."
+    docker compose exec backend python /app/scripts/seed_db.py
+    success "Database seeded."
+    ;;
+  2)
+    log "Skipping database seed."
+    ;;
+  *)
+    warn "Invalid choice. Skipping seed."
+    ;;
+esac
+
+# ── 9. Log viewer ─────────────────────────────────────────────
 echo -e "${YELLOW}View service logs?${RESET}"
 echo -e "  ${CYAN}[1]${RESET} All          ${GREEN}[default]${RESET}"
 echo -e "  ${CYAN}[2]${RESET} Frontend (fn)"
