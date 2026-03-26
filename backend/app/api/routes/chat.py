@@ -59,6 +59,7 @@ async def chat(
         session_id=session.id,
         generate_plan=body.generate_plan,
         preferences=prefs_dict,
+        db=db,
     )
 
     # Save assistant response
