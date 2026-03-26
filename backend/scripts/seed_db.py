@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import sys
+from uuid import uuid4
 
 # Ensure app module is importable (works both locally and inside container)
 # When run from backend/: __file__ = backend/scripts/seed_db.py
@@ -25,16 +26,13 @@ if os.path.exists(_env_path):
     except ImportError:
         pass  # dotenv not installed, rely on environment variables
 
-from sqlalchemy import text  # noqa: E402
-
 from app.core.security import get_password_hash  # noqa: E402
+from app.db.models import User  # noqa: E402
 from app.db.session import session_factory  # noqa: E402
 
 
 SEED_USERS = [
-    {"username": "alice", "email": "alice@example.com", "password": "password123"},
-    {"username": "bob", "email": "bob@example.com", "password": "password123"},
-    {"username": "charlie", "email": "charlie@example.com", "password": "password123"},
+    {"username": "testuser", "email": "user@gmail.com", "password": "user"},
 ]
 
 
@@ -43,29 +41,19 @@ def seed_users() -> None:
     session = session_factory()
     try:
         for user_data in SEED_USERS:
-            existing = session.execute(
-                text("SELECT id FROM users WHERE email = :email"),
-                {"email": user_data["email"]},
-            ).fetchone()
-
+            existing = session.query(User).filter(User.email == user_data["email"]).first()
             if existing:
                 print(f"  Skipping {user_data['username']} (already exists)")
                 continue
 
             hashed = get_password_hash(user_data["password"])
-            session.execute(
-                text(
-                    """
-                    INSERT INTO users (username, email, hashed_password, created_at)
-                    VALUES (:username, :email, :hashed_password, NOW())
-                    """
-                ),
-                {
-                    "username": user_data["username"],
-                    "email": user_data["email"],
-                    "hashed_password": hashed,
-                },
+            user = User(
+                id=uuid4(),
+                username=user_data["username"],
+                email=user_data["email"],
+                hashed_password=hashed,
             )
+            session.add(user)
             print(f"  Created {user_data['username']} ({user_data['email']})")
         session.commit()
         print("Seed complete.")

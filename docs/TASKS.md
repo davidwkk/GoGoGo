@@ -308,6 +308,7 @@ frontend/src/
 
 #### Phase 3 — Auth + Chat UI (Days 10–14)
 - [x] `LoginPage.tsx` — login + register tabs, form validation, error display; full-screen centered card, no sidebar ✅
+- [x] "Continue as Guest" button — bypasses auth, stores `guest_uid` in localStorage, navigates to chat; `useChat.ts` sends guest_uid as session_id; backend resolves guest sessions ✅
 - [ ] `useAuth.ts` — login/logout, persist token in localStorage
 - [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
 - [ ] `authService.ts` — API calls with Axios
@@ -440,6 +441,7 @@ backend/tests/integration/
 | 19  | 🟡        | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly              |
 | 21  | 🟢        | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image (Xuan)                                               |
 | 24  | 🟡        | Frontend     | `TripPage.tsx` needs full implementation with trip listing/detail (Xuan)                                                            |
+| 25  | 🔴        | Security     | ✅ Fixed — `POST /chat` now verifies `session.user_id == user_id` before use; returns 403 Forbidden if mismatch |
 | —   | 🟡        | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`                    |
 | —   | 🟡        | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                           |
 | —   | 🔴        | User Feature | ✅ Fixed — ProfilePage.tsx implemented with shadcn/ui; backend model/repo/service/routes all complete                  |
