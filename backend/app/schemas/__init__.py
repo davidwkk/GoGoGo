@@ -1,3 +1,8 @@
+from app.schemas.auth import (
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 from app.schemas.chat import (
     ChatMessage,
     ChatRequest,
@@ -24,6 +29,10 @@ from app.schemas.itinerary import (
 from app.schemas.user import UserCreate, UserPreference, UserResponse, UserUpdate
 
 __all__ = [
+    # Auth
+    "LoginRequest",
+    "RegisterRequest",
+    "TokenResponse",
     # Enums
     "DietaryRestriction",
     "FlightDirection",

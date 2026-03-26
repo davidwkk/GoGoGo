@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -12,24 +11,9 @@ from app.core.security import (
     verify_password,
 )
 from app.repositories.user_repo import get_user_by_email, create_user
+from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 
 router = APIRouter()
-
-
-class RegisterRequest(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 
 @router.post(

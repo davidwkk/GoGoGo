@@ -12,6 +12,8 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gogogo-shared
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U gogogo -d gogogo']
       interval: 5s
@@ -38,11 +40,14 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
       # VPN Proxy settings (optional - only used when LLM_PROXY_ENABLED=1)
       LLM_PROXY_ENABLED: ${LLM_PROXY_ENABLED:-0}
-      SOCKS5_PROXY_URL: ${SOCKS5_PROXY_URL:-socks5://host.docker.internal:1080}
+      SOCKS5_PROXY_URL: ${SOCKS5_PROXY_URL:-socks5://vpn-proxy:1080}
+    networks:
+      - gogogo-shared
     ports:
       - '8000:8000'
     volumes:
       - ./backend:/app
+      - ./backend/scripts:/app/scripts
     depends_on:
       db:
         condition: service_healthy
@@ -72,6 +77,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
+networks:
+  gogogo-shared:
+    external: true
 
 volumes:
   postgres_data:
