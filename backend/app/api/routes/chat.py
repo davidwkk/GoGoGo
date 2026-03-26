@@ -113,7 +113,7 @@ async def test_llm() -> dict:
     }
 
 
-MAX_RETRIES = 3  # 1 initial attempt + 2 retries = 3 total attempts
+MAX_RETRIES = 3  # 1 initial attempt + 3 retries = 4 total calls; display shows only retry count (1/3–3/3)
 
 
 async def _stream_agent_thoughts(
@@ -215,7 +215,7 @@ async def _stream_agent_thoughts(
             return "You've reached the rate limit. Please wait a moment and try again."
         return "An error occurred. Please try again."
 
-    for attempt in range(max_retries):
+    for attempt in range(max_retries + 1):
         try:
             logger.info(
                 f"[_stream_agent_thoughts] Iteration attempt {attempt + 1}/{max_retries + 1}"
@@ -319,7 +319,9 @@ async def _stream_agent_thoughts(
                 logger.info(
                     f"[_stream_agent_thoughts] Transient error, retrying in {wait_time}s..."
                 )
-                yield f"data: {json.dumps({'status': f'Retrying ({attempt + 2}/{max_retries + 1}) due to high demand...'})}\n\n"
+                # Skip count on attempt=0 (initial call); show 1/3–3/3 for actual retries
+                if attempt > 0:
+                    yield f"data: {json.dumps({'status': f'Retrying ({attempt}/{max_retries}) due to high demand...'})}\n\n"
                 await asyncio.sleep(wait_time)
                 continue
             else:
