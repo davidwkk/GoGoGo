@@ -120,9 +120,6 @@ for item in "${to_remove[@]}"; do
   echo "    - $(echo "$item" | cut -d'|' -f1)"
 done
 echo ""
-read -rn 1 -p "  Confirm removal? [y/N]: " CONFIRM
-echo ""
-[[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { warn "Aborted."; exit 0; }
 
 # ── Group by project → run compose down per project ──────────
 # Prefer compose down (cleans networks/volumes) when ALL containers
