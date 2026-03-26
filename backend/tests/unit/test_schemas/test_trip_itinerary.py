@@ -115,6 +115,35 @@ class TestTripItineraryValidation:
         assert len(flight.stops) == 1
         assert flight.stops[0].airport_code == "NRT"
 
+    def test_flight_info_with_booking_url(self):
+        """FlightInfo validates with booking_url."""
+        flight = FlightInfo(
+            direction=FlightDirection.OUTBOUND,
+            airline="Cathay Pacific",
+            flight_number="CX883",
+            departure_airport="HKG",
+            arrival_airport="LAX",
+            departure_time="2025-07-01T00:30:00",
+            arrival_time="2025-07-01T21:30:00",
+            stops=[],
+            booking_url="https://www.google.com/flights/CX883",
+        )
+        assert flight.booking_url == "https://www.google.com/flights/CX883"
+
+    def test_flight_info_booking_url_is_optional(self):
+        """FlightInfo booking_url is optional and defaults to None."""
+        flight = FlightInfo(
+            direction=FlightDirection.OUTBOUND,
+            airline="Cathay Pacific",
+            flight_number="CX883",
+            departure_airport="HKG",
+            arrival_airport="LAX",
+            departure_time="2025-07-01T00:30:00",
+            arrival_time="2025-07-01T21:30:00",
+            stops=[],
+        )
+        assert flight.booking_url is None
+
     def test_invalid_duration_days_rejected(self):
         """duration_days must be >= 1."""
         with pytest.raises(Exception):

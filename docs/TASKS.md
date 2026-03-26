@@ -291,33 +291,34 @@ frontend/src/
 
 #### Phase 1 — Auth Backend (Days 1–6)
 
-- [ ] Define `users` table in `db/models/user.py`
-- [ ] Write Alembic migration for `users`
-- [ ] Implement `security.py`
+- [x] Define `users` table in `db/models/user.py` ✅
+- [x] Write Alembic migration for `users` ✅
+- [x] Implement `security.py` ✅
   - `hash_password`, `verify_password` (passlib bcrypt)
   - `create_access_token`, `decode_access_token` (python-jose)
   - Use `oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")` in `deps.py`
-- [ ] Implement `auth_service.py` — register (check duplicate), login (verify + issue token)
-- [ ] Implement `user_repo.py` — `get_by_email`, `get_by_id`, `create`
-- [ ] Expose `POST /auth/register`, `POST /auth/login` in `api/routes/auth.py`
-- [ ] Implement `deps.py`
+- [x] Implement `auth_service.py` — register (check duplicate), login (verify + issue token) ✅
+- [x] Implement `user_repo.py` — `get_by_email`, `get_by_id`, `create` ✅
+- [x] Expose `POST /auth/register`, `POST /auth/login` in `api/routes/auth.py` ✅
+- [x] Implement `deps.py` ✅
   - `get_db` — async session dependency
   - `get_current_user` — decode JWT via `oauth2_scheme: OAuth2PasswordBearer` (David's mock uses the same signature); must return `User(id, username, email)` — do NOT change return type or field names
-- [ ] Expose `GET /users/me` in `api/routes/users.py`
-- [ ] **Notify David** once `deps.py` → `get_current_user` is ready so he removes the mock
+- [x] Expose `GET /users/me` in `api/routes/users.py` ✅
+- [x] **Notify David** once `deps.py` → `get_current_user` is ready so he removes the mock ✅ (done, David confirmed)
 
 #### Phase 2 — Chat Persistence (Days 7–12)
 
-- [ ] Define `chat_sessions` + `messages` tables
-- [ ] Write Alembic migrations for both tables
-- [ ] Implement `session_repo.py` — create session, get by user
-- [ ] Implement `message_repo.py` — append message, get history by session
-- [ ] Build `chat_history_service.py` with `append_user_message()` and `append_agent_message()` methods
-- [ ] Update `chat_service.py` (coordinate with David)
-  - Save user message before agent call
-  - Save assistant response after agent call
-- [ ] Expose session history endpoint: `GET /chat/sessions/{session_id}/messages`
-- [ ] **Notify David** once `message_repo.py` is ready to wire message saving in `chat_service.py`
+> **Note:** Session operations are in `message_service.py` (not separate `session_repo.py`); `chat_history_service.py` is `message_service.py`.
+
+- [x] Define `chat_sessions` + `messages` tables ✅
+- [x] Write Alembic migrations for both tables ✅
+- [x] Implement `message_service.py` — `create_session`, `get_session`, `append_message`, `get_session_messages`, `get_or_create_guest` ✅
+- [x] Build `chat_history_service.py` with `append_user_message()` and `append_agent_message()` methods ✅ (in `message_service.py`)
+- [x] Update `chat_service.py` (coordinate with David) ✅
+  - Save user message before agent call ✅
+  - Save assistant response after agent call ✅
+- [x] Expose session history endpoint: `GET /chat/sessions/{session_id}/messages` ✅
+- [x] **Notify David** once `message_repo.py` is ready to wire message saving in `chat_service.py` ✅ (done, wired)
 
 #### Phase 3 — Auth + Chat UI (Days 10–14)
 
@@ -325,10 +326,10 @@ frontend/src/
 - [x] "Continue as Guest" button — bypasses auth, stores `guest_uid` in localStorage, navigates to chat; `useChat.ts` sends guest_uid as session_id; backend resolves guest sessions ✅
 - [ ] `useAuth.ts` — login/logout, persist token in localStorage
 - [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
-- [ ] `authService.ts` — API calls with Axios
+- [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
 - [ ] Protected route wrapper — redirect to login if unauthenticated
-- [ ] `ChatPage.tsx` scaffold — message list, input bar (coordinate with David for voice wiring)
-- [ ] `MessageBubble.tsx` — user vs assistant styling
+- [ ] `ChatPage.tsx` — basic scaffold exists with message list + InputBar; MessageBubble rendered inline ✅/❌
+- [ ] `MessageBubble.tsx` — user vs assistant styling (currently inline in ChatPage)
 - [ ] Display fake loading steps ("Searching flights...", "Checking weather...") during POST /chat request
 - [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
 - [ ] Display chat history on session load
@@ -400,18 +401,18 @@ frontend/src/store/
 
 #### Phase 1 — Trip Backend (Days 1–6)
 
-- [ ] Define `trips` table in `db/models/trip.py`
+- [x] Define `trips` table in `db/models/trip.py` ✅
   - `itinerary_json` as JSONB column
-- [ ] Write Alembic migration for `trips`
-- [ ] Implement `trip_repo.py`
+- [x] Write Alembic migration for `trips` ✅
+- [x] Implement `trip_repo.py` ✅
   - `create`, `get_by_id`, `get_by_user`, `delete`
   - Call `itinerary.model_dump(mode='json')` before saving to SQLAlchemy
   - Validate back with `TripItinerary.model_validate(db_obj.itinerary_json)` on retrieval
-- [ ] Implement `trip_service.py`
+- [x] Implement `trip_service.py` ✅
   - `save_trip(user_id, session_id, itinerary: TripItinerary)` — serialize + store
   - `get_trips(user_id)` — list summaries
   - `get_trip(trip_id)` — full detail
-- [ ] Expose CRUD in `api/routes/trips.py`
+- [x] Expose CRUD in `api/routes/trips.py` ✅
   - `POST /trips` — save trip (called by `chat_service` after agent finishes)
   - `GET /trips` — list user's trips
   - `GET /trips/{trip_id}` — full itinerary
@@ -419,10 +420,10 @@ frontend/src/store/
 
 #### Phase 2 — Coordinate with David (Days 4–10)
 
-- [ ] **Day 1 — Align `TripItinerary` schema with David** — schema is owned by David (`agent/schemas.py`), no unilateral changes
-- [ ] Develop against David's `MOCK_ITINERARY` fixture (available Day 3) — no need to wait for real agent
-- [ ] `trip_service.save_trip()` accepts `TripItinerary` directly — no re-parsing
-- [ ] **Notify David** when `trip_service.save_trip()` is ready to wire into `chat_service.py`
+- [x] **Day 1 — Align `TripItinerary` schema with David** — schema is owned by David (`agent/schemas.py`), no unilateral changes ✅
+- [x] Develop against David's `MOCK_ITINERARY` fixture (available Day 3) — no need to wait for real agent ✅
+- [x] `trip_service.save_trip()` accepts `TripItinerary` directly — no re-parsing ✅
+- [x] **Notify David** when `trip_service.save_trip()` is ready to wire into `chat_service.py` ✅ (wired)
 
 #### Phase 3 — Trip UI (Days 10–14)
 
@@ -454,20 +455,21 @@ backend/tests/integration/
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area         | Issue                                                                                                               |
-| --- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| 1   | 🟡       | Backend      | ✅ Fixed — use simple module-level dict cache (see Phase 1B transport.py note)                                      |
-| 2   | 🟡       | Backend      | ✅ Accepted for demo — keep `wait_for` with demo-grade comment; all httpx clients use `async with` for clean cancel |
-| 3   | 🟢       | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                               |
-| 5   | 🟠       | Coordination | ✅ Fixed — `chat.py` creates session on first message when `session_id` is null                                     |
-| 17  | 🟡       | Backend      | `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (not yet implemented)     |
-| 19  | 🟡       | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly         |
-| 21  | 🟢       | Frontend     | `AttractionCard.tsx` must handle `thumbnail_url: null` with placeholder image (Xuan)                                |
-| 24  | 🟡       | Frontend     | `TripPage.tsx` needs full implementation with trip listing/detail (Xuan)                                            |
-| 25  | 🔴       | Security     | ✅ Fixed — `POST /chat` now verifies `session.user_id == user_id` before use; returns 403 Forbidden if mismatch     |
-| —   | 🟡       | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`               |
-| —   | 🟡       | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)             |
-| —   | 🔴       | User Feature | ✅ Fixed — ProfilePage.tsx implemented with shadcn/ui; backend model/repo/service/routes all complete               |
+| #   | Severity | Area         | Issue                                                                                                                                                      |
+| --- | -------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 🟡       | Backend      | ✅ Fixed — use simple module-level dict cache (see Phase 1B transport.py note)                                                                             |
+| 2   | 🟡       | Backend      | ✅ Accepted for demo — keep `wait_for` with demo-grade comment; all httpx clients use `async with` for clean cancel                                        |
+| 3   | 🟢       | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                                                                      |
+| 5   | 🟠       | Coordination | ✅ Fixed — `chat.py` creates session on first message when `session_id` is null                                                                            |
+| 17  | 🟡       | Backend      | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                  |
+| 19  | 🟡       | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly                                                |
+| 21  | 🟡       | Frontend     | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                                      |
+| 24  | 🔴       | Frontend     | 🔴 Open — `TripPage.tsx` is placeholder stub only; all trip UI components missing (Xuan)                                                                   |
+| 25  | 🔴       | Security     | ✅ Fixed — `POST /chat` now verifies `session.user_id == user_id` before use; returns 403 Forbidden if mismatch                                            |
+| 26  | 🟡       | Frontend     | ⚠️ Open — Minqi Phase 3 incomplete: `useAuth.ts`, auth store, `MessageBubble.tsx`, fake loading steps, "Save & Finish Trip" button, chat history on reload |
+| —   | 🟡       | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`                                                      |
+| —   | 🟡       | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                    |
+| —   | 🔴       | User Feature | ✅ Fixed — ProfilePage.tsx implemented with shadcn/ui; backend model/repo/service/routes all complete                                                      |
 
 ---
 
@@ -518,10 +520,10 @@ backend/tests/integration/
 
 > **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
 
-- [ ] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint
+- [x] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint ✅ (`POST /chat/stream` in `chat.py`)
 - [ ] Stream agent thinking steps + tool calls to frontend
-- [ ] Update `useChat.ts` — consume SSE, show intermediate steps in UI
-- [ ] Add 3x auto-retry on SSE disconnect
+- [ ] Update `useChat.ts` — consume SSE, show intermediate steps in UI (basic streaming working, thinking steps not streamed)
+- [ ] Add 3x auto-retry on SSE disconnect (currently 2 retries with exponential backoff in `_stream_chat`)
 
 ### Voice Upgrade
 

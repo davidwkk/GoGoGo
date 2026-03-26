@@ -121,6 +121,18 @@ export const chatService = {
                 data.chunk.substring(0, 100)
               );
               yield data.chunk;
+            } else if (data.thought) {
+              // Agent is thinking — pass through with special prefix for UI display
+              yield `__THOUGHT__:${data.thought}`;
+            } else if (data.tool_call) {
+              // Tool call started — pass through for UI display
+              yield `__TOOL_CALL__:${data.tool_call}`;
+            } else if (data.tool_result) {
+              // Tool result received — pass through for UI display
+              yield `__TOOL_RESULT__:${data.tool_result}`;
+            } else if (data.status) {
+              // Status update (e.g. retrying) — pass through
+              yield `__STATUS__:${data.status}`;
             } else if (data.error) {
               console.error('[streamMessage] Stream error:', data.error);
               // data.error may be a string or an object like {code, message, status}

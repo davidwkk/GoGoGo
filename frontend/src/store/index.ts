@@ -25,6 +25,9 @@ export interface ChatState {
   // Stream cancellation
   abortController: AbortController | null;
 
+  // Agent thinking steps (tool calls, status updates during streaming)
+  thinkingSteps: string[];
+
   // Actions
   setSessionId: (id: string | null) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
@@ -33,6 +36,8 @@ export interface ChatState {
   setLoading: (loading: boolean) => void;
   setThinking: (thinking: boolean) => void;
   setAbortController: (controller: AbortController | null) => void;
+  addThinkingStep: (step: string) => void;
+  clearThinkingSteps: () => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -42,18 +47,17 @@ export const useChatStore = create<ChatState>(set => ({
   isLoading: false,
   isThinking: false,
   abortController: null,
+  thinkingSteps: [],
 
   setSessionId: id => set({ sessionId: id }),
 
-  addMessage: msg =>
-    set(state => {
-      const newMsg = {
-        ...msg,
-        id: crypto.randomUUID(),
-        timestamp: Date.now(),
-      };
-      return { messages: [...state.messages, newMsg] };
-    }),
+  addMessage: msg => {
+    const id = crypto.randomUUID();
+    set(state => ({
+      messages: [...state.messages, { ...msg, id, timestamp: Date.now() }],
+    }));
+    return id;
+  },
 
   updateStreamingMessage: (id, content) =>
     set(state => ({
@@ -67,4 +71,11 @@ export const useChatStore = create<ChatState>(set => ({
   setThinking: thinking => set({ isThinking: thinking }),
 
   setAbortController: controller => set({ abortController: controller }),
+
+  addThinkingStep: step =>
+    set(state => ({
+      thinkingSteps: [...state.thinkingSteps, step],
+    })),
+
+  clearThinkingSteps: () => set({ thinkingSteps: [] }),
 }));

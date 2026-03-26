@@ -57,6 +57,7 @@ export function ChatPage() {
   const messages = useChatStore(s => s.messages);
   const isLoading = useChatStore(s => s.isLoading);
   const isThinking = useChatStore(s => s.isThinking);
+  const thinkingSteps = useChatStore(s => s.thinkingSteps);
   const isLoggedIn = !!localStorage.getItem('token');
   const clearMessages = useChatStore(s => s.clearMessages);
   const setSessionId = useChatStore(s => s.setSessionId);
@@ -187,10 +188,26 @@ export function ChatPage() {
           })}
 
           {/* Thinking indicator — shown while waiting for first content */}
-          {isThinking && (
+          {(isThinking || thinkingSteps.length > 0) && (
             <div className="flex justify-start">
-              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
-                <span className="animate-pulse">Thinking...</span>
+              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md space-y-1">
+                {thinkingSteps.length > 0 ? (
+                  <div className="space-y-1">
+                    {thinkingSteps.map((step, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                      >
+                        {i === thinkingSteps.length - 1 && (
+                          <span className="animate-pulse h-1.5 w-1.5 rounded-full bg-yellow-500 inline-block" />
+                        )}
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="animate-pulse">Thinking...</span>
+                )}
               </div>
             </div>
           )}
