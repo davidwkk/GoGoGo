@@ -83,7 +83,12 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
               setSessionId(sessionId);
             }
           } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Stream failed';
+            let errorMsg = err instanceof Error ? err.message : 'Stream failed';
+            // Make "model high demand" errors more user-friendly
+            if (errorMsg.includes('high demand') || errorMsg.includes('503')) {
+              errorMsg =
+                'The AI is experiencing high demand right now. Please try again in a few moments.';
+            }
             console.error('[useChat] Stream error:', errorMsg);
             useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
             onError?.(errorMsg);

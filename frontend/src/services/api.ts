@@ -119,7 +119,12 @@ export const chatService = {
               yield data.chunk;
             } else if (data.error) {
               console.error('[streamMessage] Stream error:', data.error);
-              throw new Error(data.error);
+              // data.error may be a string or an object like {code, message, status}
+              const errorMsg =
+                typeof data.error === 'string'
+                  ? data.error
+                  : data.error?.message || JSON.stringify(data.error);
+              throw new Error(errorMsg);
             } else if (data.done) {
               console.log('[streamMessage] Stream done signal received');
               return;
