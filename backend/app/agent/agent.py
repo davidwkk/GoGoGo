@@ -130,6 +130,9 @@ async def run_agent(
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=ALL_TOOLS,
+            thinking_config=types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel.MINIMAL
+            ),
         )
 
         logger.info(
@@ -246,6 +249,9 @@ async def run_agent_structured(
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=ALL_TOOLS,
+            thinking_config=types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel.MINIMAL
+            ),
         )
 
         response = client.models.generate_content(
@@ -307,6 +313,9 @@ async def run_agent_structured(
         system_instruction=system_instruction,
         response_mime_type="application/json",
         response_json_schema=TripItinerary.model_json_schema(),
+        thinking_config=types.ThinkingConfig(
+            thinking_level=types.ThinkingLevel.MINIMAL
+        ),
     )
 
     response = client.models.generate_content(

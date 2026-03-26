@@ -29,7 +29,7 @@ echo ""
 cd "$PROJECT_ROOT/backend"
 
 uv run python -c "
-from google.genai import Client
+from google.genai import Client, types
 import os
 
 api_key = os.environ.get('GEMINI_API_KEY')
@@ -50,6 +50,12 @@ for model in models_to_try:
         response = client.models.generate_content(
             model=model,
             contents=\"Say 'Hello, Gemini!' in exactly those words.\",
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(
+                    thinking_level=types.ThinkingLevel.MINIMAL
+                ),
+                max_output_tokens=50,
+            ),
         )
         print(f'SUCCESS! Model: {model}')
         print(f'Response: {response.text}')
