@@ -33,20 +33,33 @@ from google.genai import Client
 import os
 
 api_key = os.environ.get('GEMINI_API_KEY')
-model = os.environ.get('GEMINI_LITE_MODEL', 'gemini-3.1-flash-lite-preview')
+lite_model = os.environ.get('GEMINI_LITE_MODEL', 'gemini-3.1-flash-lite-preview')
+main_model = os.environ.get('GEMINI_MODEL', 'gemini-3.0-flash')
 
-print(f'Testing model: {model}')
 print(f'API key present: {bool(api_key)}')
 print()
 
 client = Client(api_key=api_key)
 
-response = client.models.generate_content(
-    model=model,
-    contents=\"Say 'Hello, Gemini 3.1 Flash-Lite!' in exactly those words.\",
-)
+# Try GEMINI_LITE_MODEL first, fall back to GEMINI_MODEL on failure
+models_to_try = [lite_model, main_model]
 
-print(f'Response: {response.text}')
+for model in models_to_try:
+    try:
+        print(f'Trying model: {model}')
+        response = client.models.generate_content(
+            model=model,
+            contents=\"Say 'Hello, Gemini!' in exactly those words.\",
+        )
+        print(f'SUCCESS! Model: {model}')
+        print(f'Response: {response.text}')
+        break
+    except Exception as e:
+        print(f'FAILED: {e}')
+        if model != models_to_try[-1]:
+            print('Trying next model...\n')
+        else:
+            print('All models failed.')
 "
 
 echo ""
