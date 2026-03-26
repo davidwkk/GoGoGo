@@ -6,13 +6,13 @@ All fields passed via `types.GenerateContentConfig(...)` in the Python SDK.
 
 ## Core Generation Controls
 
-| Field               | Type        | Description                                                                                                                          |
-| ------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `temperature`       | `float`     | Sampling temperature (0.0–2.0). Higher = more random/creative. Default: 1.0. For Gemini 3, maintain 1.0 to avoid degraded reasoning. |
-| `top_p`             | `float`     | Nucleus sampling threshold (0.0–1.0). Only tokens with cumulative probability up to this value are considered. Default: 0.95.        |
-| `top_k`             | `int`       | Limits sampling to the top K most likely tokens. Default: 64 (Gemini 3 Flash).                                                       |
-| `max_output_tokens` | `int`       | Maximum number of tokens in the output. Use to limit response length and control costs.                                              |
-| `stop_sequences`    | `list[str]` | Strings that stop generation when encountered. Output terminates at the first match.                                                 |
+| Field               | Type        | Description                                                                                                                                                                        |
+| ------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `temperature`       | `float`     | Sampling temperature (0.0–2.0). Default: 1.0. **Gemini 3: keep at 1.0.** Lowering it can cause looping or degraded reasoning on complex tasks. Use `seed` for determinism instead. |
+| `top_p`             | `float`     | Nucleus sampling threshold (0.0–1.0). Only tokens with cumulative probability up to this value are considered. Default: 0.95.                                                      |
+| `top_k`             | `int`       | Limits sampling to the top K most likely tokens. Default: 64 (Gemini 3 Flash).                                                                                                     |
+| `max_output_tokens` | `int`       | Maximum number of tokens in the output. Use to limit response length and control costs.                                                                                            |
+| `stop_sequences`    | `list[str]` | Strings that stop generation when encountered. Output terminates at the first match.                                                                                               |
 
 ## Structured Output
 
@@ -171,10 +171,10 @@ config = types.GenerateContentConfig(
 
 | Use Case                             | Temperature | Thinking Level    | Max Output Tokens |
 | ------------------------------------ | ----------- | ----------------- | ----------------- |
-| Casual chat / small talk             | 0.7–1.0     | `MINIMAL`         | Default           |
-| Trip planning (tool loop)            | 0.7–1.0     | `MINIMAL`         | Default           |
-| Trip planning (structured output)    | 0.5–0.7     | `MINIMAL`         | Default           |
-| High-throughput non-critical queries | 0.5         | `LOW` / `MINIMAL` | 50–100            |
-| Precise / deterministic answers      | 0.1–0.3     | `MEDIUM` / `HIGH` | Default           |
+| Casual chat / small talk             | **1.0**     | `MINIMAL`         | Default           |
+| Trip planning (tool loop)            | **1.0**     | `MINIMAL`         | Default           |
+| Trip planning (structured output)    | **1.0**     | `MINIMAL`         | Default           |
+| High-throughput non-critical queries | **1.0**     | `LOW` / `MINIMAL` | 50–100            |
+| Precise / deterministic answers      | **1.0**     | `MEDIUM` / `HIGH` | Default           |
 
-> **Note:** Google recommends keeping `temperature` at **1.0** for Gemini 3 models. Any deviation may affect reasoning quality; lower values are more likely to degrade it.
+> **⚠️ Temperature Warning:** Google recommends keeping `temperature` at **1.0** for all Gemini 3 models. Gemini 3's reasoning capabilities are optimized for the default — setting it below 1.0 may cause looping, degraded reasoning, or unexpected behavior, particularly on complex mathematical or logical tasks. **Do not lower temperature for "more determinism"** on Gemini 3; use `seed` instead for reproducible output.
