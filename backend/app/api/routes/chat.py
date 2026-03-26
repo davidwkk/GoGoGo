@@ -127,8 +127,8 @@ async def _stream_chat(
     logger.info(f"[_stream_chat] System instruction: {system_instruction[:200]}...")
 
     try:
-        logger.info("[_stream_chat] Starting generate_content_streaming")
-        stream = client.models.generate_content_streaming(  # type: ignore[attr-defined]
+        logger.info("[_stream_chat] Starting generate_content_stream")
+        stream = client.models.generate_content_stream(
             model=settings.GEMINI_LITE_MODEL,
             contents=[
                 types.Content(
