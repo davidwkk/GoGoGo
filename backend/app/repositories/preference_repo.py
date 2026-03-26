@@ -1,4 +1,5 @@
 """Preference repository — upsert user preferences."""
+
 from sqlalchemy.orm import Session
 
 from app.db.models.preference import UserPreference

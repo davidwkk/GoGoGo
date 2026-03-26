@@ -1,4 +1,5 @@
 """Chat service — David owns agent invocation only."""
+
 from __future__ import annotations
 
 import asyncio
@@ -72,4 +73,3 @@ async def invoke_agent(
             itinerary=None,
             message_type="error",
         )
-

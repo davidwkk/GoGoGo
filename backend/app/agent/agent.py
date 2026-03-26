@@ -8,6 +8,7 @@ Key implementation notes:
 - Manual history management: append model turns AND tool responses between iterations
 - System prompt: prefs_section = f"User preferences: {preferences}" if preferences else ""
 """
+
 from __future__ import annotations
 
 from google.genai import Client, types
@@ -165,17 +166,21 @@ async def run_agent_structured(
 
     user_content = types.Content(
         role="user",
-        parts=[types.Part.from_text(
-            text=user_message
-            + "\n\nBased on all the information gathered above, create a detailed "
-            "trip itinerary with the TripItinerary structure."
-        )],
+        parts=[
+            types.Part.from_text(
+                text=user_message
+                + "\n\nBased on all the information gathered above, create a detailed "
+                "trip itinerary with the TripItinerary structure."
+            )
+        ],
     )
     messages.append(user_content)
 
     # ── Phase 1: Tool-calling loop ──────────────────────────────────────────
     for iteration in range(MAX_ITERATIONS):
-        logger.debug(f"[AGENT] Iteration {iteration + 1}/{MAX_ITERATIONS} (tool gathering)")
+        logger.debug(
+            f"[AGENT] Iteration {iteration + 1}/{MAX_ITERATIONS} (tool gathering)"
+        )
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
@@ -224,10 +229,12 @@ async def run_agent_structured(
     # ── Phase 2: Structured output ─────────────────────────────────────────
     structured_prompt = types.Content(
         role="user",
-        parts=[types.Part.from_text(
-            text="Based on all the information gathered in the conversation above, "
-            "produce a complete trip itinerary as a TripItinerary JSON object."
-        )],
+        parts=[
+            types.Part.from_text(
+                text="Based on all the information gathered in the conversation above, "
+                "produce a complete trip itinerary as a TripItinerary JSON object."
+            )
+        ],
     )
     # Include all previous messages for context
     all_contents = messages + [structured_prompt]
@@ -250,5 +257,7 @@ async def run_agent_structured(
     try:
         return TripItinerary.model_validate_json(text)
     except Exception as e:
-        logger.error(f"[AGENT] Failed to parse TripItinerary: {e} | response={text[:500]}")
+        logger.error(
+            f"[AGENT] Failed to parse TripItinerary: {e} | response={text[:500]}"
+        )
         raise

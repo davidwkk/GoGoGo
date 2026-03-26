@@ -12,6 +12,7 @@ Returns:
         "icon": "01d"
     }
 """
+
 from __future__ import annotations
 
 import httpx

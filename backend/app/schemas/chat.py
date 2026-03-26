@@ -44,7 +44,9 @@ class ChatRequest(BaseModel):
     )
     # Gate for expensive agent loop — if False, simple generate_content (no tools)
     generate_plan: bool = False
-    trip_parameters: TripParameters | None = None  # Required only when generate_plan=True
+    trip_parameters: TripParameters | None = (
+        None  # Required only when generate_plan=True
+    )
     user_preferences: UserPreference | None = None  # None if guest
 
 

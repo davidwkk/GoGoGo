@@ -4,6 +4,7 @@ Triggered by POST /chat/sessions/{id}/end — user explicitly ends session, requ
 
 Extracts structured preferences from conversation and saves via preference_repo.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session

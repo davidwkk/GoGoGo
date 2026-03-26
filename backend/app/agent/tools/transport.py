@@ -20,6 +20,7 @@ Returns:
         ]
     }
 """
+
 from __future__ import annotations
 
 import httpx
@@ -46,7 +47,11 @@ async def get_transport(
         result = _cache[cache_key]
         if mode:
             result = {
-                "options": [o for o in result.get("options", []) if mode.lower() in o.get("type", "").lower()]
+                "options": [
+                    o
+                    for o in result.get("options", [])
+                    if mode.lower() in o.get("type", "").lower()
+                ]
             }
         return result
 
@@ -82,24 +87,31 @@ async def get_transport(
 
         for t in transport_list[:10]:
             transport_type = t.get("type", "Unknown")
-            options.append({
-                "type": transport_type,
-                "duration": t.get("duration", "N/A"),
-                "cost": t.get("price", t.get("fare", "N/A")),
-                "details": t.get("description", ""),
-            })
+            options.append(
+                {
+                    "type": transport_type,
+                    "duration": t.get("duration", "N/A"),
+                    "cost": t.get("price", t.get("fare", "N/A")),
+                    "details": t.get("description", ""),
+                }
+            )
 
         result = {"options": options}
         _cache[cache_key] = result
 
         if mode:
             result = {
-                "options": [o for o in options if mode.lower() in o.get("type", "").lower()]
+                "options": [
+                    o for o in options if mode.lower() in o.get("type", "").lower()
+                ]
             }
         return result
 
     except httpx.TimeoutException:
-        return {"error": f"Timeout fetching transport: {from_location} → {to_location}", "options": []}
+        return {
+            "error": f"Timeout fetching transport: {from_location} → {to_location}",
+            "options": [],
+        }
     except httpx.HTTPStatusError as e:
         return {"error": f"HTTP error fetching transport: {e}", "options": []}
     except Exception as e:

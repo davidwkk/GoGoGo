@@ -11,6 +11,7 @@ Returns:
         ]
     }
 """
+
 from __future__ import annotations
 
 import httpx
@@ -74,7 +75,10 @@ async def _search_tavily(query: str) -> dict:
 async def _search_serpapi(query: str) -> dict:
     """Fallback search via SerpAPI."""
     if not settings.SERPAPI_KEY:
-        return {"error": "No search API key configured (Tavily or SerpAPI)", "results": []}
+        return {
+            "error": "No search API key configured (Tavily or SerpAPI)",
+            "results": [],
+        }
 
     params = {
         "q": query,
@@ -95,11 +99,13 @@ async def _search_serpapi(query: str) -> dict:
 
             results = []
             for r in data.get("organic_results", [])[:5]:
-                results.append({
-                    "title": r.get("title", ""),
-                    "url": r.get("link", ""),
-                    "snippet": r.get("snippet", "")[:300],
-                })
+                results.append(
+                    {
+                        "title": r.get("title", ""),
+                        "url": r.get("link", ""),
+                        "snippet": r.get("snippet", "")[:300],
+                    }
+                )
 
             return {"results": results}
     except httpx.TimeoutException:

@@ -19,6 +19,7 @@ Returns:
         ]
     }
 """
+
 from __future__ import annotations
 
 import httpx
@@ -64,15 +65,17 @@ async def search_flights(
         flight_lists = data.get("flights") or data.get("best_flights", [])
 
         for f in flight_lists[:10]:
-            flights.append({
-                "airline": f.get("airline", "Unknown"),
-                "flight_number": f.get("flight_number", ""),
-                "departure": departure,
-                "arrival": arrival,
-                "duration": f.get("duration", ""),
-                "price": f.get("price", "N/A"),
-                "booking_url": f.get("booking_url", ""),
-            })
+            flights.append(
+                {
+                    "airline": f.get("airline", "Unknown"),
+                    "flight_number": f.get("flight_number", ""),
+                    "departure": departure,
+                    "arrival": arrival,
+                    "duration": f.get("duration", ""),
+                    "price": f.get("price", "N/A"),
+                    "booking_url": f.get("booking_url", ""),
+                }
+            )
 
         return {"flights": flights}
     except httpx.TimeoutException:
