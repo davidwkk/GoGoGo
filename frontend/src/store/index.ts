@@ -20,12 +20,14 @@ export interface ChatState {
 
   // UI state
   isLoading: boolean;
+  isThinking: boolean;
 
   // Actions
   setSessionId: (id: string) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
+  setThinking: (thinking: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -33,6 +35,7 @@ export const useChatStore = create<ChatState>(set => ({
   messages: [],
   voiceAvailable: isVoiceSupported(),
   isLoading: false,
+  isThinking: false,
 
   setSessionId: id => set({ sessionId: id }),
 
@@ -51,4 +54,6 @@ export const useChatStore = create<ChatState>(set => ({
   clearMessages: () => set({ messages: [] }),
 
   setLoading: loading => set({ isLoading: loading }),
+
+  setThinking: thinking => set({ isThinking: thinking }),
 }));
