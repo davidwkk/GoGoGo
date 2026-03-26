@@ -2,7 +2,7 @@
 // Handles ChatResponse (text + itinerary + message_type)
 
 import { useCallback } from 'react';
-import { chatService, ChatRequest } from '@/services/api';
+import { chatService, ChatRequest, guestPreferences } from '@/services/api';
 import { useChatStore } from '@/store';
 
 interface UseChatOptions {
@@ -21,11 +21,17 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
         const guestUid = localStorage.getItem('guest_uid');
         const effectiveSessionId = sessionId ?? guestUid ?? undefined;
 
+        // Always include preferences: guest preferences from localStorage
+        // (for logged-in users, the backend fetches from DB via the token)
+        const isLoggedIn = !!localStorage.getItem('token');
+        const prefs = isLoggedIn ? undefined : guestPreferences.get();
+
         const req: ChatRequest = {
           message,
           session_id: effectiveSessionId,
           generate_plan: generatePlan,
           trip_parameters: tripParams,
+          user_preferences: prefs as unknown as Record<string, unknown>,
         };
 
         const response = await chatService.sendMessage(req);

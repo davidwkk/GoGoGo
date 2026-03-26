@@ -13,8 +13,8 @@ interface AuthResponse {
 
 export function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login');
-  const [email, setEmail] = useState(() => localStorage.getItem('user_email') ?? '');
-  const [username, setUsername] = useState(() => localStorage.getItem('user_name') ?? '');
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(
     () => localStorage.getItem('rememberMe') === 'true'
@@ -23,6 +23,17 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+
+  // Prefill from localStorage when switching to login tab
+  useEffect(() => {
+    if (mode === 'login') {
+      setEmail(localStorage.getItem('user_email') ?? '');
+      setUsername(localStorage.getItem('user_name') ?? '');
+    } else {
+      setEmail('');
+      setUsername('');
+    }
+  }, [mode]);
 
   // Auto-redirect to chat if already logged in
   useEffect(() => {
