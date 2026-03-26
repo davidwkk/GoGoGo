@@ -1,7 +1,8 @@
 // ProfilePage — View and edit user profile and travel preferences
 
 import { useCallback, useEffect, useState } from 'react';
-import { User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +58,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -66,6 +68,11 @@ export function ProfilePage() {
   // Form state
   const [username, setUsername] = useState('');
   const [prefs, setPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
 
   const loadProfile = useCallback(async () => {
     if (!localStorage.getItem('token')) {
@@ -205,7 +212,7 @@ export function ProfilePage() {
                 value={prefs.travel_style}
                 onValueChange={v => setPrefs(p => ({ ...p, travel_style: v }))}
               >
-                <SelectTrigger id="travel-style">
+                <SelectTrigger id="travel-style" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -224,7 +231,7 @@ export function ProfilePage() {
                 value={prefs.dietary_restriction}
                 onValueChange={v => setPrefs(p => ({ ...p, dietary_restriction: v }))}
               >
-                <SelectTrigger id="dietary">
+                <SelectTrigger id="dietary" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,7 +253,7 @@ export function ProfilePage() {
                 value={prefs.hotel_tier}
                 onValueChange={v => setPrefs(p => ({ ...p, hotel_tier: v }))}
               >
-                <SelectTrigger id="hotel-tier">
+                <SelectTrigger id="hotel-tier" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -265,7 +272,7 @@ export function ProfilePage() {
                 value={String(prefs.max_flight_stops)}
                 onValueChange={v => setPrefs(p => ({ ...p, max_flight_stops: Number(v) }))}
               >
-                <SelectTrigger id="max-stops">
+                <SelectTrigger id="max-stops" className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,6 +333,12 @@ export function ProfilePage() {
           <p className="text-sm text-green-600 dark:text-green-400">Profile saved successfully!</p>
         )}
         {error && profile && <p className="text-sm text-destructive">{error}</p>}
+        <div className="ml-auto">
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="size-4 mr-1.5" />
+            Logout
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -13,10 +13,12 @@ interface AuthResponse {
 
 export function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login');
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('user_email') ?? '');
+  const [username, setUsername] = useState(() => localStorage.getItem('user_name') ?? '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(
+    () => localStorage.getItem('rememberMe') === 'true'
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +44,12 @@ export function LoginPage() {
         });
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('rememberMe', String(rememberMe));
+        if (rememberMe) {
+          localStorage.setItem('user_email', email);
+        } else {
+          localStorage.removeItem('user_email');
+        }
+        localStorage.setItem('user_name', username);
         navigate('/chat');
       } else {
         const { data } = await apiClient.post<AuthResponse>('/auth/register', {
@@ -51,6 +59,8 @@ export function LoginPage() {
         });
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('rememberMe', String(rememberMe));
+        localStorage.setItem('user_email', email);
+        localStorage.setItem('user_name', username);
         navigate('/chat');
       }
     } catch (err: unknown) {
