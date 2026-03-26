@@ -3,6 +3,7 @@
 POST /chat/sessions/{id}/end — end session and extract preferences
 GET /chat/sessions/{id}/messages — retrieve session message history
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -32,10 +33,7 @@ async def end_chat_session(
 
     # Build conversation history for preference extraction
     messages = get_session_messages(db, session_id)
-    history = [
-        {"role": msg.role, "content": msg.content}
-        for msg in messages
-    ]
+    history = [{"role": msg.role, "content": msg.content} for msg in messages]
 
     # Extract preferences (fire and forget — don't block response)
     try:

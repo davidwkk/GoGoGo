@@ -4,9 +4,18 @@ Gemini SDK accepts raw Python callables as tools — no manual
 FunctionDeclaration needed. The SDK infers the schema from the
 function signature and docstring.
 """
+
 from __future__ import annotations
 
-from app.agent.tools import attractions, flights, hotels, maps, search, transport, weather
+from app.agent.tools import (
+    attractions,
+    flights,
+    hotels,
+    maps,
+    search,
+    transport,
+    weather,
+)
 
 # Raw callables — SDK handles schema inference
 get_attraction = attractions.get_attraction

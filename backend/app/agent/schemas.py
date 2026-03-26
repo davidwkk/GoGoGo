@@ -8,6 +8,7 @@ Gemini schema constraints:
   ⚠️ dict[str, int] — not well supported, avoid
   ❌ Raw dict types not supported
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
@@ -24,7 +25,9 @@ class TransportOption(BaseModel):
     transport_type: str = Field(
         description="One of: MTR, bus, taxi, train, ferry, walk"
     )
-    duration: str = Field(description="Human-readable duration, e.g. '45 min' or '1h 30m'")
+    duration: str = Field(
+        description="Human-readable duration, e.g. '45 min' or '1h 30m'"
+    )
     cost: str = Field(description="Estimated cost, e.g. 'HKD 50' or 'Free'")
     details: str | None = None
 

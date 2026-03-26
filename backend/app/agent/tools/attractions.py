@@ -12,6 +12,7 @@ Returns:
         "category": "..."
     }
 """
+
 from __future__ import annotations
 
 import httpx
@@ -34,7 +35,11 @@ async def get_attraction(attraction_name: str) -> dict:
             data = response.json()
 
             coords = None
-            if "coordinates" in data and isinstance(data["coordinates"], list) and data["coordinates"]:
+            if (
+                "coordinates" in data
+                and isinstance(data["coordinates"], list)
+                and data["coordinates"]
+            ):
                 first = data["coordinates"][0]
                 coords = {
                     "lat": first.get("lat"),
@@ -49,8 +54,14 @@ async def get_attraction(attraction_name: str) -> dict:
                 "category": None,
             }
     except httpx.TimeoutException:
-        return {"error": f"Timeout fetching attraction: {attraction_name}", "name": attraction_name}
+        return {
+            "error": f"Timeout fetching attraction: {attraction_name}",
+            "name": attraction_name,
+        }
     except httpx.HTTPStatusError as e:
-        return {"error": f"HTTP error fetching attraction: {e}", "name": attraction_name}
+        return {
+            "error": f"HTTP error fetching attraction: {e}",
+            "name": attraction_name,
+        }
     except Exception as e:
         return {"error": f"Failed to fetch attraction: {e}", "name": attraction_name}

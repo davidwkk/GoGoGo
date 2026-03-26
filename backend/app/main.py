@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from app.api.routes import auth, chat, chat_sessions, health, trips, users
 from app.core.logging import setup_logging
 from app.core.middleware import setup_middleware
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()

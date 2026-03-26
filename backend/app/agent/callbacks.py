@@ -1,4 +1,5 @@
 """Loguru logging callbacks for agent tool calls and finish events."""
+
 from __future__ import annotations
 
 from loguru import logger

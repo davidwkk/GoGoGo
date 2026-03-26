@@ -18,6 +18,7 @@ Returns:
         ]
     }
 """
+
 from __future__ import annotations
 
 import httpx
@@ -81,14 +82,16 @@ async def search_hotels(
                 elif isinstance(ext, list):
                     amenities.extend(ext)
 
-            hotels.append({
-                "name": h.get("name", "Unknown Hotel"),
-                "location": h.get("location", destination),
-                "price_per_night": price,
-                "rating": rating,
-                "amenities": amenities[:5],
-                "booking_url": h.get("link", ""),
-            })
+            hotels.append(
+                {
+                    "name": h.get("name", "Unknown Hotel"),
+                    "location": h.get("location", destination),
+                    "price_per_night": price,
+                    "rating": rating,
+                    "amenities": amenities[:5],
+                    "booking_url": h.get("link", ""),
+                }
+            )
 
         return {"hotels": hotels}
     except httpx.TimeoutException:

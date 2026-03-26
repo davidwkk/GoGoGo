@@ -6,6 +6,7 @@ Returns:
     embed_url: "https://www.google.com/maps/embed?..."
     static_url: "https://maps.googleapis.com/maps/api/staticmap?..."
 """
+
 from __future__ import annotations
 
 from app.core.config import settings
@@ -61,7 +62,4 @@ def build_directions_url(
     """Build a Google Maps directions URL."""
     f = from_place.replace(" ", "+")
     t = to_place.replace(" ", "+")
-    return (
-        f"https://www.google.com/maps/dir/{f}/{t}"
-        f"/@{mode}"
-    )
+    return f"https://www.google.com/maps/dir/{f}/{t}/@{mode}"

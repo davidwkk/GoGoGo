@@ -10,6 +10,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.db.models.user import User
 
+
 class Trip(Base):
     __tablename__ = "trips"
 
