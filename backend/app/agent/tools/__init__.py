@@ -27,9 +27,11 @@ from app.agent.tools import (
 
 def _make_sync(fn):
     """Wrap an async function so it appears sync to the Gemini SDK."""
+
     @wraps(fn)  # preserves __name__ so SDK sees unique declarations
     def wrapper(*args, **kwargs):
         return asyncio.run(fn(*args, **kwargs))
+
     return wrapper
 
 

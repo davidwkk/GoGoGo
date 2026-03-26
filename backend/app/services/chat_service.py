@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
 
 # LLM call timeout (30s for agent responses)
 TIMEOUT_SECONDS = 30.0
+
+logger = logging.getLogger(__name__)
 
 
 async def invoke_agent(
@@ -32,15 +35,25 @@ async def invoke_agent(
       then saves the trip to the database via trip_service.
     """
     session_id_str = str(session_id) if session_id else ""
+    logger.info(
+        f"[invoke_agent] Called with generate_plan={generate_plan}, user_message: {user_message[:100]}..."
+    )
+    logger.info(f"[invoke_agent] user_id={user_id}, session_id={session_id}")
 
     try:
         if generate_plan:
+            logger.info(
+                "[invoke_agent] Using run_agent_structured (generate_plan=True)"
+            )
             itinerary = await asyncio.wait_for(
                 run_agent_structured(
                     user_message=user_message,
                     preferences=preferences,
                 ),
                 timeout=TIMEOUT_SECONDS,
+            )
+            logger.info(
+                f"[invoke_agent] Structured response received, itinerary destination: {itinerary.destination if itinerary else 'None'}"
             )
 
             # Save trip to DB if db session provided and user is authenticated
@@ -53,6 +66,7 @@ async def invoke_agent(
                     session_id=session_id,
                     itinerary=itinerary,
                 )
+                logger.info(f"[invoke_agent] Trip saved to DB")
 
             return ChatResponse(
                 session_id=session_id_str,
@@ -61,6 +75,7 @@ async def invoke_agent(
                 message_type="itinerary",
             )
         else:
+            logger.info("[invoke_agent] Using run_agent (generate_plan=False)")
             text = await asyncio.wait_for(
                 run_agent(
                     user_message=user_message,
@@ -68,6 +83,10 @@ async def invoke_agent(
                 ),
                 timeout=TIMEOUT_SECONDS,
             )
+            logger.info(
+                f"[invoke_agent] Agent response received, text length: {len(text)}"
+            )
+            logger.debug(f"[invoke_agent] Agent response text: {text[:200]}...")
             return ChatResponse(
                 session_id=session_id_str,
                 text=text,
@@ -75,6 +94,7 @@ async def invoke_agent(
                 message_type="chat",
             )
     except asyncio.TimeoutError:
+        logger.error("[invoke_agent] Request timed out")
         return ChatResponse(
             session_id=session_id_str,
             text="Request timed out. Please try again.",
@@ -82,6 +102,7 @@ async def invoke_agent(
             message_type="error",
         )
     except Exception as e:
+        logger.error(f"[invoke_agent] Exception: {type(e).__name__}: {str(e)}")
         return ChatResponse(
             session_id=session_id_str,
             text=f"An error occurred: {e}",

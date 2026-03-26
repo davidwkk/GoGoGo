@@ -41,7 +41,9 @@ def seed_users() -> None:
     session = session_factory()
     try:
         for user_data in SEED_USERS:
-            existing = session.query(User).filter(User.email == user_data["email"]).first()
+            existing = (
+                session.query(User).filter(User.email == user_data["email"]).first()
+            )
             if existing:
                 print(f"  Skipping {user_data['username']} (already exists)")
                 continue

@@ -105,8 +105,8 @@ export function ChatPage() {
             </div>
           ))}
 
-          {/* Thinking indicator — shown after user message while waiting for response */}
-          {isThinking && (
+          {/* Thinking indicator — shown while waiting for response */}
+          {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && messages[messages.length - 1].content === '' && (
             <div className="flex justify-start">
               <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
                 <span className="animate-pulse">Thinking...</span>
