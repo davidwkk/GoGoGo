@@ -59,12 +59,16 @@ async def extract_and_save_preferences(
     )
 
     try:
-        prefs = UserPreference.model_validate_json(response.text)
+        raw_text = response.text
+        prefs = UserPreference.model_validate_json(
+            raw_text if raw_text is not None else "{}"
+        )
         prefs_dict = prefs.model_dump()
     except Exception:
         # Fallback to defaults
-        prefs_dict = UserPreference.model_dump()
+        prefs_dict = UserPreference().model_dump()
 
     # Save to DB
     saved = upsert_preferences(db, user_id, prefs_dict)
-    return saved
+    # Return as Pydantic schema (not the ORM model)
+    return UserPreference.model_validate(saved.preferences_json)
