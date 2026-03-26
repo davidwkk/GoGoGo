@@ -47,6 +47,83 @@ export const chatService = {
     const { data } = await apiClient.post<ChatResponse>('/chat', req);
     return data;
   },
+
+  /**
+   * Stream chat response chunks for low-latency updates.
+   * Yields text chunks as they arrive from the server.
+   */
+  async *streamMessage(
+    req: ChatRequest,
+  ): AsyncGenerator<string, void, unknown> {
+    console.log('[streamMessage] Starting stream for message:', req.message.substring(0, 50));
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE}/chat/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(req),
+    });
+
+    console.log('[streamMessage] Response status:', response.status, 'ok:', response.ok);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[streamMessage] Stream request failed:', response.status, response.statusText, errorText);
+      throw new Error(`Stream request failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      console.error('[streamMessage] No response body');
+      throw new Error('No response body');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let chunkCount = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        console.log('[streamMessage] Stream complete. Total chunks:', chunkCount);
+        break;
+      }
+
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            console.log('[streamMessage] SSE data:', JSON.stringify(data).substring(0, 200));
+            if (data.chunk) {
+              chunkCount++;
+              console.log('[streamMessage] Yielding chunk', chunkCount, ':', data.chunk.substring(0, 100));
+              yield data.chunk;
+            } else if (data.error) {
+              console.error('[streamMessage] Stream error:', data.error);
+              throw new Error(data.error);
+            } else if (data.done) {
+              console.log('[streamMessage] Stream done signal received');
+              return;
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message !== 'Skip malformed JSON') {
+              console.error('[streamMessage] JSON parse error:', e);
+            }
+            // Skip malformed JSON
+          }
+        }
+      }
+    }
+  },
 };
 
 // ─── Guest Preferences (localStorage) ─────────────────────────────────────────

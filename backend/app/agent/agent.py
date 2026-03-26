@@ -89,8 +89,11 @@ async def run_agent(
     Run the agent loop in chat (non-structured) mode.
     Returns plain text response.
     """
+    logger.info(f"[AGENT] run_agent called with message: {user_message[:100]}...")
+    logger.info(f"[AGENT] Preferences: {preferences}")
     client = _get_client()
     system_instruction = _build_system_prompt(preferences)
+    logger.info(f"[AGENT] System instruction: {system_instruction[:200]}...")
 
     messages: list[types.Content] = list(conversation_history or [])
 
@@ -101,30 +104,48 @@ async def run_agent(
     messages.append(user_content)
 
     for iteration in range(MAX_ITERATIONS):
-        logger.debug(f"[AGENT] Iteration {iteration + 1}/{MAX_ITERATIONS}")
+        logger.info(f"[AGENT] Iteration {iteration + 1}/{MAX_ITERATIONS}")
+        logger.debug(f"[AGENT] Message history length: {len(messages)}")
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=ALL_TOOLS,
         )
 
+        logger.info(
+            f"[AGENT] Calling generate_content with model: {settings.GEMINI_LITE_MODEL}"
+        )
         response = client.models.generate_content(
             model=settings.GEMINI_LITE_MODEL,
             contents=messages,
             config=config,
         )
+        logger.info(
+            f"[AGENT] Response received. Has function_calls: {bool(response.function_calls)}"
+        )
+        if response.text:
+            logger.info(
+                f"[AGENT] Response text (first 200 chars): {response.text[:200]}"
+            )
 
         # Append model content as-is (preserves thought_signature)
         if response.candidates and response.candidates[0].content:
+            logger.debug(f"[AGENT] Appending candidate content to history")
             messages.append(response.candidates[0].content)
 
         # Handle function calls
         if response.function_calls:
+            logger.info(
+                f"[AGENT] Handling {len(response.function_calls)} function call(s)"
+            )
             for fc in response.function_calls:
                 tool_name = fc.name
                 if not tool_name:
                     continue
                 args = dict(fc.args) if fc.args else {}
+                logger.info(
+                    f"[AGENT] Tool call: {tool_name} with args: {str(args)[:200]}"
+                )
                 log_tool_call(tool_name, args)
 
                 # Execute tool
@@ -132,9 +153,16 @@ async def run_agent(
                 if tool_fn:
                     try:
                         result = await tool_fn(**args)
+                        logger.info(
+                            f"[AGENT] Tool {tool_name} result: {str(result)[:200]}"
+                        )
                     except Exception as e:
+                        logger.error(
+                            f"[AGENT] Tool {tool_name} exception: {type(e).__name__}: {str(e)}"
+                        )
                         result = {"error": str(e)}
                 else:
+                    logger.warning(f"[AGENT] Unknown tool: {tool_name}")
                     result = {"error": f"Unknown tool: {tool_name}"}
 
                 log_tool_response(tool_name, result)
@@ -149,10 +177,12 @@ async def run_agent(
         else:
             # No function calls — plain text response, loop done
             text = response.text or ""
+            logger.info(f"[AGENT] Final response (text only): {text[:200]}...")
             log_agent_finish(text)
             return text
 
     # Max iterations reached
+    logger.warning("[AGENT] Max iterations reached")
     return "I ran out of time planning your trip. Please try again."
 
 

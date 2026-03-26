@@ -24,7 +24,9 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    sessions: Mapped[list["ChatSession"]] = relationship(back_populates="user", foreign_keys="ChatSession.user_id")
+    sessions: Mapped[list["ChatSession"]] = relationship(
+        back_populates="user", foreign_keys="ChatSession.user_id"
+    )
     trips: Mapped[list["Trip"]] = relationship(back_populates="user")
     preferences: Mapped["UserPreference"] = relationship(
         back_populates="user", uselist=False

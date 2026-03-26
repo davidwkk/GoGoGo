@@ -24,7 +24,8 @@ export interface ChatState {
 
   // Actions
   setSessionId: (id: string) => void;
-  addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
+  addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
+  updateStreamingMessage: (id: string, content: string) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setThinking: (thinking: boolean) => void;
@@ -40,15 +41,20 @@ export const useChatStore = create<ChatState>(set => ({
   setSessionId: id => set({ sessionId: id }),
 
   addMessage: msg =>
+    set(state => {
+      const newMsg = {
+        ...msg,
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+      };
+      return { messages: [...state.messages, newMsg] };
+    }),
+
+  updateStreamingMessage: (id, content) =>
     set(state => ({
-      messages: [
-        ...state.messages,
-        {
-          ...msg,
-          id: crypto.randomUUID(),
-          timestamp: Date.now(),
-        },
-      ],
+      messages: state.messages.map(msg =>
+        msg.id === id ? { ...msg, content } : msg
+      ),
     })),
 
   clearMessages: () => set({ messages: [] }),

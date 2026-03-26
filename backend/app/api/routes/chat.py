@@ -1,7 +1,11 @@
+import asyncio
+import json
 import socket
+from typing import AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException
-from google.genai import Client
+from fastapi.responses import StreamingResponse
+from google.genai import Client, types
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_optional, get_db
@@ -81,6 +85,157 @@ async def test_llm() -> dict:
         "response": response.text,
         "proxy_enabled": settings.LLM_PROXY_ENABLED,
     }
+
+
+async def _stream_chat(
+    message: str,
+    preferences: dict | None = None,
+) -> AsyncIterator[str]:
+    """
+    Stream chat response chunks via SSE.
+    Uses generate_content_streaming with tools disabled for simplicity.
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"[_stream_chat] Starting stream for message: {message[:100]}...")
+    logger.info(f"[_stream_chat] Preferences: {preferences}")
+    logger.info(f"[_stream_chat] LLM_PROXY_ENABLED: {settings.LLM_PROXY_ENABLED}")
+    logger.info(f"[_stream_chat] Proxy reachable: {_is_proxy_reachable()}")
+
+    if not _is_proxy_reachable() and not settings.LLM_PROXY_ENABLED:
+        logger.warning("[_stream_chat] Proxy not reachable, returning error")
+        yield f"data: {json.dumps({'error': 'Proxy not reachable'})}\n\n"
+        return
+
+    http_opts = (
+        types.HttpOptionsDict(client_args={"proxy": settings.SOCKS5_PROXY_URL})
+        if settings.LLM_PROXY_ENABLED
+        else None
+    )
+    logger.info(
+        f"[_stream_chat] Creating client with model: {settings.GEMINI_LITE_MODEL}"
+    )
+    client = Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
+
+    prefs_section = f"User preferences: {preferences}" if preferences else ""
+    system_instruction = (
+        "You are a helpful travel planning assistant. "
+        "Keep responses concise and friendly. "
+        f"{prefs_section}"
+    )
+    logger.info(f"[_stream_chat] System instruction: {system_instruction[:200]}...")
+
+    try:
+        logger.info("[_stream_chat] Starting generate_content_streaming")
+        stream = client.models.generate_content_streaming(
+            model=settings.GEMINI_LITE_MODEL,
+            contents=[
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=message)],
+                )
+            ],
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+            ),
+        )
+
+        chunk_count = 0
+        for chunk in stream:
+            logger.info(
+                f"[_stream_chat] Received chunk {chunk_count}: {repr(chunk.text)[:100] if chunk.text else 'empty'}"
+            )
+            if chunk.text:
+                chunk_count += 1
+                yield f"data: {json.dumps({'chunk': chunk.text})}\n\n"
+                await asyncio.sleep(0)  # Allow other coroutines to run
+
+        logger.info(f"[_stream_chat] Stream complete. Total chunks: {chunk_count}")
+        yield f"data: {json.dumps({'done': True})}\n\n"
+
+    except Exception as e:
+        logger.error(f"[_stream_chat] Exception: {type(e).__name__}: {str(e)}")
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+
+@router.post("/stream")
+async def chat_stream(
+    body: ChatRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    """
+    POST /chat/stream — streaming chat endpoint.
+
+    Streams response chunks via SSE for low-latency updates.
+    Uses a simpler non-tool approach for streaming.
+    For generate_plan=True, use the non-streaming endpoint instead.
+    """
+    if body.generate_plan:
+        raise HTTPException(
+            status_code=400,
+            detail="Use /chat for generate_plan requests",
+        )
+
+    user_id = current_user["user_id"] if current_user else None
+
+    # Get or create session
+    session = None
+    if body.session_id:
+        try:
+            session_pk = int(body.session_id)
+        except ValueError:
+            if user_id is not None:
+                raise HTTPException(status_code=400, detail="Invalid session_id")
+            guest = get_or_create_guest(db, body.session_id)
+            from sqlalchemy import desc, select
+            from app.db.models.chat_session import ChatSession
+
+            result = db.execute(
+                select(ChatSession)
+                .where(ChatSession.guest_id == guest.id)
+                .order_by(desc(ChatSession.created_at))
+                .limit(1)
+            )
+            session = result.scalar_one_or_none()
+            if session is None:
+                session = create_session(db, user_id=None, guest_id=guest.id)
+        else:
+            session = get_session(db, session_pk)
+            if session is None:
+                raise HTTPException(status_code=404, detail="Session not found")
+            if session.user_id != user_id:
+                raise HTTPException(status_code=403, detail="Forbidden")
+    else:
+        if user_id is not None:
+            session = create_session(db, user_id=user_id)
+        else:
+            guest_uid = body.session_id or ""
+            guest = get_or_create_guest(db, guest_uid)
+            session = create_session(db, user_id=None, guest_id=guest.id)
+
+    # Save user message
+    append_message(
+        db,
+        session_id=session.id,
+        role="user",
+        content=body.message,
+    )
+
+    prefs_dict = None
+    if body.user_preferences:
+        prefs_dict = body.user_preferences.model_dump()
+
+    return StreamingResponse(
+        _stream_chat(message=body.message, preferences=prefs_dict),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("", response_model=ChatResponse)
