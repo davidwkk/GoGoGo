@@ -10,9 +10,6 @@ Key implementation notes:
 """
 from __future__ import annotations
 
-import asyncio
-from typing import Any
-
 from google.genai import Client, types
 from loguru import logger
 
@@ -50,7 +47,7 @@ _client: Client | None = None
 def _get_client() -> Client:
     global _client
     if _client is None:
-        _client = types.Client(api_key=settings.GEMINI_API_KEY)
+        _client = Client(api_key=settings.GEMINI_API_KEY)
     return _client
 
 
