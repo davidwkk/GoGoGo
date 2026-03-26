@@ -1,7 +1,8 @@
 // ProfilePage — View and edit user profile and travel preferences
 
 import { useCallback, useEffect, useState } from "react";
-import { User } from "lucide-react";
+import { ArrowLeft, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +64,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -119,47 +121,93 @@ export function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Loading profile...</p>
+      <div className="flex flex-col min-h-screen">
+        <div className="p-4">
+          <button
+            onClick={() => navigate("/chat")}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to chat
+          </button>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
       </div>
     );
   }
 
   if (error && !profile) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <p className="text-destructive">{error}</p>
-        <Button variant="outline" onClick={loadProfile}>
-          Try again
-        </Button>
+      <div className="flex flex-col min-h-screen">
+        <div className="p-4">
+          <button
+            onClick={() => navigate("/chat")}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to chat
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4">
+          <p className="text-destructive">{error}</p>
+          <Button variant="outline" onClick={loadProfile}>
+            Try again
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
-        <User className="size-8 text-muted-foreground" />
-        <div>
-          <p className="text-sm font-medium">Sign in to view your profile</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Your profile and preferences will appear here
-          </p>
+      <div className="flex flex-col min-h-screen">
+        <div className="p-4">
+          <button
+            onClick={() => navigate("/chat")}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to chat
+          </button>
         </div>
-        <Button variant="outline" onClick={() => window.location.href = "/login"}>
-          Sign in
-        </Button>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+          <User className="size-8 text-muted-foreground" />
+          <div>
+            <p className="text-sm font-medium">Sign in to view your profile</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Your profile and preferences will appear here
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => window.location.href = "/login"}>
+            Sign in
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
-      {/* Page header */}
-      <div className="flex items-center gap-3">
-        <User className="size-6 text-muted-foreground" />
-        <h1 className="text-2xl font-semibold">My Profile</h1>
+    <div className="flex flex-col min-h-screen">
+      {/* Back to Chat */}
+      <div className="p-4">
+        <button
+          onClick={() => navigate("/chat")}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to chat
+        </button>
       </div>
+
+      {/* Page content */}
+      <div className="max-w-2xl mx-auto py-8 px-4 space-y-6 w-full">
+        {/* Page header */}
+        <div className="flex items-center gap-3">
+          <User className="size-6 text-muted-foreground" />
+          <h1 className="text-2xl font-semibold">My Profile</h1>
+        </div>
 
       {/* User info card */}
       <Card>
@@ -336,6 +384,7 @@ export function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* Save row */}
       <div className="flex items-center gap-4">

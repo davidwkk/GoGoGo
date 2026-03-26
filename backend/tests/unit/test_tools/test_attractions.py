@@ -1,4 +1,5 @@
 """Simple tests for attractions tool."""
+
 import unittest.mock
 
 import pytest
@@ -63,4 +64,3 @@ async def test_get_attraction_handles_timeout():
         result = await get_attraction("Tokyo Tower")
 
     assert "error" in result
-

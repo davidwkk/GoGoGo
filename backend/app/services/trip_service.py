@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 
 from app.repositories.trip_repo import (
     create_trip,
-    delete_trip,
     get_trip_by_id,
     get_trips_by_user,
 )

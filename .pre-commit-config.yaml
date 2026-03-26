@@ -1,0 +1,37 @@
+# Pre-commit hooks for GoGoGo project
+#
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Python: ruff check and format
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff (check)
+        entry: uv run ruff check
+        description: "Run ruff check on Python files"
+        language: system
+        types_or: [python]
+        pass_filenames: true
+
+      - id: ruff-format
+        name: ruff (format)
+        entry: uv run ruff format
+        description: "Run ruff format on Python files"
+        language: system
+        types_or: [python]
+        pass_filenames: false
+        require_serial: true
+
+  # Frontend: npm lint (TypeScript/JavaScript)
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: frontend lint
+        entry: bash -c 'cd frontend && npm run lint'
+        description: "Run ESLint on frontend TypeScript files"
+        language: system
+        files: ^frontend/src/
+        types_or: [ts, tsx]
+        pass_filenames: false

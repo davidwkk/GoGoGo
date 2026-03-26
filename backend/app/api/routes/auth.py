@@ -32,7 +32,9 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
     # Check if email already exists
     existing = get_user_by_email(db, body.email)

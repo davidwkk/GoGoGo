@@ -1,5 +1,5 @@
 """Simple tests for maps URL builder."""
-import pytest
+
 from unittest.mock import patch
 
 from app.agent.tools.maps import build_embed_url, build_static_url, build_directions_url

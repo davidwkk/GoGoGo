@@ -27,7 +27,9 @@ def get_single_trip(
     user_id = current_user["user_id"]
     trip = get_trip(db, trip_id, user_id)
     if trip is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+        )
     return trip
 
 
@@ -43,5 +45,7 @@ def delete_single_trip(
     user_id = current_user["user_id"]
     deleted = delete_trip(db, trip_id, user_id)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+        )
     return None

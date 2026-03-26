@@ -1,11 +1,13 @@
 // ChatPage — Main chat UI with AI travel agent
 
-import { MessageSquare } from "lucide-react";
+import { LogIn, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useChatStore } from "@/store";
 import { InputBar } from "@/components/chat/InputBar";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 export function ChatPage() {
+  const navigate = useNavigate();
   const messages = useChatStore((s) => s.messages);
   const isLoading = useChatStore((s) => s.isLoading);
 
@@ -40,6 +42,13 @@ export function ChatPage() {
                   Ask me anything about destinations, flights, hotels, or attractions
                 </p>
               </div>
+              <button
+                onClick={() => navigate("/login")}
+                className="mt-1 flex items-center gap-1.5 h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
+              >
+                <LogIn className="size-3.5" />
+                Sign in
+              </button>
             </div>
           )}
 

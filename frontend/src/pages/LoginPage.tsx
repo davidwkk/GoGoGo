@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { apiClient } from "@/services/api";
 
 type AuthMode = "login" | "signup";
@@ -58,6 +59,15 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <div className="w-full max-w-sm space-y-6">
+        {/* Back to Chat */}
+        <button
+          onClick={() => navigate("/chat")}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to chat
+        </button>
+
         {/* Logo */}
         <div className="flex flex-col items-center gap-2">
           <div className="flex items-center justify-center rounded-2xl bg-black text-white size-12 font-semibold text-sm">

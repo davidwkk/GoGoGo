@@ -44,17 +44,15 @@ async def invoke_agent(
             )
 
             # Save trip to DB if db session provided
-            saved_trip_id = None
             if db is not None and itinerary is not None:
                 from app.services import trip_service
 
-                saved = trip_service.save_trip(
+                trip_service.save_trip(
                     db=db,
                     user_id=user_id,
                     session_id=session_id,
                     itinerary=itinerary,
                 )
-                saved_trip_id = saved.get("id") if saved else None
 
             return ChatResponse(
                 session_id=session_id_str,
