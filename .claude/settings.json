@@ -9,24 +9,27 @@
         "hooks": [
           {
             "type": "command",
-            "command": "filePath=$(jq -r '.tool_input.file_path // .tool_response.filePath' /dev/stdin 2>/dev/null); ext=\"${filePath##*.}\"; if [[ \"$ext\" == \"py\" ]]; then REPO_ROOT=$(git -C \"$(dirname \"$filePath\")\" rev-parse --show-toplevel 2>/dev/null || dirname \"$filePath\") && cd \"$REPO_ROOT/backend\" && ruff check --fix \"$filePath\" 2>/dev/null || true; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "filePath=$(jq -r '.tool_input.file_path // .tool_response.filePath' /dev/stdin 2>/dev/null); ext=\"${filePath##*.}\"; if [[ \"$ext\" == \"ts\" || \"$ext\" == \"tsx\" ]]; then REPO_ROOT=$(git -C \"$(dirname \"$filePath\")\" rev-parse --show-toplevel 2>/dev/null || dirname \"$filePath\") && cd \"$REPO_ROOT/frontend\" && npx eslint --fix \"$filePath\" 2>/dev/null || true; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "filePath=$(jq -r '.tool_input.file_path // .tool_response.filePath' /dev/stdin 2>/dev/null); ext=\"${filePath##*.}\"; if [[ \"$ext\" != \"py\" && \"$ext\" != \"ts\" && \"$ext\" != \"tsx\" ]]; then npx prettier --write \"$filePath\" 2>/dev/null || true; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path' | { read -r f; if [ \"${f%.py}\" != \"$f\" ] || [ \"${f%.tsx}\" != \"$f\" ] || [ \"${f%.ts}\" != \"$f\" ]; then cd backend && uv run pyright \"$f\" 2>&1 || true; fi; }",
+            "command": "cd /home/davidwsl/projects/GoGoGo && uv run ruff check --fix && uv run ruff format",
             "timeout": 30,
-            "statusMessage": "Running pyright..."
+            "statusMessage": "Running ruff check/format..."
+          },
+          {
+            "type": "command",
+            "command": "cd /home/davidwsl/projects/GoGoGo/frontend && npm run lint && npm run format",
+            "timeout": 30,
+            "statusMessage": "Running frontend lint/format..."
+          },
+          {
+            "type": "command",
+            "command": "cd /home/davidwsl/projects/GoGoGo && npx prettier --write --ignore-unknown .",
+            "timeout": 30,
+            "statusMessage": "Running prettier..."
+          },
+          {
+            "type": "command",
+            "command": "cd /home/davidwsl/projects/GoGoGo/backend && uv run pyright app/",
+            "timeout": 60,
+            "statusMessage": "Running pyright type check..."
           }
         ]
       }
