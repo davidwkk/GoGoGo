@@ -21,5 +21,5 @@ def setup_logging() -> None:
         rotation="10 MB",
         retention="7 days",
         level="DEBUG",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
+        serialize=True,
     )

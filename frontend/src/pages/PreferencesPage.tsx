@@ -198,7 +198,7 @@ export function PreferencesPage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button onClick={handleSave}>{saved ? 'Saved!' : 'Save Preferences'}</Button>
+        <Button onClick={handleSave}>Save Preferences</Button>
         <Button variant="outline" onClick={handleReset}>
           Reset
         </Button>
