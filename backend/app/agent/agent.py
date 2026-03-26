@@ -114,6 +114,8 @@ async def run_agent(
         if response.function_calls:
             for fc in response.function_calls:
                 tool_name = fc.name
+                if not tool_name:
+                    continue
                 args = dict(fc.args) if fc.args else {}
                 log_tool_call(tool_name, args)
 
@@ -199,6 +201,8 @@ async def run_agent_structured(
         if response.function_calls:
             for fc in response.function_calls:
                 tool_name = fc.name
+                if not tool_name:
+                    continue
                 args = dict(fc.args) if fc.args else {}
                 log_tool_call(tool_name, args)
 
@@ -251,7 +255,8 @@ async def run_agent_structured(
         config=config,
     )
 
-    text = response.text or ""
+    raw_text = response.text
+    text = raw_text if raw_text is not None else ""
     log_agent_finish(text)
 
     try:
