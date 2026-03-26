@@ -15,13 +15,23 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
 
   const sendMessage = useCallback(
     async (message: string, generatePlan = false, tripParams?: ChatRequest['trip_parameters']) => {
-      console.log('[useChat] sendMessage called', { message: message.substring(0, 50), generatePlan });
+      console.log('[useChat] sendMessage called', {
+        message: message.substring(0, 50),
+        generatePlan,
+      });
       setLoading(true);
       try {
         // Use guest_uid from localStorage for unauthenticated users
         const guestUid = localStorage.getItem('guest_uid');
         const effectiveSessionId = sessionId ?? guestUid ?? undefined;
-        console.log('[useChat] sessionId:', sessionId, 'guestUid:', guestUid, 'effectiveSessionId:', effectiveSessionId);
+        console.log(
+          '[useChat] sessionId:',
+          sessionId,
+          'guestUid:',
+          guestUid,
+          'effectiveSessionId:',
+          effectiveSessionId
+        );
 
         // Always include preferences: guest preferences from localStorage
         // (for logged-in users, the backend fetches from DB via the token)
@@ -50,11 +60,23 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             for await (const chunk of chatService.streamMessage(req)) {
               chunkCount++;
               fullText += chunk;
-              console.log('[useChat] Chunk', chunkCount, ':', chunk.substring(0, 100), '| fullText length:', fullText.length);
+              console.log(
+                '[useChat] Chunk',
+                chunkCount,
+                ':',
+                chunk.substring(0, 100),
+                '| fullText length:',
+                fullText.length
+              );
               // Update the assistant message with accumulated text
               useChatStore.getState().updateStreamingMessage(msgId, fullText);
             }
-            console.log('[useChat] Stream complete. Total chunks:', chunkCount, 'final text length:', fullText.length);
+            console.log(
+              '[useChat] Stream complete. Total chunks:',
+              chunkCount,
+              'final text length:',
+              fullText.length
+            );
 
             // Update session ID if returned (streaming doesn't return session_id separately)
             if (sessionId) {
@@ -73,7 +95,10 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
         // Non-streaming path for generate_plan requests
         console.log('[useChat] Using non-streaming path for generate_plan');
         const response = await chatService.sendMessage(req);
-        console.log('[useChat] Non-streaming response:', JSON.stringify(response).substring(0, 200));
+        console.log(
+          '[useChat] Non-streaming response:',
+          JSON.stringify(response).substring(0, 200)
+        );
 
         // Update session ID if returned
         if (response.session_id) {

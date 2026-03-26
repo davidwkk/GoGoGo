@@ -52,9 +52,7 @@ export const useChatStore = create<ChatState>(set => ({
 
   updateStreamingMessage: (id, content) =>
     set(state => ({
-      messages: state.messages.map(msg =>
-        msg.id === id ? { ...msg, content } : msg
-      ),
+      messages: state.messages.map(msg => (msg.id === id ? { ...msg, content } : msg)),
     })),
 
   clearMessages: () => set({ messages: [] }),

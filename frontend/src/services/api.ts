@@ -52,9 +52,7 @@ export const chatService = {
    * Stream chat response chunks for low-latency updates.
    * Yields text chunks as they arrive from the server.
    */
-  async *streamMessage(
-    req: ChatRequest,
-  ): AsyncGenerator<string, void, unknown> {
+  async *streamMessage(req: ChatRequest): AsyncGenerator<string, void, unknown> {
     console.log('[streamMessage] Starting stream for message:', req.message.substring(0, 50));
     const token = localStorage.getItem('token');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -72,8 +70,15 @@ export const chatService = {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[streamMessage] Stream request failed:', response.status, response.statusText, errorText);
-      throw new Error(`Stream request failed: ${response.status} ${response.statusText} - ${errorText}`);
+      console.error(
+        '[streamMessage] Stream request failed:',
+        response.status,
+        response.statusText,
+        errorText
+      );
+      throw new Error(
+        `Stream request failed: ${response.status} ${response.statusText} - ${errorText}`
+      );
     }
 
     const reader = response.body?.getReader();
@@ -105,7 +110,12 @@ export const chatService = {
             console.log('[streamMessage] SSE data:', JSON.stringify(data).substring(0, 200));
             if (data.chunk) {
               chunkCount++;
-              console.log('[streamMessage] Yielding chunk', chunkCount, ':', data.chunk.substring(0, 100));
+              console.log(
+                '[streamMessage] Yielding chunk',
+                chunkCount,
+                ':',
+                data.chunk.substring(0, 100)
+              );
               yield data.chunk;
             } else if (data.error) {
               console.error('[streamMessage] Stream error:', data.error);

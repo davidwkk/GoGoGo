@@ -16,7 +16,9 @@ export function ChatPage() {
   const testLLM = async () => {
     try {
       const res = await apiClient.get('/chat/test-llm');
-      alert(`Model: ${res.data.model}\nResponse: ${res.data.response}\nProxy: ${res.data.proxy_enabled}`);
+      alert(
+        `Model: ${res.data.model}\nResponse: ${res.data.response}\nProxy: ${res.data.proxy_enabled}`
+      );
     } catch (e) {
       alert('LLM test failed: ' + (e instanceof Error ? e.message : String(e)));
     }
@@ -106,13 +108,16 @@ export function ChatPage() {
           ))}
 
           {/* Thinking indicator — shown while waiting for response */}
-          {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && messages[messages.length - 1].content === '' && (
-            <div className="flex justify-start">
-              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
-                <span className="animate-pulse">Thinking...</span>
+          {isLoading &&
+            messages.length > 0 &&
+            messages[messages.length - 1].role === 'assistant' &&
+            messages[messages.length - 1].content === '' && (
+              <div className="flex justify-start">
+                <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                  <span className="animate-pulse">Thinking...</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Input bar */}

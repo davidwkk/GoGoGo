@@ -94,7 +94,10 @@ export function ProfilePage() {
             Your profile and preferences will appear here
           </p>
         </div>
-        <Button onClick={() => (window.location.href = '/login')} className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity">
+        <Button
+          onClick={() => (window.location.href = '/login')}
+          className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
+        >
           Sign in
         </Button>
       </div>

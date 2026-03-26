@@ -66,7 +66,7 @@ async def invoke_agent(
                     session_id=session_id,
                     itinerary=itinerary,
                 )
-                logger.info(f"[invoke_agent] Trip saved to DB")
+                logger.info("[invoke_agent] Trip saved to DB")
 
             return ChatResponse(
                 session_id=session_id_str,
