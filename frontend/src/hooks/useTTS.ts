@@ -2,10 +2,10 @@
 // Phase 1: Browser TTS (no API key required)
 // Future: swap to Gemini TTS API if browser TTS quality is insufficient
 
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
 export function isTTSAvailable(): boolean {
-  return typeof window !== "undefined" && "speechSynthesis" in window;
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
 }
 
 interface UseTTSOptions {
@@ -18,9 +18,9 @@ export function useTTS({ onStart, onEnd, onError }: UseTTSOptions = {}) {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const speak = useCallback(
-    (text: string, lang = "en-US") => {
+    (text: string, lang = 'en-US') => {
       if (!isTTSAvailable()) {
-        onError?.("TTS not available in this browser");
+        onError?.('TTS not available in this browser');
         return;
       }
 
@@ -42,7 +42,7 @@ export function useTTS({ onStart, onEnd, onError }: UseTTSOptions = {}) {
         onEnd?.();
       };
 
-      utterance.onerror = (event) => {
+      utterance.onerror = event => {
         setIsSpeaking(false);
         onError?.(`TTS error: ${event.error}`);
       };
@@ -64,4 +64,3 @@ export function useTTS({ onStart, onEnd, onError }: UseTTSOptions = {}) {
     isAvailable: isTTSAvailable(),
   };
 }
-

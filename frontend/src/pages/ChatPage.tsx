@@ -1,21 +1,17 @@
 // ChatPage — Main chat UI with AI travel agent
 
-import { LogIn, MessageSquare } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useChatStore } from "@/store";
-import { InputBar } from "@/components/chat/InputBar";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { LogIn, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useChatStore } from '@/store';
+import { InputBar } from '@/components/chat/InputBar';
 
 export function ChatPage() {
   const navigate = useNavigate();
-  const messages = useChatStore((s) => s.messages);
-  const isLoading = useChatStore((s) => s.isLoading);
+  const messages = useChatStore(s => s.messages);
+  const isLoading = useChatStore(s => s.isLoading);
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Left sidebar */}
-      <Sidebar />
-
       {/* Main chat area */}
       <main className="flex flex-col flex-1">
         {/* Header */}
@@ -43,7 +39,7 @@ export function ChatPage() {
                 </p>
               </div>
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate('/login')}
                 className="mt-1 flex items-center gap-1.5 h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
               >
                 <LogIn className="size-3.5" />
@@ -61,16 +57,16 @@ export function ChatPage() {
             </div>
           )}
 
-          {messages.map((msg) => (
+          {messages.map(msg => (
             <div
               key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
                 className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
-                  msg.role === "user"
-                    ? "bg-black text-white rounded-br-md"
-                    : "bg-muted text-foreground rounded-bl-md"
+                  msg.role === 'user'
+                    ? 'bg-black text-white rounded-br-md'
+                    : 'bg-muted text-foreground rounded-bl-md'
                 }`}
               >
                 {msg.content}

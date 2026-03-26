@@ -3,7 +3,7 @@
 // MUST: mute useTTS when recording starts (handled by parent via isListening)
 // MUST: handle permission denial gracefully → text fallback
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from 'react';
 
 export interface ASRResult {
   transcript: string;
@@ -12,8 +12,8 @@ export interface ASRResult {
 
 export function isVoiceSupported(): boolean {
   return (
-    typeof window !== "undefined" &&
-    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
+    typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
   );
 }
 
@@ -28,18 +28,17 @@ export function useASR({ onTranscript, onError }: UseASROptions) {
 
   const startListening = useCallback(() => {
     if (!isVoiceSupported()) {
-      onError?.("Speech recognition not supported in this browser");
+      onError?.('Speech recognition not supported in this browser');
       return;
     }
 
     const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    recognition.lang = 'en-US';
 
     recognition.onstart = () => setIsListening(true);
 
@@ -55,8 +54,8 @@ export function useASR({ onTranscript, onError }: UseASROptions) {
 
     recognition.onerror = (event: any) => {
       setIsListening(false);
-      if (event.error === "not-allowed") {
-        onError?.("Microphone permission denied. Please use text input.");
+      if (event.error === 'not-allowed') {
+        onError?.('Microphone permission denied. Please use text input.');
       } else {
         onError?.(`Speech error: ${event.error}`);
       }
@@ -80,4 +79,3 @@ export function useASR({ onTranscript, onError }: UseASROptions) {
     isSupported: isVoiceSupported(),
   };
 }
-

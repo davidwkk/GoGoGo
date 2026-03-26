@@ -8,16 +8,16 @@ GoGoGo is a travel agent AI app. Users chat with an AI to plan trips, receiving 
 
 ## Tech Stack
 
-| Layer        | Technology                                  |
-| ------------ | ------------------------------------------- |
-| Backend      | FastAPI + SQLAlchemy 2.0 + PostgreSQL 16    |
-| ORM / Migrations | Alembic                               |
-| Auth         | JWT (python-jose) + passlib bcrypt          |
-| Agent        | Google Gemini 3 Flash + Gemini 3.1 Flash-Lite |
-| Tools        | Tavily (search), SerpAPI (flights/hotels), OpenWeatherMap, Google Maps, Wikipedia |
-| Frontend     | React 18 + Vite + React Router + Zustand    |
-| UI           | shadcn/ui + Tailwind CSS                   |
-| Voice        | Web Speech API (ASR + TTS)                 |
+| Layer            | Technology                                                                        |
+| ---------------- | --------------------------------------------------------------------------------- |
+| Backend          | FastAPI + SQLAlchemy 2.0 + PostgreSQL 16                                          |
+| ORM / Migrations | Alembic                                                                           |
+| Auth             | JWT (python-jose) + passlib bcrypt                                                |
+| Agent            | Google Gemini 3 Flash + Gemini 3.1 Flash-Lite                                     |
+| Tools            | Tavily (search), SerpAPI (flights/hotels), OpenWeatherMap, Google Maps, Wikipedia |
+| Frontend         | React 18 + Vite + React Router + Zustand                                          |
+| UI               | shadcn/ui + Tailwind CSS                                                          |
+| Voice            | Web Speech API (ASR + TTS)                                                        |
 
 ---
 
@@ -146,13 +146,14 @@ frontend/src/
 └── pages/
     ├── ChatPage.tsx           # Sidebar + chat UI (messages + InputBar)
     ├── LoginPage.tsx           # Full-screen login/register (no sidebar)
-    ├── ProfilePage.tsx         # User profile + preferences (no sidebar yet)
-    └── TripPage.tsx           # Saved trips list + detail (no sidebar yet)
+    ├── ProfilePage.tsx         # Sidebar + User profile + preferences
+    └── TripPage.tsx           # Sidebar + Saved trips list + detail
 ```
 
 ### Layout Design Rule
 
 All main app pages (Chat, Trips, Profile) share a **single fixed sidebar on the left**:
+
 - Width: 56px
 - Top: black `GG` logo button (navigates to /chat)
 - Middle: icon nav (MessageSquare → /chat, Map → /trips, User → /profile)
@@ -162,14 +163,14 @@ The remaining full-width area is the page's content. **LoginPage is full-screen 
 
 ### Routing
 
-| Path       | Component     | Layout          |
-| ---------- | ------------- | --------------- |
-| `/`        | → redirect    | —               |
-| `/login`   | LoginPage     | Full-screen     |
-| `/chat`    | ChatPage      | Sidebar layout  |
-| `/trips`   | TripPage      | Sidebar layout  |
-| `/profile` | ProfilePage   | Sidebar layout  |
-| `*`        | → redirect    | —               |
+| Path       | Component   | Layout         |
+| ---------- | ----------- | -------------- |
+| `/`        | → redirect  | —              |
+| `/login`   | LoginPage   | Full-screen    |
+| `/chat`    | ChatPage    | Sidebar layout |
+| `/trips`   | TripPage    | Sidebar layout |
+| `/profile` | ProfilePage | Sidebar layout |
+| `*`        | → redirect  | —              |
 
 ### API Client
 
@@ -178,6 +179,7 @@ The remaining full-width area is the page's content. **LoginPage is full-screen 
 ### State Management
 
 Zustand store (`store/index.ts`) holds:
+
 - `ChatState`: `sessionId`, `messages[]`, `isLoading`, `voiceAvailable`
 - Actions: `setSessionId`, `addMessage`, `clearMessages`, `setLoading`
 
@@ -185,19 +187,19 @@ Zustand store (`store/index.ts`) holds:
 
 ## API Endpoints
 
-| Method | Path                      | Auth | Description                          |
-| ------ | ------------------------- | ---- | ------------------------------------ |
-| POST   | `/auth/register`          | —    | Register with email + username + password |
-| POST   | `/auth/login`             | —    | Login with email + password          |
-| GET    | `/health`                 | —    | Health check                         |
-| POST   | `/chat`                   | JWT  | Send message, get response/itinerary |
-| POST   | `/chat/sessions/{id}/end` | JWT  | End session, trigger preference extraction |
-| GET    | `/chat/sessions/{id}/messages` | JWT | Get session message history       |
-| GET    | `/users/me`               | JWT  | Get current user profile            |
-| PATCH  | `/users/me`               | JWT  | Update username/preferences         |
-| GET    | `/trips`                  | JWT  | List user's saved trips             |
-| GET    | `/trips/{id}`             | JWT  | Get single trip with full itinerary |
-| DELETE | `/trips/{id}`             | JWT  | Delete a saved trip                |
+| Method | Path                           | Auth | Description                                |
+| ------ | ------------------------------ | ---- | ------------------------------------------ |
+| POST   | `/auth/register`               | —    | Register with email + username + password  |
+| POST   | `/auth/login`                  | —    | Login with email + password                |
+| GET    | `/health`                      | —    | Health check                               |
+| POST   | `/chat`                        | JWT  | Send message, get response/itinerary       |
+| POST   | `/chat/sessions/{id}/end`      | JWT  | End session, trigger preference extraction |
+| GET    | `/chat/sessions/{id}/messages` | JWT  | Get session message history                |
+| GET    | `/users/me`                    | JWT  | Get current user profile                   |
+| PATCH  | `/users/me`                    | JWT  | Update username/preferences                |
+| GET    | `/trips`                       | JWT  | List user's saved trips                    |
+| GET    | `/trips/{id}`                  | JWT  | Get single trip with full itinerary        |
+| DELETE | `/trips/{id}`                  | JWT  | Delete a saved trip                        |
 
 ---
 

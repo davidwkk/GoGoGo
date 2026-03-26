@@ -1,8 +1,8 @@
 // VoiceButton — Mic toggle with pulsing animation when listening
 // Only rendered if isVoiceSupported()
 
-import { Mic, MicOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Mic, MicOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface VoiceButtonProps {
   isListening: boolean;
@@ -22,18 +22,14 @@ export function VoiceButton({ isListening, onToggle, disabled }: VoiceButtonProp
       )}
 
       <Button
-        variant={isListening ? "destructive" : "outline"}
+        variant={isListening ? 'destructive' : 'outline'}
         size="icon"
         onClick={onToggle}
         disabled={disabled}
-        aria-label={isListening ? "Stop recording" : "Start recording"}
+        aria-label={isListening ? 'Stop recording' : 'Start recording'}
         className="relative z-10"
       >
-        {isListening ? (
-          <MicOff className="size-4" />
-        ) : (
-          <Mic className="size-4" />
-        )}
+        {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
       </Button>
     </div>
   );
