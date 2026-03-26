@@ -62,7 +62,7 @@ async def extract_and_save_preferences(
         prefs_dict = prefs.model_dump()
     except Exception:
         # Fallback to defaults
-        prefs_dict = UserPreference().model_dump()
+        prefs_dict = UserPreference.model_dump()
 
     # Save to DB
     saved = upsert_preferences(db, user_id, prefs_dict)
