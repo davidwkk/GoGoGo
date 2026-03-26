@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
 from app.agent.agent import run_agent, run_agent_structured
 from app.schemas.chat import ChatResponse
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 # Demo-grade timeout: acceptable for low-concurrency demo use.
 # All httpx.AsyncClient calls use async with so connections clean up on cancel.
@@ -18,15 +22,14 @@ async def invoke_agent(
     session_id: int | None = None,
     generate_plan: bool = False,
     preferences: dict | None = None,
+    db: Session | None = None,
 ) -> ChatResponse:
     """
     Invoke the Gemini agent with the user's message.
 
     If generate_plan=False: simple chat via run_agent (no structured output).
-    If generate_plan=True: runs full tool-calling loop + structured TripItinerary.
-
-    Demo-grade timeout: acceptable for low-concurrency demo use.
-    All httpx.AsyncClient calls use async with so connections clean up on cancel.
+    If generate_plan=True: runs full tool-calling loop + structured TripItinerary,
+      then saves the trip to the database via trip_service.
     """
     session_id_str = str(session_id) if session_id else ""
 
@@ -39,6 +42,20 @@ async def invoke_agent(
                 ),
                 timeout=TIMEOUT_SECONDS,
             )
+
+            # Save trip to DB if db session provided
+            saved_trip_id = None
+            if db is not None and itinerary is not None:
+                from app.services import trip_service
+
+                saved = trip_service.save_trip(
+                    db=db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    itinerary=itinerary,
+                )
+                saved_trip_id = saved.get("id") if saved else None
+
             return ChatResponse(
                 session_id=session_id_str,
                 text="",

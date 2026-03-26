@@ -74,6 +74,10 @@ export function ProfilePage() {
   const [prefs, setPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES);
 
   const loadProfile = useCallback(async () => {
+    if (!localStorage.getItem("token")) {
+      setLoading(false);
+      return;
+    }
     try {
       setError(null);
       const data = await userService.getProfile();
@@ -94,6 +98,7 @@ export function ProfilePage() {
   }, [loadProfile]);
 
   const handleSave = async () => {
+    if (!localStorage.getItem("token")) return;
     setSaving(true);
     setError(null);
     setSuccess(false);
@@ -126,6 +131,23 @@ export function ProfilePage() {
         <p className="text-destructive">{error}</p>
         <Button variant="outline" onClick={loadProfile}>
           Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
+        <User className="size-8 text-muted-foreground" />
+        <div>
+          <p className="text-sm font-medium">Sign in to view your profile</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Your profile and preferences will appear here
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => window.location.href = "/login"}>
+          Sign in
         </Button>
       </div>
     );
