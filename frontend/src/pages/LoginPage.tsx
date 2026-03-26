@@ -57,9 +57,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Back to Chat */}
+    <div className="flex flex-col min-h-screen bg-muted/30">
+      {/* Back to Chat */}
+      <div className="p-4">
         <button
           onClick={() => navigate("/chat")}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -67,17 +67,20 @@ export function LoginPage() {
           <ArrowLeft className="size-3.5" />
           Back to chat
         </button>
+      </div>
 
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center justify-center rounded-2xl bg-black text-white size-12 font-semibold text-sm">
-            GG
+      <div className="flex flex-1 items-center justify-center px-4">
+        <div className="w-full max-w-sm space-y-6">
+          {/* Logo */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center rounded-2xl bg-black text-white size-12 font-semibold text-sm">
+              GG
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight">GoGoGo</h1>
+            <p className="text-xs text-muted-foreground text-center">
+              Your AI-powered travel agent
+            </p>
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">GoGoGo</h1>
-          <p className="text-xs text-muted-foreground text-center">
-            Your AI-powered travel agent
-          </p>
-        </div>
 
         {/* Card */}
         <div className="rounded-2xl border bg-card p-6 shadow-sm space-y-5">
@@ -178,6 +181,7 @@ export function LoginPage() {
         <p className="text-center text-xs text-muted-foreground">
           By continuing, you agree to our Terms of Service
         </p>
+        </div>
       </div>
     </div>
   );
