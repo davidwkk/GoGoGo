@@ -1,6 +1,5 @@
-// Trip service — API calls for trip CRUD operations
-
-import { apiClient } from '@/services/api';
+// frontend/src/services/tripService.ts
+import { apiClient } from './api';
 
 export interface TripSummary {
   id: number;
@@ -10,12 +9,14 @@ export interface TripSummary {
 }
 
 export interface TripDetail extends TripSummary {
-  itinerary: unknown; // TripItinerary
+  itinerary: any; // We use 'any' temporarily to handle the complex AI JSON
 }
 
 export const tripService = {
-  /** List all trips for the current user */
-  async getTrips(): Promise<TripSummary[]> {
+  /** * List all trips for the current user 
+   * Matches the 'listTrips' call in TripPage.tsx
+   */
+  async listTrips(): Promise<TripSummary[]> {
     const { data } = await apiClient.get<TripSummary[]>('/trips');
     return data;
   },
