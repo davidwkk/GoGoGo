@@ -15,7 +15,7 @@ export interface DayPlan {
 }
 
 export interface Flight {
-  direction: "outbound" | "return";
+  direction: 'outbound' | 'return';
   airline: string;
   flight_number: string;
   departure_airport: string;
@@ -41,6 +41,7 @@ export interface TripItinerary {
   hotels: Hotel[];
   flights: Flight[];
   weather_summary: string;
+  map_embed_url?: string;
 }
 
 // What the List View returns

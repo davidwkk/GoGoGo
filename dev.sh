@@ -63,7 +63,32 @@ else
   success "Network gogogo-shared already exists."
 fi
 
-# ── 4. VPN option ─────────────────────────────────────────────
+# ── 4. Install pre-commit hooks ───────────────────────────────
+log "Checking pre-commit installation..."
+if command -v pre-commit > /dev/null 2>&1; then
+  success "pre-commit is installed."
+else
+  warn "pre-commit not found. Installing..."
+  if command -v uv > /dev/null 2>&1; then
+    uv tool install pre-commit
+  else
+    pip install pre-commit
+  fi
+  success "pre-commit installed."
+fi
+
+# Install git hooks if not already installed
+if [ -f ".pre-commit-config.yaml" ]; then
+  if git config --get core.hooksPath > /dev/null 2>&1; then
+    success "Git hooks already configured."
+  else
+    log "Installing pre-commit hooks..."
+    pre-commit install
+    success "Pre-commit hooks installed."
+  fi
+fi
+
+# ── 5. VPN option ─────────────────────────────────────────────
 echo -e ""
 echo -e "  ${BOLD}Build VPN proxy service?${RESET}"
 echo -e "  ${YELLOW}(Requires: vpn/nordvpn_creds.txt)${RESET}"
@@ -75,7 +100,7 @@ read -rn 1 -p "  Enter choice [1-2] (default: 1): " VPN_CHOICE
 echo ""
 VPN_CHOICE="${VPN_CHOICE:-1}"
 
-# ── 5. Build mode menu ───────────────────────────────────────
+# ── 6. Build mode menu ───────────────────────────────────────
 echo -e ""
 echo -e "  ${BOLD}Select a build mode:${RESET}"
 echo -e ""
@@ -90,12 +115,12 @@ echo ""
 BUILD_CHOICE="${BUILD_CHOICE:-1}"
 
 
-# ── 6. Prune dangling images ──────────────────────────────────
+# ── 7. Prune dangling images ──────────────────────────────────
 log "Removing dangling images..."
 docker image prune -f
 success "Dangling images removed."
 
-# ── 7. Execute build mode ─────────────────────────────────────
+# ── 8. Execute build mode ─────────────────────────────────────
 BASE_COMPOSE="docker compose -f docker-compose.yml"
 if [ "$VPN_CHOICE" = "2" ]; then
   BASE_COMPOSE="$BASE_COMPOSE -f docker-compose.vpn.yml"
@@ -151,7 +176,7 @@ esac
 
 success "Services started."
 
-# ── 8. Per-service health check ───────────────────────────────
+# ── 9. Per-service health check ───────────────────────────────
 check_service_health() {
   local SERVICE="$1"
   local LABEL="$2"
@@ -216,7 +241,7 @@ if [ "$FAILED" -eq 1 ]; then
   exit 1
 fi
 
-# ── 9. Access URLs ────────────────────────────────────────────
+# ── 10. Access URLs ────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${GREEN}║              Services are running!               ║${RESET}"
@@ -225,7 +250,7 @@ echo -e "${BOLD}${GREEN}║  🌐 Frontend  →  http://localhost:5173          
 echo -e "${BOLD}${GREEN}║  ⚙️  Backend   →  http://localhost:8000           ║${RESET}"
 echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}\n"
 
-# ── 10. Seed DB ───────────────────────────────────────────────
+# ── 11. Seed DB ───────────────────────────────────────────────
 echo -e "${YELLOW}Seed the database with sample users?${RESET}"
 echo -e "  ${CYAN}[1]${RESET} Yes, seed sample users  ${YELLOW}(alice, bob, charlie / password123)${RESET} ${GREEN}[default]${RESET}"
 echo -e "  ${CYAN}[2]${RESET} No, skip seeding"
@@ -248,7 +273,7 @@ case "$SEED_CHOICE" in
     ;;
 esac
 
-# ── 11. Log viewer ─────────────────────────────────────────────
+# ── 12. Log viewer ─────────────────────────────────────────────
 echo -e "${YELLOW}View service logs?${RESET}"
 echo -e "  ${CYAN}[1]${RESET} All          ${GREEN}[default]${RESET}"
 echo -e "  ${CYAN}[2]${RESET} Frontend (fn)"

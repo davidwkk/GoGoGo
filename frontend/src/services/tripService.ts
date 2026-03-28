@@ -13,7 +13,7 @@ export interface TripDetail extends TripSummary {
 }
 
 export const tripService = {
-  /** * List all trips for the current user 
+  /** * List all trips for the current user
    * Matches the 'listTrips' call in TripPage.tsx
    */
   async listTrips(): Promise<TripSummary[]> {

@@ -1,9 +1,9 @@
 // frontend/src/pages/TripPage.tsx
-import React, { useEffect, useState, useCallback } from 'react';
-import { Map, Calendar, MapPin, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Map, Calendar, MapPin, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { tripService } from '../services/tripService';
-import { TripSummary, TripDetail } from '../types/trip';
+import { TripSummary, TripDetail, Flight, DayPlan } from '../types/trip';
 import { FlightCard } from '../components/trip/FlightCard';
 import { ActivityCard } from '../components/trip/ActivityCard';
 
@@ -30,7 +30,7 @@ export function TripPage() {
   const navigate = useNavigate();
   const token = localStorage.getItem('token') || localStorage.getItem('access_token');
   const isLoggedIn = !!token;
-  
+
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(isLoggedIn);
@@ -39,7 +39,7 @@ export function TripPage() {
 
   // --- DATA EXTRACTION HELPERS ---
   const hotel = selectedTrip?.itinerary?.hotels?.[0];
-  
+
   const getNights = (inDate?: string, outDate?: string) => {
     if (!inDate || !outDate) return 1;
     const diff = new Date(outDate).getTime() - new Date(inDate).getTime();
@@ -58,8 +58,8 @@ export function TripPage() {
       const data = await tripService.listTrips();
       setTrips(data || []);
     } catch (err) {
-      setError("Unable to sync trips. Please check your connection.");
-      console.error("Trip fetch error:", err);
+      setError('Unable to sync trips. Please check your connection.');
+      console.error('Trip fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ export function TripPage() {
       const detail = await tripService.getTrip(id);
       setSelectedTrip(detail);
     } catch (err) {
-      console.error("Failed to load trip details", err);
+      console.error('Failed to load trip details', err);
     } finally {
       setFetchingDetail(false);
     }
@@ -106,29 +106,41 @@ export function TripPage() {
           <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase">
             {loading ? 'Syncing...' : `${trips.length} saved plans`}
           </p>
+          {error && (
+            <div className="flex items-center gap-2 mt-2 text-red-500 text-xs">
+              <AlertCircle className="size-3" />
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loading && trips.length === 0 ? (
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-slate-200" /></div>
+            <div className="flex justify-center py-20">
+              <Loader2 className="animate-spin text-slate-200" />
+            </div>
           ) : (
-            trips.map((trip) => (
+            trips.map(trip => (
               <button
                 key={trip.id}
                 onClick={() => handleSelectTrip(trip.id)}
                 className={`w-full text-left p-4 rounded-2xl transition-all border ${
-                  selectedTrip?.id === trip.id 
-                    ? 'bg-black text-white border-black shadow-xl scale-[1.02]' 
+                  selectedTrip?.id === trip.id
+                    ? 'bg-black text-white border-black shadow-xl scale-[1.02]'
                     : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600 shadow-sm'
                 }`}
               >
                 <div className="flex justify-between items-start">
                   <p className="font-bold text-sm truncate pr-2">{trip.title}</p>
-                  <ChevronRight className={`size-3 mt-1 ${selectedTrip?.id === trip.id ? 'opacity-100' : 'opacity-10'}`} />
+                  <ChevronRight
+                    className={`size-3 mt-1 ${selectedTrip?.id === trip.id ? 'opacity-100' : 'opacity-10'}`}
+                  />
                 </div>
                 <div className="flex items-center gap-1.5 mt-2 opacity-50">
                   <MapPin className="size-3" />
-                  <span className="text-[10px] font-black uppercase tracking-tight">{trip.destination}</span>
+                  <span className="text-[10px] font-black uppercase tracking-tight">
+                    {trip.destination}
+                  </span>
                 </div>
               </button>
             ))
@@ -138,7 +150,11 @@ export function TripPage() {
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 overflow-y-auto bg-white">
-        {selectedTrip ? (
+        {fetchingDetail ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="animate-spin text-slate-200 size-12" />
+          </div>
+        ) : selectedTrip ? (
           <div className="max-w-3xl mx-auto p-12">
             <header className="mb-12">
               <div className="flex items-center gap-2 text-blue-600 mb-6 font-black text-[10px] uppercase tracking-[0.3em]">
@@ -154,7 +170,6 @@ export function TripPage() {
 
             {/* Container for main sections to handle uniform spacing */}
             <div className="space-y-16">
-              
               {/* 1. WEATHER SUMMARY (Moved up for better UX) */}
               {selectedTrip.itinerary.weather_summary && (
                 <section>
@@ -173,11 +188,13 @@ export function TripPage() {
               {selectedTrip.itinerary.flights && (
                 <section>
                   <div className="flex items-center gap-4 mb-6">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Flight Logistics</h3>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Flight Logistics
+                    </h3>
                     <div className="h-px flex-1 bg-slate-100" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {selectedTrip.itinerary.flights.map((f: any, i: number) => (
+                    {selectedTrip.itinerary.flights.map((f: Flight, i: number) => (
                       <FlightCard key={i} flight={f} />
                     ))}
                   </div>
@@ -192,11 +209,13 @@ export function TripPage() {
               {/* 4. ITINERARY DAYS */}
               <section>
                 <div className="flex items-center gap-4 mb-10">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Daily Schedule</h3>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Daily Schedule
+                  </h3>
                   <div className="h-px flex-1 bg-slate-100" />
                 </div>
                 <div className="space-y-12">
-                  {selectedTrip.itinerary.days.map((day: any) => (
+                  {selectedTrip.itinerary.days?.map((day: DayPlan) => (
                     <div key={day.day_number}>
                       <div className="flex items-center gap-4 mb-8">
                         <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-lg shadow-xl">
@@ -204,10 +223,12 @@ export function TripPage() {
                         </div>
                         <div>
                           <p className="font-black text-xl text-slate-900">Day {day.day_number}</p>
-                          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{day.date}</p>
+                          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
+                            {day.date}
+                          </p>
                         </div>
                       </div>
-                      
+
                       <div className="ml-2 border-l-2 border-slate-50 pl-2">
                         <ActivityCard activity={day.morning?.[0]} label="Morning" />
                         <ActivityCard activity={day.afternoon?.[0]} label="Afternoon" />
@@ -222,44 +243,59 @@ export function TripPage() {
               {hotel && (
                 <section className="bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden group mb-10">
                   <div className="absolute -right-10 -top-10 size-40 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-colors" />
-                  
+
                   <div className="relative z-10">
                     <div className="flex justify-between items-start mb-8">
                       <span className="px-4 py-1 bg-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
                         Stay Details
                       </span>
                       <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nightly Rate</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          Nightly Rate
+                        </p>
                         <p className="text-sm font-bold text-blue-400">
-                          HKD {hotel.price_per_night_min_hkd?.toLocaleString()} - {hotel.price_per_night_max_hkd?.toLocaleString()}
+                          HKD {hotel.price_per_night_min_hkd?.toLocaleString()} -{' '}
+                          {hotel.price_per_night_max_hkd?.toLocaleString()}
                         </p>
                       </div>
                     </div>
 
                     <h4 className="text-4xl font-black mb-3 tracking-tight">{hotel.name}</h4>
-                    
+
                     <div className="flex flex-wrap gap-8 mb-10">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Check-in</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                          Check-in
+                        </p>
                         <p className="text-sm font-medium text-slate-200">{hotel.check_in_date}</p>
                       </div>
                       <div className="h-8 w-px bg-white/10 self-center" />
                       <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Check-out</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                          Check-out
+                        </p>
                         <p className="text-sm font-medium text-slate-200">{hotel.check_out_date}</p>
                       </div>
                       <div className="h-8 w-px bg-white/10 self-center" />
                       <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Stay Duration</p>
-                        <p className="text-sm font-medium text-slate-200">{nights} {nights > 1 ? 'Nights' : 'Night'}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                          Stay Duration
+                        </p>
+                        <p className="text-sm font-medium text-slate-200">
+                          {nights} {nights > 1 ? 'Nights' : 'Night'}
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-end border-t border-white/10 pt-10">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 text-blue-300">Total Stay Estimate</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-blue-300">
+                          Total Stay Estimate
+                        </p>
                         <p className="text-3xl font-black text-white tracking-tighter">
-                          HKD {minTotal.toLocaleString()} <span className="text-lg text-slate-500 font-medium lowercase">to</span> {maxTotal.toLocaleString()}
+                          HKD {minTotal.toLocaleString()}{' '}
+                          <span className="text-lg text-slate-500 font-medium lowercase">to</span>{' '}
+                          {maxTotal.toLocaleString()}
                         </p>
                       </div>
                       <button className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-xl active:scale-95 uppercase tracking-widest">
@@ -274,14 +310,17 @@ export function TripPage() {
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center p-20 animate-in fade-in duration-500">
             <div className="relative mb-10">
-               <div className="absolute inset-0 bg-blue-100 rounded-full blur-3xl opacity-20 scale-150" />
-               <div className="relative bg-white border border-slate-100 rounded-full p-12 shadow-sm">
-                 <Map className="size-16 text-slate-100" />
-               </div>
+              <div className="absolute inset-0 bg-blue-100 rounded-full blur-3xl opacity-20 scale-150" />
+              <div className="relative bg-white border border-slate-100 rounded-full p-12 shadow-sm">
+                <Map className="size-16 text-slate-100" />
+              </div>
             </div>
-            <h3 className="text-slate-900 font-black text-3xl tracking-tight">Your world, planned.</h3>
+            <h3 className="text-slate-900 font-black text-3xl tracking-tight">
+              Your world, planned.
+            </h3>
             <p className="text-slate-400 text-sm mt-3 max-w-xs leading-relaxed font-medium">
-              Select an itinerary from your sidebar to unlock the full logistics of your next journey.
+              Select an itinerary from your sidebar to unlock the full logistics of your next
+              journey.
             </p>
           </div>
         )}

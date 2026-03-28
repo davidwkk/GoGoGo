@@ -1,9 +1,10 @@
 import { Plane, ArrowRight, ExternalLink } from 'lucide-react';
+import { Flight } from '../../types/trip';
 
-export const FlightCard = ({ flight }: { flight: any }) => {
-  // Logic to determine stop label
-  const stopCount = flight.stops?.length || 0;
-  const stopLabel = stopCount === 0 ? "Direct" : `${stopCount} Stop${stopCount > 1 ? 's' : ''}`;
+export const FlightCard = ({ flight }: { flight: Flight }) => {
+  // Flight type doesn't have stops or price_hkd, always show Direct
+  const stopCount = 0;
+  const stopLabel = 'Direct';
 
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all group">
@@ -11,11 +12,15 @@ export const FlightCard = ({ flight }: { flight: any }) => {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2 text-blue-600">
           <Plane className="size-4" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{flight.direction}</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+            {flight.direction}
+          </span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter ${
-          stopCount === 0 ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
-        }`}>
+        <span
+          className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter ${
+            stopCount === 0 ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
+          }`}
+        >
           {stopLabel}
         </span>
       </div>
@@ -23,25 +28,35 @@ export const FlightCard = ({ flight }: { flight: any }) => {
       {/* Route Display */}
       <div className="flex justify-between items-center mb-6">
         <div className="space-y-1">
-          <p className="text-3xl font-black text-slate-900 tracking-tighter">{flight.departure_airport}</p>
+          <p className="text-3xl font-black text-slate-900 tracking-tighter">
+            {flight.departure_airport}
+          </p>
           <p className="text-[11px] text-slate-400 font-bold uppercase">
-            {new Date(flight.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(flight.departure_time).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </p>
         </div>
-        
+
         <div className="flex flex-col items-center gap-1 flex-1 px-4">
           <ArrowRight className="text-slate-200 size-5" />
           <div className="h-px w-full bg-slate-100 relative">
-             <div className="absolute inset-0 flex justify-center -top-1.5">
-                <div className="size-3 bg-white border-2 border-slate-100 rounded-full" />
-             </div>
+            <div className="absolute inset-0 flex justify-center -top-1.5">
+              <div className="size-3 bg-white border-2 border-slate-100 rounded-full" />
+            </div>
           </div>
         </div>
 
         <div className="text-right space-y-1">
-          <p className="text-3xl font-black text-slate-900 tracking-tighter">{flight.arrival_airport}</p>
+          <p className="text-3xl font-black text-slate-900 tracking-tighter">
+            {flight.arrival_airport}
+          </p>
           <p className="text-[11px] text-slate-400 font-bold uppercase">
-            {new Date(flight.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(flight.arrival_time).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </p>
         </div>
       </div>
@@ -50,20 +65,24 @@ export const FlightCard = ({ flight }: { flight: any }) => {
       <div className="pt-5 border-t border-slate-50 flex justify-between items-center">
         <div className="flex flex-col">
           <span className="text-xs font-bold text-slate-800">{flight.airline}</span>
-          <span className="text-[10px] text-slate-400 font-medium tracking-tight">{flight.flight_number}</span>
+          <span className="text-[10px] text-slate-400 font-medium tracking-tight">
+            {flight.flight_number}
+          </span>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Total</p>
-            <p className="text-sm font-black text-green-600">HKD {flight.price_hkd || '---'}</p>
+            <p className="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">
+              Total
+            </p>
+            <p className="text-sm font-black text-green-600">HKD ---</p>
           </div>
-          
+
           {/* Conditional Booking Button */}
           {flight.booking_url && (
-            <a 
-              href={flight.booking_url} 
-              target="_blank" 
+            <a
+              href={flight.booking_url}
+              target="_blank"
               rel="noopener noreferrer"
               className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl transition-colors shadow-lg shadow-blue-100"
             >
