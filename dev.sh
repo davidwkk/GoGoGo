@@ -261,6 +261,9 @@ SEED_CHOICE="${SEED_CHOICE:-1}"
 
 case "$SEED_CHOICE" in
   1)
+    log "Running database migrations..."
+    $BASE_COMPOSE exec backend alembic upgrade head
+    success "Migrations complete."
     log "Seeding database..."
     $BASE_COMPOSE exec backend python /app/scripts/seed_db.py
     success "Database seeded."
