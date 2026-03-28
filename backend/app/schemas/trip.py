@@ -3,6 +3,7 @@ from typing import Any, Optional
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
+
 # Lightweight schema for the list view (hides the heavy AI JSON)
 class TripSummary(BaseModel):
     id: int
@@ -11,6 +12,7 @@ class TripSummary(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
 
 # Full schema for the detail view
 class TripOut(TripSummary):

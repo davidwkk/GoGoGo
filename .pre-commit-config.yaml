@@ -48,6 +48,16 @@ repos:
         pass_filenames: true
         always_run: false
 
+      - id: frontend-typecheck
+        name: frontend typecheck
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        description: 'Run TypeScript type check on frontend files'
+        language: system
+        files: ^frontend/src/
+        types_or: [ts, tsx]
+        pass_filenames: false
+        always_run: false
+
       - id: frontend-format
         name: frontend format
         entry: npx prettier --write

@@ -53,7 +53,11 @@ echo -e "${BOLD}${CYAN}║           GoGoGo Container Cleanup               ║$
 echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════╝${RESET}\n"
 
 # ── Collect containers ────────────────────────────────────────
-readarray -t RAW < <(get_compose_containers)
+# Use while read instead of readarray/mapfile for macOS/WSL compatibility
+RAW=()
+while IFS= read -r line; do
+  RAW+=("$line")
+done < <(get_compose_containers)
 
 if [ ${#RAW[@]} -eq 0 ]; then
   warn "No compose-managed containers found."
@@ -126,28 +130,56 @@ echo ""
 # in a project are selected; otherwise fall back to docker rm -f.
 echo ""
 
-declare -A project_total   # project → total container count
-declare -A project_selected # project → selected count
+# Collect unique projects and their container counts
+# Use simple positional arrays (bash 3.2 compatible)
+all_projects=()
+all_totals=()
+all_selected=()
 
+# First pass: collect all projects and total counts
 for item in "${sorted[@]}"; do
   p=$(echo "$item" | cut -d'|' -f2)
-  project_total[$p]=$(( ${project_total[$p]:-0} + 1 ))
+  found=0
+  for i in "${!all_projects[@]}"; do
+    if [ "${all_projects[$i]}" = "$p" ]; then
+      all_totals[$i]=$((all_totals[$i] + 1))
+      found=1
+      break
+    fi
+  done
+  if [ "$found" -eq 0 ]; then
+    all_projects+=("$p")
+    all_totals+=("1")
+    all_selected+=("0")
+  fi
 done
+
+# Second pass: count selected containers per project
 for item in "${to_remove[@]}"; do
   p=$(echo "$item" | cut -d'|' -f2)
-  project_selected[$p]=$(( ${project_selected[$p]:-0} + 1 ))
+  for i in "${!all_projects[@]}"; do
+    if [ "${all_projects[$i]}" = "$p" ]; then
+      all_selected[$i]=$((all_selected[$i] + 1))
+      break
+    fi
+  done
 done
 
 # Collect projects where ALL containers are selected → use compose down
 full_down_projects=()
 partial_remove=()
-for item in "${to_remove[@]}"; do
-  p=$(echo "$item" | cut -d'|' -f2)
-  if [ "${project_selected[$p]}" -eq "${project_total[$p]}" ]; then
-    # Mark project for full down (deduplicate)
-    [[ ! " ${full_down_projects[*]} " =~ " $p " ]] && full_down_projects+=("$p")
+for i in "${!all_projects[@]}"; do
+  p="${all_projects[$i]}"
+  total="${all_totals[$i]}"
+  selected="${all_selected[$i]}"
+  if [ "$selected" -eq "$total" ] && [ "$total" -gt 0 ]; then
+    full_down_projects+=("$p")
   else
-    partial_remove+=("$item")
+    for item in "${to_remove[@]}"; do
+      if [ "$(echo "$item" | cut -d'|' -f2)" = "$p" ]; then
+        partial_remove+=("$item")
+      fi
+    done
   fi
 done
 
