@@ -49,3 +49,32 @@ def delete_single_trip(
             status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
         )
     return None
+
+
+@router.post("/demo")
+def get_demo_trip(db: Session = Depends(get_db)):
+    """
+    Return the seeded demo trip without requiring authentication.
+    Used by the frontend Demo Trip button for quick testing.
+    """
+    from app.db.models.trip import Trip
+    from sqlalchemy import select
+
+    result = db.execute(
+        select(Trip)
+        .where(Trip.title.like("%Tokyo Spring%"))
+        .order_by(Trip.created_at.desc())
+    )
+    trip = result.scalar_one_or_none()
+    if trip is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Demo trip not found. Please run `docker compose exec backend python /app/scripts/seed_db.py` first.",
+        )
+    return {
+        "id": trip.id,
+        "title": trip.title,
+        "destination": trip.destination,
+        "created_at": trip.created_at.isoformat() if trip.created_at else None,
+        "itinerary": trip.itinerary_json,
+    }

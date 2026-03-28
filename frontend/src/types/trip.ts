@@ -14,6 +14,13 @@ export interface DayPlan {
   evening: Activity[];
 }
 
+export interface FlightStop {
+  airport_code: string;
+  airport_name: string;
+  arrival_time: string | null;
+  departure_time: string | null;
+}
+
 export interface Flight {
   direction: 'outbound' | 'return';
   airline: string;
@@ -22,6 +29,7 @@ export interface Flight {
   arrival_airport: string;
   departure_time: string;
   arrival_time: string;
+  stops: FlightStop[];
   booking_url: string | null;
 }
 

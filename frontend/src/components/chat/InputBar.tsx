@@ -9,18 +9,20 @@ import { VoiceButton } from '@/components/voice/VoiceButton';
 import { useChat } from '@/hooks/useChat';
 import { useASR } from '@/hooks/useASR';
 import { useChatStore } from '@/store';
+import type { TripItinerary } from '@/types/trip';
 
 interface InputBarProps {
   disabled?: boolean;
+  onItinerary?: (itinerary: TripItinerary) => void;
 }
 
-export function InputBar({ disabled }: InputBarProps) {
+export function InputBar({ disabled, onItinerary }: InputBarProps) {
   const [text, setText] = useState('');
   const voiceAvailable = useChatStore(s => s.voiceAvailable);
   const isLoading = useChatStore(s => s.isLoading);
   const addMessage = useChatStore(s => s.addMessage);
   const setThinking = useChatStore(s => s.setThinking);
-  const { sendMessage } = useChat({});
+  const { sendMessage } = useChat({ onItinerary });
   const { isListening, startListening, stopListening } = useASR({
     onTranscript: result => {
       // Append transcript to existing text (allows multiple utterances)

@@ -1,5 +1,6 @@
 // frontend/src/services/tripService.ts
 import { apiClient } from './api';
+import type { TripDetail } from '../types/trip';
 
 export interface TripSummary {
   id: number;
@@ -8,14 +9,8 @@ export interface TripSummary {
   created_at: string;
 }
 
-export interface TripDetail extends TripSummary {
-  itinerary: any; // We use 'any' temporarily to handle the complex AI JSON
-}
-
 export const tripService = {
-  /** * List all trips for the current user
-   * Matches the 'listTrips' call in TripPage.tsx
-   */
+  /** List all trips for the current user */
   async listTrips(): Promise<TripSummary[]> {
     const { data } = await apiClient.get<TripSummary[]>('/trips');
     return data;
@@ -30,5 +25,11 @@ export const tripService = {
   /** Delete a trip */
   async deleteTrip(tripId: number): Promise<void> {
     await apiClient.delete(`/trips/${tripId}`);
+  },
+
+  /** Get the seeded demo trip (no auth required) */
+  async getDemoTrip(): Promise<TripDetail> {
+    const { data } = await apiClient.post<TripDetail>('/trips/demo');
+    return data;
   },
 };

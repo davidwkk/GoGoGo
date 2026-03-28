@@ -4,9 +4,10 @@
 import { useCallback } from 'react';
 import { chatService, ChatRequest, guestPreferences } from '@/services/api';
 import { useChatStore } from '@/store';
+import type { TripItinerary } from '@/types/trip';
 
 interface UseChatOptions {
-  onItinerary?: (itinerary: unknown) => void;
+  onItinerary?: (itinerary: TripItinerary) => void;
   onError?: (error: string) => void;
 }
 
@@ -192,7 +193,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
 
         // If itinerary returned, notify caller
         if (response.itinerary && onItinerary) {
-          onItinerary(response.itinerary);
+          onItinerary(response.itinerary as TripItinerary);
         }
 
         // If error, notify caller
