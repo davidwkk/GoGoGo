@@ -209,13 +209,23 @@ async def _stream_agent_thoughts(
         )
 
     def _user_message(msg: str) -> str:
-        if "unavailable" in msg.lower() or "503" in msg:
+        msg_lower = msg.lower()
+        if "unavailable" in msg_lower or "503" in msg:
             return (
                 "The AI service is temporarily unavailable due to high demand. "
                 "This is usually temporary - please try again in a few moments."
             )
-        if "rate limit" in msg.lower() or "429" in msg:
+        if "rate limit" in msg_lower or "429" in msg:
             return "You've reached the rate limit. Please wait a moment and try again."
+        if (
+            "name or service not known" in msg_lower
+            or "errno -2" in msg_lower
+            or "connecterror" in msg_lower
+        ):
+            return (
+                "Cannot reach the AI service — VPN may be disconnected. "
+                "Please connect your VPN and try again."
+            )
         return "An error occurred. Please try again."
 
     for attempt in range(max_retries + 1):

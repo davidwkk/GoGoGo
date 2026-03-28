@@ -112,6 +112,15 @@ async def invoke_agent(
             user_message = (
                 "You've reached the rate limit. Please wait a moment and try again."
             )
+        elif (
+            "name or service not known" in error_msg
+            or "errno -2" in error_msg
+            or "connecterror" in error_msg
+        ):
+            user_message = (
+                "Cannot reach the AI service — VPN may be disconnected. "
+                "Please connect your VPN and try again."
+            )
         else:
             user_message = f"An error occurred: {e}"
         logger.error(f"[invoke_agent] Exception: {type(e).__name__}: {str(e)}")
