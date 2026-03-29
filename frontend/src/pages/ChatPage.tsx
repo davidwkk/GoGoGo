@@ -222,7 +222,7 @@ export function ChatPage() {
   const isLoading = useChatStore(s => s.isLoading);
   const isThinking = useChatStore(s => s.isThinking);
   const thinkingSteps = useChatStore(s => s.thinkingSteps);
-  const isLoggedIn = !!localStorage.getItem('token');
+  const isLoggedIn = !!localStorage.getItem('access_token');
   const clearMessages = useChatStore(s => s.clearMessages);
   const setSessionId = useChatStore(s => s.setSessionId);
   const abortController = useChatStore(s => s.abortController);

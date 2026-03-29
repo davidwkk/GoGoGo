@@ -4,6 +4,8 @@ export interface Activity {
   location: string;
   map_url: string | null;
   estimated_duration_minutes: number;
+  // TODO: Add image_url field to display attraction images (maps to AttractionItem.thumbnail_url)
+  image_url?: string | null;
 }
 
 export interface DayPlan {
