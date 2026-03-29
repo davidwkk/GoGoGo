@@ -1,5 +1,19 @@
 import { MapPin, Clock } from 'lucide-react';
 
+// TODO: Wire up image_url from activity data (data.image_url or data.thumbnail_url from backend)
+const ActivityImage = ({ imageUrl, name }: { imageUrl?: string | null; name: string }) => {
+  if (!imageUrl) return null;
+  return (
+    <div className="w-full h-32 mb-4 -mx-5 -mt-5 rounded-t-2xl overflow-hidden bg-slate-100">
+      <img
+        src={imageUrl}
+        alt={name}
+        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+      />
+    </div>
+  );
+};
+
 export const ActivityCard = ({ activity, label }: { activity: any; label: string }) => {
   // If activity is null or an empty array/object, don't show the card
   if (!activity || (Array.isArray(activity) && activity.length === 0)) return null;
@@ -14,6 +28,12 @@ export const ActivityCard = ({ activity, label }: { activity: any; label: string
       <div className="absolute left-0 top-1 size-[23px] rounded-full border-4 border-white bg-blue-600 shadow-sm z-10" />
 
       <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:border-blue-200 transition-all hover:shadow-md">
+        {/* TODO: Display attraction image using ActivityImage component */}
+        <ActivityImage
+          imageUrl={data.image_url || data.thumbnail_url}
+          name={data.name || 'Activity'}
+        />
+
         <div className="flex justify-between items-start mb-2">
           <span className="text-[10px] font-black uppercase text-blue-500 tracking-tighter">
             {label}

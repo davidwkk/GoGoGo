@@ -45,7 +45,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
 
         // Always include preferences: guest preferences from localStorage
         // (for logged-in users, the backend fetches from DB via the token)
-        const isLoggedIn = !!localStorage.getItem('token');
+        const isLoggedIn = !!localStorage.getItem('access_token');
         const prefs = isLoggedIn ? undefined : guestPreferences.get();
         console.log('[useChat] isLoggedIn:', isLoggedIn, 'prefs:', prefs);
 

@@ -22,12 +22,12 @@ export function ProfilePage() {
   const [username, setUsername] = useState('');
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     navigate('/login');
   };
 
   const loadProfile = useCallback(async () => {
-    if (!localStorage.getItem('token')) {
+    if (!localStorage.getItem('access_token')) {
       setLoading(false);
       return;
     }
@@ -48,7 +48,7 @@ export function ProfilePage() {
   }, [loadProfile]);
 
   const handleSave = async () => {
-    if (!localStorage.getItem('token')) return;
+    if (!localStorage.getItem('access_token')) return;
     setSaving(true);
     setError(null);
     setSuccess(false);

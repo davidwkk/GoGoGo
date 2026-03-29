@@ -11,7 +11,7 @@ export const apiClient = axios.create({
 
 // Attach JWT token if present
 apiClient.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -57,7 +57,7 @@ export const chatService = {
     signal?: AbortSignal
   ): AsyncGenerator<string, void, unknown> {
     console.log('[streamMessage] Starting stream for message:', req.message.substring(0, 50));
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;

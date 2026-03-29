@@ -1,5 +1,5 @@
 // frontend/src/pages/TripPage.tsx
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Map, Calendar, MapPin, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { tripService } from '../services/tripService';
@@ -26,16 +26,22 @@ const MapEmbed = ({ url }: { url: string | null }) => {
   );
 };
 
+function getStoredToken(): string | null {
+  return localStorage.getItem('access_token');
+}
+
 export function TripPage() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token') || localStorage.getItem('access_token');
-  const isLoggedIn = !!token;
 
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null);
-  const [loading, setLoading] = useState(isLoggedIn);
+  const [loading, setLoading] = useState(false);
   const [fetchingDetail, setFetchingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Track auth state as React state so effects respond to changes correctly
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!getStoredToken());
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // --- DATA EXTRACTION HELPERS ---
   const hotel = selectedTrip?.itinerary?.hotels?.[0];
@@ -50,24 +56,44 @@ export function TripPage() {
   const minTotal = (hotel?.price_per_night_min_hkd || 0) * nights;
   const maxTotal = (hotel?.price_per_night_max_hkd || 0) * nights;
 
-  const loadTrips = useCallback(async () => {
+  // Sync auth state whenever localStorage changes (handles logout in other tabs/components)
+  useEffect(() => {
+    const handleStorage = () => setIsLoggedIn(!!getStoredToken());
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // Fetch trips only when auth state becomes true (not on every render)
+  useEffect(() => {
     if (!isLoggedIn) return;
+
+    // Cancel any in-flight request from a previous auth state
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setLoading(true);
     setError(null);
-    try {
-      const data = await tripService.listTrips();
-      setTrips(data || []);
-    } catch (err) {
-      setError('Unable to sync trips. Please check your connection.');
-      console.error('Trip fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [isLoggedIn]);
+    tripService
+      .listTrips()
+      .then(data => setTrips(data || []))
+      .catch(err => {
+        // Ignore abort errors — they happen when user logs out mid-request
+        if (
+          err.name === 'CanceledError' ||
+          (err instanceof Error && err.message.includes('cancel'))
+        )
+          return;
+        setError('Unable to sync trips. Please check your connection.');
+        console.error('Trip fetch error:', err);
+      })
+      .finally(() => setLoading(false));
 
-  useEffect(() => {
-    loadTrips();
-  }, [loadTrips]);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, [isLoggedIn]);
 
   const handleSelectTrip = async (id: number) => {
     setFetchingDetail(true);
@@ -85,8 +111,10 @@ export function TripPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center">
         <Map className="size-16 text-slate-100 mb-4" />
-        <h2 className="text-xl font-black text-slate-900">Your trips are waiting</h2>
-        <p className="text-sm text-slate-400 mt-2 mb-6">Sign in to view your saved itineraries.</p>
+        <h2 className="text-xl font-black text-slate-900">Sign in to view your trips</h2>
+        <p className="text-sm text-slate-400 mt-2 mb-6">
+          Create an account or sign in to save and manage your trip itineraries.
+        </p>
         <button
           onClick={() => navigate('/login')}
           className="h-12 rounded-2xl bg-black text-white px-10 text-sm font-bold hover:bg-slate-800 transition-all"

@@ -427,14 +427,14 @@ frontend/src/store/
 
 #### Phase 3 — Trip UI (Days 10–14)
 
-- [ ] `TripPage.tsx` — list of saved trips, click to expand detail
-- [ ] `ItineraryCard.tsx` — render `DayPlan[]`, day tabs or accordion
+- [x] `TripPage.tsx` — list of saved trips, click to expand detail ✅
+- [x] `ItineraryCard.tsx` — render `DayPlan[]`, day tabs or accordion ✅ (as `ActivityCard.tsx`)
 - [ ] `HotelCard.tsx` — name, price, rating, booking link button
-- [ ] `FlightCard.tsx` — airline, departure/arrival, price, booking link
+- [x] `FlightCard.tsx` — airline, departure/arrival, price, booking link ✅
 - [ ] `AttractionCard.tsx` — name, category badge, photo, rating
-- [ ] `MapEmbed.tsx` — render Google Maps Embed iframe from `map_embed_url`
-- [ ] `tripService.ts` — Axios calls for all trip endpoints
-- [ ] Wire `TripPage` into app routing (coordinate with Minqi's auth guard)
+- [ ] `MapEmbed.tsx` — render Google Maps Embed iframe from `map_embed_url` (inline in TripPage instead)
+- [x] `tripService.ts` — Axios calls for all trip endpoints ✅
+- [x] Wire `TripPage` into app routing (coordinate with Minqi's auth guard) ✅
 
 ### 🧪 Tests to Write
 
@@ -455,21 +455,13 @@ backend/tests/integration/
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area         | Issue                                                                                                                                                      |
-| --- | -------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 🟡       | Backend      | ✅ Fixed — use simple module-level dict cache (see Phase 1B transport.py note)                                                                             |
-| 2   | 🟡       | Backend      | ✅ Accepted for demo — keep `wait_for` with demo-grade comment; all httpx clients use `async with` for clean cancel                                        |
-| 3   | 🟢       | Integration  | ✅ Fixed — `deps.py` now uses JWT payload, no hardcoded `DEV_USER_ID`                                                                                      |
-| 5   | 🟠       | Coordination | ✅ Fixed — `chat.py` creates session on first message when `session_id` is null                                                                            |
-| 17  | 🟡       | Backend      | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                  |
-| 19  | 🟡       | Coordination | ✅ Fixed — POST /trips removed from public API; `chat_service.py` calls `trip_service.save_trip()` directly                                                |
-| 21  | 🟡       | Frontend     | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                                      |
-| 24  | 🔴       | Frontend     | 🔴 Open — `TripPage.tsx` is placeholder stub only; all trip UI components missing (Xuan)                                                                   |
-| 25  | 🔴       | Security     | ✅ Fixed — `POST /chat` now verifies `session.user_id == user_id` before use; returns 403 Forbidden if mismatch                                            |
-| 26  | 🟡       | Frontend     | ⚠️ Open — Minqi Phase 3 incomplete: `useAuth.ts`, auth store, `MessageBubble.tsx`, fake loading steps, "Save & Finish Trip" button, chat history on reload |
-| —   | 🟡       | Frontend     | ✅ Fixed — `useASR.isVoiceSupported()` used at store init, single source of truth in `store/index.ts`                                                      |
-| —   | 🟡       | Frontend     | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                    |
-| —   | 🔴       | User Feature | ✅ Fixed — ProfilePage.tsx implemented with shadcn/ui; backend model/repo/service/routes all complete                                                      |
+| #   | Severity | Area     | Issue                                                                                                                                     |
+| --- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 17  | 🟡       | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume) |
+| 21  | 🟡       | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                     |
+| 24  | 🟡       | Frontend | ⚠️ Partial — `TripPage.tsx` implemented; `HotelCard.tsx`, `AttractionCard.tsx` still missing (Xuan)                                       |
+| 26  | 🟡       | Frontend | ⚠️ Open — Minqi Phase 3 incomplete: `useAuth.ts`, auth store, `MessageBubble.tsx`, "Save & Finish Trip" button, chat history on reload    |
+| —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                   |
 
 ---
 

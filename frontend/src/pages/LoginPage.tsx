@@ -35,7 +35,7 @@ export function LoginPage() {
 
   // Auto-redirect to chat if already logged in
   useEffect(() => {
-    if (localStorage.getItem('token')) {
+    if (localStorage.getItem('access_token')) {
       navigate('/chat');
     }
   }, [navigate]);
@@ -51,7 +51,7 @@ export function LoginPage() {
           email,
           password,
         });
-        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('rememberMe', String(rememberMe));
         if (rememberMe) {
           localStorage.setItem('user_email', email);
@@ -66,7 +66,7 @@ export function LoginPage() {
           username,
           password,
         });
-        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('rememberMe', String(rememberMe));
         localStorage.setItem('user_email', email);
         localStorage.setItem('user_name', username);
