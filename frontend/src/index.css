@@ -126,6 +126,20 @@ body {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 0.8s step-end infinite;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

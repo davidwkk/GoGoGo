@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
+
+from loguru import logger
 
 from app.agent.agent import run_agent, run_agent_structured
 from app.schemas.chat import ChatResponse
@@ -15,8 +16,6 @@ if TYPE_CHECKING:
 
 # LLM call timeout (30s for agent responses)
 TIMEOUT_SECONDS = 30.0
-
-logger = logging.getLogger(__name__)
 
 
 async def invoke_agent(
