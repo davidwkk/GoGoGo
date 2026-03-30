@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-
 # ─────────────────────────────────────────
 # Transport
 # ─────────────────────────────────────────
@@ -45,7 +44,6 @@ class Coordinates(BaseModel):
 class AttractionItem(BaseModel):
     name: str
     description: str = Field(description="Brief summary from Wikipedia")
-    # TODO: Ensure thumbnail_url is passed through to DayPlan activities for frontend display
     thumbnail_url: str | None = None
     coordinates: Coordinates | None = None
     category: str | None = None
