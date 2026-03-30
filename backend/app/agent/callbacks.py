@@ -132,7 +132,7 @@ def log_agent_finish(
         agent_mode=agent_mode,
         iterations=iterations,
         max_iterations=max_iterations,
-        response_preview=response_preview[:500] if response_preview else None,
+        response_preview=response_preview if response_preview else None,
         token_usage=token_usage,
         latency_ms=latency_ms,
     ).info("Agent finished")

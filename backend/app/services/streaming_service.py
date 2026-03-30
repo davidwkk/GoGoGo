@@ -71,7 +71,7 @@ async def stream_agent_response(
         trace_id=trace_id,
         model=model,
         session_id=session_id,
-        user_message_preview=message[:100],
+        user_message_preview=message,
         preferences=preferences,
     ).info("Stream agent thoughts started")
 
@@ -183,7 +183,7 @@ async def stream_agent_response(
                         service="chat",
                         trace_id=trace_id,
                         elapsed_ms=chunk_start_ms,
-                        function_calls=repr(chunk_function_calls)[:500],
+                        function_calls=repr(chunk_function_calls),
                     ).info(
                         f"Function calls found on chunk directly at +{chunk_start_ms}ms: {chunk_function_calls}"
                     )
@@ -214,7 +214,7 @@ async def stream_agent_response(
                     service="chat",
                     trace_id=trace_id,
                     elapsed_ms=chunk_start_ms,
-                    chunk=str(chunk)[:500],
+                    chunk=str(chunk),
                     chunk_repr=repr(chunk),
                     has_candidates=hasattr(chunk, "candidates")
                     and chunk.candidates is not None,
@@ -279,14 +279,12 @@ async def stream_agent_response(
                     finish_reason=str(candidate.finish_reason)
                     if hasattr(candidate, "finish_reason")
                     else None,
-                    content_repr=repr(candidate.content)[:300]
-                    if candidate.content
-                    else None,
+                    content_repr=repr(candidate.content) if candidate.content else None,
                     content_type=type(candidate.content).__name__
                     if candidate.content
                     else None,
                 ).debug(
-                    f"Candidate at +{chunk_start_ms}ms: finish_reason={getattr(candidate, 'finish_reason', None)}, content={repr(candidate.content)[:200]}"
+                    f"Candidate at +{chunk_start_ms}ms: finish_reason={getattr(candidate, 'finish_reason', None)}, content={repr(candidate.content)}"
                 )
                 if not candidate.content:
                     continue
@@ -321,14 +319,14 @@ async def stream_agent_response(
                         trace_id=trace_id,
                         elapsed_ms=chunk_start_ms,
                         part_type=type(part).__name__,
-                        part_repr=repr(part)[:300],
+                        part_repr=repr(part),
                         part_attrs={
                             attr: getattr(part, attr, None)
                             for attr in dir(part)
                             if not attr.startswith("_")
                         },
                     ).debug(
-                        f"Part received at +{chunk_start_ms}ms: thought={getattr(part, 'thought', None)}, text={repr(getattr(part, 'text', None))[:100]}, func={getattr(part, 'function_call', None)}"
+                        f"Part received at +{chunk_start_ms}ms: thought={getattr(part, 'thought', None)}, text={repr(getattr(part, 'text', None))}, func={getattr(part, 'function_call', None)}"
                     )
 
                     part_thought = getattr(part, "thought", None)
@@ -348,11 +346,11 @@ async def stream_agent_response(
                                 chunk_type="thought",
                                 thought=part_text,
                                 thought_length=len(part_text),
-                                thought_signature_hex=thought_sig.hex()[:64]
+                                thought_signature_hex=thought_sig.hex()
                                 if thought_sig
                                 else None,
                                 finish_reason=finish_reason,
-                            ).info(f"Stream thought: {part_text[:200]}")
+                            ).info(f"Stream thought: {part_text}")
                             yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
                         elif thought_sig:
                             # Thought with no text but has signature bytes
@@ -364,10 +362,10 @@ async def stream_agent_response(
                                 chunk_index=chunk_index,
                                 chunk_type="thought_signature",
                                 thought_present=True,
-                                thought_signature_hex=thought_sig.hex()[:64],
+                                thought_signature_hex=thought_sig.hex(),
                                 thought_signature_len=len(thought_sig),
                             ).info(
-                                f"Thought signature present ({len(thought_sig)} bytes): {thought_sig.hex()[:32]}..."
+                                f"Thought signature present ({len(thought_sig)} bytes): {thought_sig.hex()}..."
                             )
                     elif part_func is not None:
                         # Skip if this function call was already processed from chunk.function_calls
@@ -432,11 +430,11 @@ async def stream_agent_response(
                 elapsed_ms=_elapsed_ms(),
                 round_text_parts_count=len(round_text_parts),
                 round_func_parts_count=len(round_func_parts),
-                round_func_parts_repr=[repr(p)[:200] for p in round_func_parts],
+                round_func_parts_repr=[repr(p) for p in round_func_parts],
                 assistant_text_length=len(assistant_text),
-                assistant_text_preview=assistant_text[:200],
+                assistant_text_preview=assistant_text,
             ).info(
-                f"Stream round complete at +{_elapsed_ms()}ms: text_parts={len(round_text_parts)}, func_parts={len(round_func_parts)}, assistant_text='{assistant_text[:100]}...'"
+                f"Stream round complete at +{_elapsed_ms()}ms: text_parts={len(round_text_parts)}, func_parts={len(round_func_parts)}, assistant_text='{assistant_text}...'"
             )
 
             # Log usage metadata on final chunk of this round
@@ -533,7 +531,7 @@ async def stream_agent_response(
                                 trace_id=trace_id,
                                 model=model,
                                 tool_name=tool_name,
-                                tool_result_preview=str(result)[:200],
+                                tool_result_preview=str(result),
                                 tool_duration_ms=tool_duration_ms,
                             ).info("Tool completed")
                         except Exception as e:
@@ -555,7 +553,7 @@ async def stream_agent_response(
                                 tool_duration_ms=tool_duration_ms,
                             ).error(
                                 f"Tool exception | tool={tool_name} | args={args} | "
-                                f"error={type(e).__name__}: {str(e)[:200]} | duration_ms={tool_duration_ms}"
+                                f"error={type(e).__name__}: {str(e)} | duration_ms={tool_duration_ms}"
                             )
                             result = {"error": str(e)}
                     else:
@@ -576,7 +574,7 @@ async def stream_agent_response(
                         model=model,
                         elapsed_ms=_elapsed_ms(),
                         tool_name=tool_name,
-                        tool_result_preview=str(result)[:200],
+                        tool_result_preview=str(result),
                     ).debug(f"Tool result at +{_elapsed_ms()}ms")
                     yield f"data: {json.dumps({'tool_result': tool_name, 'result': result})}\n\n"
                     yield f"data: {json.dumps({'status': 'processing_results'})}\n\n"
@@ -685,12 +683,12 @@ async def stream_agent_response(
             error_type=type(e).__name__,
             error_code=error_code,
             error_status=error_status,
-            error_message=str(e)[:500],
+            error_message=str(e),
             error_details=error_details,
             error_traceback=tb_mod.format_exc(),
         ).error(
             f"Stream error at +{_elapsed_ms()}ms | type={type(e).__name__} | code={error_code} | status={error_status} | "
-            f"msg={str(e)[:200]} | tool_round={tool_round} | chunks={chunk_index} | "
+            f"msg={str(e)} | tool_round={tool_round} | chunks={chunk_index} | "
             f"tools={total_tool_calls} | text_len={len(assistant_text)}"
         )
         _flush_assistant_text()
