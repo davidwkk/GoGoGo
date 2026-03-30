@@ -619,7 +619,7 @@ export function ChatPage() {
                           ▶
                         </span>
                       </button>
-                      {(expandedBubbles.has(msg.id) || isInProgress) && !isZeroSteps && (
+                      {expandedBubbles.has(msg.id) && !isZeroSteps && (
                         <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
                           {thinkingSteps.slice(exchangeStart, exchangeEnd).map((step, i) => (
                             <div key={i} className="text-xs text-muted-foreground leading-relaxed">
