@@ -561,7 +561,7 @@ async def run_agent_structured(
             trace_id=trace_id,
             model=model,
             error=f"{type(e).__name__}: {e}",
-            response_preview=text[:500],
+            response_preview=text,
             latency_ms=latency_ms,
         ).error("Failed to parse TripItinerary")
         raise
