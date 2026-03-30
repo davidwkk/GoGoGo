@@ -2,6 +2,17 @@
 
 import axios from 'axios';
 
+const DEBUG = import.meta.env.DEV;
+const log = (...args: unknown[]) => {
+  if (DEBUG) console.log(...args);
+};
+const warn = (...args: unknown[]) => {
+  if (DEBUG) console.warn(...args);
+};
+const error = (...args: unknown[]) => {
+  if (DEBUG) console.error(...args);
+};
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export const apiClient = axios.create({
@@ -51,113 +62,151 @@ export const chatService = {
   /**
    * Stream chat response chunks for low-latency updates.
    * Yields text chunks as they arrive from the server.
+   * Retries up to 3 times with exponential backoff on SSE disconnect.
    */
   async *streamMessage(
     req: ChatRequest,
     signal?: AbortSignal
   ): AsyncGenerator<string, void, unknown> {
-    console.log('[streamMessage] Starting stream for message:', req.message.substring(0, 50));
-    const token = localStorage.getItem('access_token');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    const MAX_RETRIES = 4; // 1 initial + up to 3 retries (display: 1/3, 2/3, 3/3)
+    const BASE_DELAY_MS = 500;
+    let attempt = 0;
 
-    const response = await fetch(`${API_BASE}/chat/stream`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(req),
-      signal,
-    });
+    let exhaustedError: string | null = null;
 
-    console.log('[streamMessage] Response status:', response.status, 'ok:', response.ok);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        '[streamMessage] Stream request failed:',
-        response.status,
-        response.statusText,
-        errorText
-      );
-      throw new Error(
-        `Stream request failed: ${response.status} ${response.statusText} - ${errorText}`
-      );
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      console.error('[streamMessage] No response body');
-      throw new Error('No response body');
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let chunkCount = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        console.log('[streamMessage] Stream complete. Total chunks:', chunkCount);
-        break;
+    while (attempt <= MAX_RETRIES) {
+      attempt++;
+      if (signal?.aborted) {
+        log('[streamMessage] Aborted by caller, stopping');
+        return;
       }
-
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            console.log('[streamMessage] SSE data:', JSON.stringify(data).substring(0, 200));
-            if (data.chunk) {
-              chunkCount++;
-              console.log(
-                '[streamMessage] Yielding chunk',
-                chunkCount,
-                ':',
-                data.chunk.substring(0, 100)
-              );
-              yield data.chunk;
-            } else if (data.thought) {
-              // Agent is thinking — pass through with special prefix for UI display
-              yield `__THOUGHT__:${data.thought}`;
-            } else if (data.model_thought) {
-              // Model's internal reasoning (when include_thoughts=True)
-              yield `__MODEL_THOUGHT__:${data.model_thought}`;
-            } else if (data.tool_call) {
-              // Tool call started — pass through for UI display
-              yield `__TOOL_CALL__:${data.tool_call}`;
-            } else if (data.tool_result) {
-              // Tool result received — pass through for UI display
-              yield `__TOOL_RESULT__:${data.tool_result}`;
-            } else if (data.status) {
-              // Status update (e.g. retrying) — pass through
-              yield `__STATUS__:${data.status}`;
-            } else if (data.error) {
-              console.error('[streamMessage] Stream error:', data.error);
-              // data.error may be a string or an object like {code, message, status}
-              const errorMsg =
-                typeof data.error === 'string'
-                  ? data.error
-                  : data.error?.message || JSON.stringify(data.error);
-              // Yield error as special marker instead of throwing
-              // because async generators don't propagate thrown exceptions to for-await
-              yield `__ERROR__:${errorMsg}`;
-            } else if (data.done) {
-              console.log('[streamMessage] Stream done signal received');
-              return;
-            }
-          } catch (e) {
-            if (e instanceof Error && e.message !== 'Skip malformed JSON') {
-              console.error('[streamMessage] JSON parse error:', e);
-            }
-            // Skip malformed JSON
-          }
+      if (attempt > 1) {
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 2);
+        log(`[streamMessage] Retry ${attempt - 1}/${MAX_RETRIES - 1} after ${delay}ms backoff`);
+        yield `__STATUS__:Reconnecting (${attempt - 1}/${MAX_RETRIES - 1})...\n`;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        // Check again after backoff — user may have started a new chat
+        if (signal?.aborted) {
+          log('[streamMessage] Aborted after backoff, stopping retries');
+          return;
         }
       }
+
+      let response: Response;
+      try {
+        log('[streamMessage] Starting stream for message:', req.message.substring(0, 50));
+        const token = localStorage.getItem('access_token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        response = await fetch(`${API_BASE}/chat/stream`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(req),
+          signal,
+        });
+      } catch (fetchErr) {
+        warn('[streamMessage] Fetch error, retrying:', fetchErr);
+        if (attempt >= MAX_RETRIES)
+          exhaustedError = 'Connection failed. Please check your network and try again.';
+        continue;
+      }
+
+      log('[streamMessage] Response status:', response.status, 'ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        error(
+          '[streamMessage] Stream request failed:',
+          response.status,
+          response.statusText,
+          errorText
+        );
+        if (attempt >= MAX_RETRIES)
+          exhaustedError = `Server error (${response.status}). Please try again later.`;
+        continue;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        error('[streamMessage] No response body');
+        if (attempt >= MAX_RETRIES) exhaustedError = 'No response from server. Please try again.';
+        continue;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let chunkCount = 0;
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            log('[streamMessage] Stream complete. Total chunks:', chunkCount);
+            return;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                log('[streamMessage] SSE data:', JSON.stringify(data).substring(0, 200));
+                if (data.chunk) {
+                  chunkCount++;
+                  log(
+                    '[streamMessage] Yielding chunk',
+                    chunkCount,
+                    ':',
+                    data.chunk.substring(0, 100)
+                  );
+                  yield data.chunk;
+                } else if (data.thought) {
+                  yield `__THOUGHT__:${data.thought}`;
+                } else if (data.model_thought) {
+                  yield `__MODEL_THOUGHT__:${data.model_thought}`;
+                } else if (data.tool_call) {
+                  yield `__TOOL_CALL__:${data.tool_call}`;
+                } else if (data.tool_result) {
+                  yield `__TOOL_RESULT__:${data.tool_result}`;
+                } else if (data.status) {
+                  yield `__STATUS__:${data.status}`;
+                } else if (data.error) {
+                  error('[streamMessage] Stream error:', data.error);
+                  const errorMsg =
+                    typeof data.error === 'string'
+                      ? data.error
+                      : data.error?.message || JSON.stringify(data.error);
+                  yield `__ERROR__:${errorMsg}`;
+                } else if (data.done) {
+                  log('[streamMessage] Stream done signal received');
+                  return;
+                }
+              } catch (e) {
+                if (e instanceof Error && e.message !== 'Skip malformed JSON') {
+                  error('[streamMessage] JSON parse error:', e);
+                }
+              }
+            }
+          }
+        }
+      } catch (streamErr) {
+        warn('[streamMessage] Stream broken, will retry:', streamErr);
+        reader.cancel().catch(() => {});
+        if (attempt >= MAX_RETRIES) exhaustedError = 'Connection lost. Please try again.';
+        continue;
+      }
+    }
+
+    if (exhaustedError) {
+      error('[streamMessage] All retries exhausted');
+      yield `__ERROR__:${exhaustedError}`;
     }
   },
 };

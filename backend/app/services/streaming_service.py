@@ -104,6 +104,8 @@ async def stream_agent_response(
         "3. When a user asks about weather, you MUST call the get_weather tool.\n"
         "4. Always use HKD for prices when the destination is in Asia.\n"
         "5. Dates should be ISO 8601 format (YYYY-MM-DD).\n"
+        "6. Format your responses using Markdown (headers, bold, lists, code blocks) — "
+        "it will be rendered on the frontend.\n"
         f"{prefs_section}"
     )
 
