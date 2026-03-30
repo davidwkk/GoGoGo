@@ -20,6 +20,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
     setAbortController,
     setThinking,
     addThinkingStep,
+    setPartialThoughtText,
   } = useChatStore();
 
   const sendMessage = useCallback(
@@ -83,30 +84,53 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                   setAbortController(null);
                   return;
                 }
+                // Commit any pending partial thought before processing a non-thought event
+                const commitPartialThought = () => {
+                  const partial = useChatStore.getState().partialThoughtText;
+                  if (partial) {
+                    addThinkingStep(partial);
+                    setPartialThoughtText('');
+                  }
+                };
+
                 if (chunk.startsWith('__THOUGHT__:')) {
+                  commitPartialThought();
                   const step = chunk.slice('__THOUGHT__:'.length);
                   addThinkingStep(step);
                   continue;
                 }
                 if (chunk.startsWith('__MODEL_THOUGHT__:')) {
                   const thought = chunk.slice('__MODEL_THOUGHT__:'.length);
-                  addThinkingStep(`💭 ${thought}`);
+                  const current = useChatStore.getState().partialThoughtText;
+                  setPartialThoughtText(current + thought);
                   continue;
                 }
                 if (chunk.startsWith('__TOOL_CALL__:')) {
+                  commitPartialThought();
                   const toolName = chunk.slice('__TOOL_CALL__:'.length);
                   addThinkingStep(`🔧 Calling ${toolName}...`);
                   continue;
                 }
                 if (chunk.startsWith('__TOOL_RESULT__:')) {
+                  commitPartialThought();
                   const toolName = chunk.slice('__TOOL_RESULT__:'.length);
                   addThinkingStep(`✅ ${toolName} done`);
                   continue;
                 }
                 if (chunk.startsWith('__STATUS__:')) {
+                  commitPartialThought();
                   const status = chunk.slice('__STATUS__:'.length);
                   addThinkingStep(status);
                   continue;
+                }
+              }
+
+              // Commit any pending partial thought before text chunks
+              {
+                const partial = useChatStore.getState().partialThoughtText;
+                if (partial) {
+                  addThinkingStep(partial);
+                  setPartialThoughtText('');
                 }
               }
 
@@ -140,12 +164,29 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             if (sessionId) {
               setSessionId(sessionId);
             }
+
+            // Commit any remaining partial thought at end of stream
+            {
+              const partial = useChatStore.getState().partialThoughtText;
+              if (partial) {
+                addThinkingStep(partial);
+                setPartialThoughtText('');
+              }
+            }
           } catch (err) {
             // Ignore AbortError — user cancelled the stream
             if (err instanceof Error && err.name === 'AbortError') {
               console.log('[useChat] Stream cancelled by user');
               setThinking(false);
               setAbortController(null);
+              // Commit any remaining partial thought
+              {
+                const partial = useChatStore.getState().partialThoughtText;
+                if (partial) {
+                  addThinkingStep(partial);
+                  setPartialThoughtText('');
+                }
+              }
               return;
             }
             let errorMsg = err instanceof Error ? err.message : 'Stream failed';
@@ -156,6 +197,14 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             }
             console.error('[useChat] Stream error:', errorMsg);
             setThinking(false);
+            // Commit any remaining partial thought
+            {
+              const partial = useChatStore.getState().partialThoughtText;
+              if (partial) {
+                addThinkingStep(partial);
+                setPartialThoughtText('');
+              }
+            }
             // If we already have a message, update it; otherwise create one with the error
             if (msgId !== null) {
               useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
