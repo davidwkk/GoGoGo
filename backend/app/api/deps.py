@@ -64,3 +64,12 @@ def get_current_user_optional(
         return None
 
     return {"user_id": UUID(user_id)}
+
+
+def verify_user_exists(user_id: UUID | None, db: Session) -> None:
+    """Verify that a user exists in the DB. Raises 401 if user_id is valid but user is not found."""
+    if user_id is not None:
+        from app.repositories.user_repo import get_user_by_id
+
+        if get_user_by_id(db, user_id) is None:
+            raise HTTPException(status_code=401, detail="User not found")
