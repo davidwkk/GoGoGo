@@ -191,9 +191,12 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 
 #### Phase 4 — Streaming UI + Observability (Post-Phase 3)
 
-- [ ] **Typewriter effects in frontend** — Stream LLM response tokens to frontend instead of waiting for full reply; update `useChat.ts` to handle SSE token streaming; render tokens as they arrive in `MessageBubble.tsx`
-- [ ] **Add log to track LLM full cycle** — Instrument `chat_service.py` and `agent.py` with structured logging (Loguru → JSON format); add metrics for: LLM call latency, tool call counts, token usage, end-to-end response time; configure Grafana dashboard to visualize these metrics
+- [x] **Typewriter effects in frontend** — Stream LLM response tokens to frontend instead of waiting for full reply; update `useChat.ts` to handle SSE token streaming; render tokens as they arrive in `MessageBubble.tsx`
+- [x] **Add log to track LLM full cycle** — Instrument `chat_service.py` and `agent.py` with structured logging (Loguru → JSON format); add metrics for: LLM call latency, tool call counts, token usage, end-to-end response time; configure Grafana dashboard to visualize these metrics
 - [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds)
+- [ ] **Stream agent tool calls to frontend** — Add frontend states to display when agent is actively calling tools (e.g., "Searching flights...", "Checking weather...", "Finding hotels..."); show these intermediate steps in the UI during the agent loop, not just a generic "thinking" indicator
+- [ ] **Migrate trip planning to streaming** — Change agent call (trip planning) from waiting for full output to using stream; requires adding a tool to fetch the current time/day for date-aware planning
+- [ ] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations
 
 ### 🧪 Tests to Write
 
@@ -328,14 +331,16 @@ frontend/src/
 
 #### Phase 3 — Auth + Chat UI (Days 10–14)
 
+- [ ] **Verify voice component** — Test ASR (useASR) and TTS (useTTS) in both frontend and backend to ensure the full voice input → agent → voice output pipeline works end-to-end
+
 - [x] `LoginPage.tsx` — login + register tabs, form validation, error display; full-screen centered card, no sidebar ✅
 - [x] "Continue as Guest" button — bypasses auth, stores `guest_uid` in localStorage, navigates to chat; `useChat.ts` sends guest_uid as session_id; backend resolves guest sessions ✅
-- [ ] `useAuth.ts` — login/logout, persist token in localStorage
+- [x] `useAuth.ts` — login/logout, persist token in localStorage
 - [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
 - [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
 - [ ] Protected route wrapper — redirect to login if unauthenticated
-- [ ] `ChatPage.tsx` — basic scaffold exists with message list + InputBar; MessageBubble rendered inline ✅/❌
-- [ ] `MessageBubble.tsx` — user vs assistant styling (currently inline in ChatPage)
+- [x] `ChatPage.tsx` — basic scaffold exists with message list + InputBar; MessageBubble rendered inline ✅/❌
+- [x] `MessageBubble.tsx` — user vs assistant styling (currently inline in ChatPage)
 - [ ] Display fake loading steps ("Searching flights...", "Checking weather...") during POST /chat request
 - [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
 - [ ] Display chat history on session load
@@ -433,6 +438,7 @@ frontend/src/store/
 
 #### Phase 3 — Trip UI (Days 10–14)
 
+- [ ] **Fix frontend display for trips and other components** — Audit and fix any display issues in TripPage, HotelCard, AttractionCard, and other trip-related components
 - [x] `TripPage.tsx` — list of saved trips, click to expand detail ✅
 - [x] `ItineraryCard.tsx` — render `DayPlan[]`, day tabs or accordion ✅ (as `ActivityCard.tsx`)
 - [ ] `HotelCard.tsx` — name, price, rating, booking link button
@@ -461,20 +467,20 @@ backend/tests/integration/
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area     | Issue                                                                                                                                     |
-| --- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 17  | 🟡       | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume) |
-| 21  | 🟡       | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                     |
-| 24  | 🟡       | Frontend | ⚠️ Partial — `TripPage.tsx` implemented; `HotelCard.tsx`, `AttractionCard.tsx` still missing (Xuan)                                       |
-| 26  | 🟡       | Frontend | ⚠️ Open — Minqi Phase 3 incomplete: `useAuth.ts`, auth store, `MessageBubble.tsx`, "Save & Finish Trip" button, chat history on reload    |
-| —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                   |
+| #   | Severity | Area     | Issue                                                                                                                                    |
+| --- | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 17  | 🟡        | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume) |
+| 21  | 🟡        | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                     |
+| 24  | 🟡        | Frontend | ⚠️ Partial — `TripPage.tsx` implemented; `HotelCard.tsx`, `AttractionCard.tsx` still missing (Xuan)                                       |
+| 26  | 🟡        | Frontend | ⚠️ Open — Minqi Phase 3 incomplete: `useAuth.ts`, auth store, `MessageBubble.tsx`, "Save & Finish Trip" button, chat history on reload    |
+| —   | 🟡        | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                  |
 
 ---
 
 ## 🔗 Integration Points & Coordination
 
-| When       | Who           | Action                                                                                             |
-| ---------- | ------------- | -------------------------------------------------------------------------------------------------- |
+| When       | Who           | Action                                                                                            |
+| ---------- | ------------- | ------------------------------------------------------------------------------------------------- |
 | Day 1      | David + Xuan  | ✅ Finalize `TripItinerary` Pydantic schema together                                               |
 | Day 1      | David + Minqi | ✅ Session ID creation flow — `chat.py` creates session on first message when `session_id` is null |
 | Day 3      | David → All   | ✅ Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                           |
@@ -495,7 +501,7 @@ backend/tests/integration/
 | **4–9**   | Agent loop + `chat_service.py` + callbacks + `POST /chat`                             | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
 | **9–13**  | Preference extraction + auth wiring                                                   | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
 | **13–17** | Wire real auth + DB into chat, import chat_history_service                            | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
-| **18–20** | 🔴 Buffer — integration bugs, demo prep                                               | 🔴 Buffer — integration bugs, demo prep           | 🔴 Buffer — integration bugs, demo prep           |
+| **18–20** | 🔴 Buffer — integration bugs, demo prep                                                | 🔴 Buffer — integration bugs, demo prep            | 🔴 Buffer — integration bugs, demo prep            |
 
 ---
 
