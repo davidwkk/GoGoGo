@@ -12,46 +12,48 @@ import { FlightCard } from '@/components/trip/FlightCard';
 import { ActivityCard } from '@/components/trip/ActivityCard';
 
 function StreamingMessage({ content }: { content: string }) {
-  const [displayedWords, setDisplayedWords] = useState(0);
+  const [displayedLength, setDisplayedLength] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    // Reset when content changes
-    setDisplayedWords(0);
+  // Typewriter speed: 12ms per character for smooth natural feel
+  const CHAR_DELAY = 12;
 
-    // Clear any existing interval
+  useEffect(() => {
+    // Clear existing interval on new content
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
-    const words = content.split(/\s+/);
-    if (words.length === 0) return;
+    // If already caught up, no need to animate
+    if (displayedLength >= content.length) {
+      return;
+    }
 
-    // Reveal 1 word every 50ms for natural "talking" feel
+    // Animate character by character
     intervalRef.current = setInterval(() => {
-      setDisplayedWords(prev => {
-        if (prev >= words.length) {
+      setDisplayedLength(prev => {
+        // If caught up to current content length, stop
+        if (prev >= content.length) {
           if (intervalRef.current) clearInterval(intervalRef.current);
           return prev;
         }
+        // Show one more character
         return prev + 1;
       });
-    }, 50);
+    }, CHAR_DELAY);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [content]);
+  }, [content.length]); // Only restart when content length changes
 
-  const words = content.split(/\s+/);
-  const displayed = words.slice(0, displayedWords).join(' ');
-  const remaining = words.slice(displayedWords).join(' ');
+  const displayed = content.slice(0, displayedLength);
+  const isStreaming = displayedLength < content.length;
 
   return (
     <>
       {displayed}
-      {remaining && <span className="animate-pulse">{remaining[0]}</span>}
-      {remaining.slice(1)}
+      {isStreaming && <span className="animate-pulse">▍</span>}
     </>
   );
 }

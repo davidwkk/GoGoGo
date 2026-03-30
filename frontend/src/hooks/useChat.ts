@@ -90,6 +90,11 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                   addThinkingStep(step);
                   continue;
                 }
+                if (chunk.startsWith('__MODEL_THOUGHT__:')) {
+                  const thought = chunk.slice('__MODEL_THOUGHT__:'.length);
+                  addThinkingStep(`💭 ${thought}`);
+                  continue;
+                }
                 if (chunk.startsWith('__TOOL_CALL__:')) {
                   const toolName = chunk.slice('__TOOL_CALL__:'.length);
                   addThinkingStep(`🔧 Calling ${toolName}...`);

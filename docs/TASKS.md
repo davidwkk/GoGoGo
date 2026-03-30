@@ -189,6 +189,12 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] Wire `save_trip` — `chat_service.invoke_agent` calls `trip_service.save_trip` when `generate_plan=True` ✅
 - [x] Wire voice into Chat UI — ChatPage/InputBar already integrate VoiceButton + useASR/useTTS ✅
 
+#### Phase 4 — Streaming UI + Observability (Post-Phase 3)
+
+- [ ] **Typewriter effects in frontend** — Stream LLM response tokens to frontend instead of waiting for full reply; update `useChat.ts` to handle SSE token streaming; render tokens as they arrive in `MessageBubble.tsx`
+- [ ] **Add log / Grafana to track LLM full cycle** — Instrument `chat_service.py` and `agent.py` with structured logging (Loguru → JSON format); add metrics for: LLM call latency, tool call counts, token usage, end-to-end response time; configure Grafana dashboard to visualize these metrics
+- [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds)
+
 ### 🧪 Tests to Write
 
 ```
