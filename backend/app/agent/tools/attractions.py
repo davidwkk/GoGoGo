@@ -3,20 +3,62 @@
 API: GET https://en.wikipedia.org/api/rest_v1/page/summary/{title}
 No API key required.
 
-Returns:
-    {
-        "name": "...",
-        "description": "...",
-        "thumbnail_url": "...",
-        "coordinates": {"lat": ..., "lon": ...},
-        "category": "..."
-    }
+--- Wikipedia REST API Page Summary Full Response Schema ---
+{
+    "title": "Taj Mahal",
+    "displaytitle": "Taj Mahal",
+    "description": "Mausoleum in Agra, Uttar Pradesh, India",   # short description
+    "extract": "The Taj Mahal is an ivory-white marble mausoleum...",
+    "extract_html": "<p>The Taj Mahal is an ivory-white...</p>",
+    "thumbnail": {
+        "source": "https://upload.wikimedia.org/wikipedia/...",
+        "width": 320,
+        "height": 240
+    },
+    "originalimage": {
+        "source": "https://upload.wikimedia.org/wikipedia/...",
+        "width": 4000,
+        "height": 3000
+    },
+    "coordinates": {
+        "lat": 27.175144,
+        "lon": 78.042138
+    },
+    "content_urls": {
+        "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Taj_Mahal"
+        },
+        "mobile": {
+            "page": "https://en.m.wikipedia.org/wiki/Taj_Mahal"
+        }
+    },
+    "type": "standard",
+    "wikibase_item": "Q6568032",
+}
+
+--- Our Normalized Output Schema ---
+{
+    "name": str,                    # e.g. "Taj Mahal"
+    "description": str,             # full extract/description
+    "location": str | None,        # textual location (city, country)
+    "map_url": str | None,         # Google Maps embed URL built from coordinates
+    "thumbnail_url": str | None,    # small image for cards
+    "image_url": str | None,       # full original image URL
+    "coordinates": {
+        "lat": float,
+        "lon": float,
+    } | None,
+    "category": str | None,        # e.g. "Mausoleum", "Museum", "Park"
+    "wiki_url": str | None,        # desktop Wikipedia page URL
+}
 """
 
 from __future__ import annotations
 
 import httpx
 from loguru import logger
+
+from app.core.config import settings
 
 
 async def get_attraction(attraction_name: str) -> dict:
@@ -38,27 +80,52 @@ async def get_attraction(attraction_name: str) -> dict:
             response.raise_for_status()
             data = response.json()
 
-            coords = None
-            if (
-                "coordinates" in data
-                and isinstance(data["coordinates"], list)
-                and data["coordinates"]
-            ):
-                first = data["coordinates"][0]
-                coords = {
-                    "lat": first.get("lat"),
-                    "lon": first.get("lon"),
-                }
-
-            result = {
-                "name": data.get("title", attraction_name),
-                "description": data.get("extract", ""),
-                "thumbnail_url": (data.get("thumbnail") or {}).get("source"),
-                "coordinates": coords,
-                "category": None,
+        # Coordinates
+        coords = None
+        raw_coords = data.get("coordinates")
+        if raw_coords and isinstance(raw_coords, dict):
+            coords = {
+                "lat": raw_coords.get("lat"),
+                "lon": raw_coords.get("lon"),
             }
-            logger.info(f"[attractions] Fetched: {result['name']}")
-            return result
+
+        # Build Google Maps embed URL from coordinates
+        map_url = None
+        if coords and settings.GOOGLE_MAPS_API_KEY:
+            lat = coords.get("lat")
+            lon = coords.get("lon")
+            if lat is not None and lon is not None:
+                map_url = (
+                    f"https://www.google.com/maps/embed/v1/place"
+                    f"?key={settings.GOOGLE_MAPS_API_KEY}"
+                    f"&q=place/{lat},{lon}"
+                )
+
+        # Thumbnail vs full image
+        thumbnail = data.get("thumbnail") or {}
+        original = data.get("originalimage") or {}
+
+        # Build textual location from description (best effort)
+        # e.g. "Mausoleum in Agra, Uttar Pradesh, India" → "Agra, Uttar Pradesh, India"
+        description = data.get("description", "")
+        # Try to extract a location string from the description
+        location = _extract_location_from_description(description)
+
+        result = {
+            "name": data.get("title", attraction_name),
+            "description": data.get("extract", ""),
+            "location": location,
+            "map_url": map_url,
+            "thumbnail_url": thumbnail.get("source"),
+            "image_url": original.get("source"),
+            "coordinates": coords,
+            "category": description.split(" in ")[0] if " in " in description else None,
+            "wiki_url": ((data.get("content_urls") or {}).get("desktop", {}) or {}).get(
+                "page"
+            ),
+        }
+        logger.info(f"[attractions] Fetched: {result['name']}")
+        return result
     except httpx.TimeoutException:
         logger.warning(f"[attractions] Timeout: {attraction_name}")
         return {
@@ -74,3 +141,16 @@ async def get_attraction(attraction_name: str) -> dict:
     except Exception as e:
         logger.warning(f"[attractions] Failed: {e}")
         return {"error": f"Failed to fetch attraction: {e}", "name": attraction_name}
+
+
+def _extract_location_from_description(description: str | None) -> str | None:
+    """Extract a textual location from a Wikipedia short description.
+
+    E.g. "Mausoleum in Agra, Uttar Pradesh, India" → "Agra, Uttar Pradesh, India"
+    E.g. "Museum in London, England" → "London, England"
+    """
+    if not description:
+        return None
+    if " in " in description:
+        return description.split(" in ", 1)[1].strip()
+    return None
