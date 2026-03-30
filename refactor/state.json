@@ -1,0 +1,13 @@
+{
+  "session": "chat_router_split",
+  "started": "2026-03-30",
+  "target": "backend/app/api/routes/chat.py",
+  "progress": {
+    "stream_utils_created": true,
+    "streaming_service_created": true,
+    "message_service_updated": true,
+    "chat_router_slimmed": true,
+    "deps_updated": true
+  },
+  "status": "COMPLETE"
+}

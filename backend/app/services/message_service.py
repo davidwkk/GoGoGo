@@ -1,7 +1,8 @@
 """Message persistence service — Minqi owns this."""
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -125,3 +126,52 @@ def end_session(
         # Could add an `ended_at` field or `status` field here
         db.commit()
     return session
+
+
+async def resolve_session(
+    db: Session,
+    session_id: str | None,
+    user_id: int | None,
+) -> ChatSession:
+    """
+    Resolve a session from a session_id string (integer PK or guest UUID).
+
+    For integer session_id:
+      - Authenticated users can only access their own sessions
+      - Guests cannot access integer-PK sessions
+
+    For guest UUID session_id:
+      - Only guests may use it; creates a new session if none exists
+
+    For no session_id:
+      - Creates a new session for authenticated users or guests
+    """
+    if session_id:
+        # Try parsing as integer PK first (authenticated user session)
+        try:
+            session_pk = int(session_id)
+            session = get_session(db, session_pk)
+            if session is None:
+                raise HTTPException(status_code=404, detail="Session not found")
+            if user_id is None:
+                raise HTTPException(status_code=403, detail="Forbidden")
+            if session.user_id != user_id:
+                raise HTTPException(status_code=403, detail="Forbidden")
+            return session
+        except ValueError:
+            # Treat as guest UUID - look up existing session or create new one
+            if user_id is not None:
+                raise HTTPException(status_code=400, detail="Invalid session_id")
+            guest = get_or_create_guest(db, session_id)
+            session = get_latest_session_for_guest(db, guest.id)
+            if session is None:
+                session = create_session(db, user_id=None, guest_id=guest.id)
+            return session
+    else:
+        # No session_id provided - create new session
+        if user_id is not None:
+            return create_session(db, user_id=user_id)
+        else:
+            guest_uid = str(uuid4())
+            guest = get_or_create_guest(db, guest_uid)
+            return create_session(db, user_id=None, guest_id=guest.id)
