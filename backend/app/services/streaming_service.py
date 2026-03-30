@@ -80,6 +80,9 @@ async def stream_agent_response(
     )
     assistant_text = ""
 
+    def _elapsed_ms() -> float:
+        return round(time_mod.perf_counter() * 1000 - start_ms, 1)
+
     def _flush_assistant_text() -> None:
         nonlocal assistant_text
         update_message_content(db, assistant_msg.id, assistant_text)
@@ -147,7 +150,8 @@ async def stream_agent_response(
                 model=model,
                 tool_round=tool_round + 1,
                 max_tool_rounds=MAX_TOOL_ROUNDS,
-            ).info("Starting tool round")
+                elapsed_ms=_elapsed_ms(),
+            ).info(f"Starting tool round at +{_elapsed_ms()}ms")
 
             stream = client.models.generate_content_stream(
                 model=model,
@@ -163,6 +167,7 @@ async def stream_agent_response(
             yield f"data: {json.dumps({'status': 'thinking'})}\n\n"
 
             async for chunk in _sync_stream_to_async(stream):
+                chunk_start_ms = _elapsed_ms()
                 # Track function call IDs we've already processed from chunk.function_calls
                 # to avoid double-counting when the same calls appear in candidate.content.parts
                 chunk_function_call_ids: set[str] = set()
@@ -176,9 +181,10 @@ async def stream_agent_response(
                         event="function_calls_on_chunk",
                         service="chat",
                         trace_id=trace_id,
+                        elapsed_ms=chunk_start_ms,
                         function_calls=repr(chunk_function_calls)[:500],
                     ).info(
-                        f"Function calls found on chunk directly: {chunk_function_calls}"
+                        f"Function calls found on chunk directly at +{chunk_start_ms}ms: {chunk_function_calls}"
                     )
                     # First pass: collect thought_signatures from candidate content parts
                     if candidates := chunk.candidates:
@@ -206,13 +212,14 @@ async def stream_agent_response(
                     event="raw_chunk",
                     service="chat",
                     trace_id=trace_id,
+                    elapsed_ms=chunk_start_ms,
                     chunk=str(chunk)[:500],
                     chunk_repr=repr(chunk),
                     has_candidates=hasattr(chunk, "candidates")
                     and chunk.candidates is not None,
                     has_function_calls=chunk_function_calls is not None,
                 ).debug(
-                    f"Raw chunk received: candidates={hasattr(chunk, 'candidates')}, candidates_value={getattr(chunk, 'candidates', None)}, function_calls={chunk_function_calls}"
+                    f"Raw chunk received at +{chunk_start_ms}ms: candidates={hasattr(chunk, 'candidates')}, candidates_value={getattr(chunk, 'candidates', None)}, function_calls={chunk_function_calls}"
                 )
 
                 candidates = chunk.candidates
@@ -236,6 +243,7 @@ async def stream_agent_response(
                         service="chat",
                         trace_id=trace_id,
                         model=model,
+                        elapsed_ms=chunk_start_ms,
                         chunk_index=chunk_index,
                         chunk_type="usage",
                         usage={
@@ -250,7 +258,7 @@ async def stream_agent_response(
                             ),
                         },
                     ).debug(
-                        f"Stream usage: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
+                        f"Stream usage at +{chunk_start_ms}ms: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
                     )
 
                 if not candidates:
@@ -258,13 +266,15 @@ async def stream_agent_response(
                         event="no_candidates",
                         service="chat",
                         trace_id=trace_id,
-                    ).warning("Chunk has no candidates")
+                        elapsed_ms=chunk_start_ms,
+                    ).warning(f"Chunk has no candidates at +{chunk_start_ms}ms")
                     continue
                 candidate = candidates[0]
                 logger.bind(
                     event="candidate",
                     service="chat",
                     trace_id=trace_id,
+                    elapsed_ms=chunk_start_ms,
                     finish_reason=str(candidate.finish_reason)
                     if hasattr(candidate, "finish_reason")
                     else None,
@@ -275,7 +285,7 @@ async def stream_agent_response(
                     if candidate.content
                     else None,
                 ).debug(
-                    f"Candidate: finish_reason={getattr(candidate, 'finish_reason', None)}, content={repr(candidate.content)[:200]}"
+                    f"Candidate at +{chunk_start_ms}ms: finish_reason={getattr(candidate, 'finish_reason', None)}, content={repr(candidate.content)[:200]}"
                 )
                 if not candidate.content:
                     continue
@@ -286,10 +296,11 @@ async def stream_agent_response(
                         event="no_parts",
                         service="chat",
                         trace_id=trace_id,
+                        elapsed_ms=chunk_start_ms,
                         parts_value=parts,
                         content_type=type(content).__name__,
                     ).warning(
-                        f"No parts in content: parts={parts}, content_type={type(content).__name__}"
+                        f"No parts in content at +{chunk_start_ms}ms: parts={parts}, content_type={type(content).__name__}"
                     )
                     continue
 
@@ -305,6 +316,7 @@ async def stream_agent_response(
                         event="part",
                         service="chat",
                         trace_id=trace_id,
+                        elapsed_ms=chunk_start_ms,
                         part_type=type(part).__name__,
                         part_repr=repr(part)[:300],
                         part_attrs={
@@ -313,7 +325,7 @@ async def stream_agent_response(
                             if not attr.startswith("_")
                         },
                     ).debug(
-                        f"Part received: thought={getattr(part, 'thought', None)}, text={repr(getattr(part, 'text', None))[:100]}, func={getattr(part, 'function_call', None)}"
+                        f"Part received at +{chunk_start_ms}ms: thought={getattr(part, 'thought', None)}, text={repr(getattr(part, 'text', None))[:100]}, func={getattr(part, 'function_call', None)}"
                     )
 
                     part_thought = getattr(part, "thought", None)
@@ -398,11 +410,12 @@ async def stream_agent_response(
                             event="skipped_part",
                             service="chat",
                             trace_id=trace_id,
+                            elapsed_ms=chunk_start_ms,
                             part_thought=part_thought,
                             part_text=repr(part_text),
                             part_func=part_func,
                         ).debug(
-                            f"Skipped part: thought={part_thought}, text={repr(part_text)}, func={part_func}"
+                            f"Skipped part at +{chunk_start_ms}ms: thought={part_thought}, text={repr(part_text)}, func={part_func}"
                         )
 
                 await asyncio.sleep(0)
@@ -413,13 +426,14 @@ async def stream_agent_response(
                 service="chat",
                 trace_id=trace_id,
                 tool_round=tool_round + 1,
+                elapsed_ms=_elapsed_ms(),
                 round_text_parts_count=len(round_text_parts),
                 round_func_parts_count=len(round_func_parts),
                 round_func_parts_repr=[repr(p)[:200] for p in round_func_parts],
                 assistant_text_length=len(assistant_text),
                 assistant_text_preview=assistant_text[:200],
             ).info(
-                f"Stream round complete: text_parts={len(round_text_parts)}, func_parts={len(round_func_parts)}, assistant_text='{assistant_text[:100]}...'"
+                f"Stream round complete at +{_elapsed_ms()}ms: text_parts={len(round_text_parts)}, func_parts={len(round_func_parts)}, assistant_text='{assistant_text[:100]}...'"
             )
 
             # Log usage metadata on final chunk of this round
@@ -431,6 +445,7 @@ async def stream_agent_response(
                     service="chat",
                     trace_id=trace_id,
                     model=model,
+                    elapsed_ms=_elapsed_ms(),
                     tool_round=tool_round + 1,
                     usage={
                         "prompt_tokens": prompt_tokens_first_chunk,
@@ -444,7 +459,7 @@ async def stream_agent_response(
                         ),
                     },
                 ).info(
-                    f"Round token usage: prompt={prompt_tokens_first_chunk}, candidates={cand_tokens}, total={total_tokens}"
+                    f"Round token usage at +{_elapsed_ms()}ms: prompt={prompt_tokens_first_chunk}, candidates={cand_tokens}, total={total_tokens}"
                 )
 
             # Phase 2: Execute tools AFTER stream is exhausted
@@ -468,11 +483,12 @@ async def stream_agent_response(
                         service="chat",
                         trace_id=trace_id,
                         model=model,
+                        elapsed_ms=_elapsed_ms(),
                         tool_name=tool_name,
                         function_call_id=fc_id,
                         tool_args=args,
                         tool_round=tool_round + 1,
-                    ).info("Executing tool")
+                    ).info(f"Executing tool at +{_elapsed_ms()}ms")
 
                     yield f"data: {json.dumps({'status': f'calling_{tool_name}'})}\n\n"
                     yield f"data: {json.dumps({'tool_call': tool_name, 'args': args})}\n\n"
@@ -532,9 +548,10 @@ async def stream_agent_response(
                         service="chat",
                         trace_id=trace_id,
                         model=model,
+                        elapsed_ms=_elapsed_ms(),
                         tool_name=tool_name,
                         tool_result_preview=str(result)[:200],
-                    ).debug("Tool result")
+                    ).debug(f"Tool result at +{_elapsed_ms()}ms")
                     yield f"data: {json.dumps({'tool_result': tool_name, 'result': result})}\n\n"
                     yield f"data: {json.dumps({'status': 'processing_results'})}\n\n"
 
@@ -556,6 +573,7 @@ async def stream_agent_response(
                     service="chat",
                     trace_id=trace_id,
                     model=model,
+                    elapsed_ms=_elapsed_ms(),
                     latency_ms=latency_ms,
                     total_chunks=chunk_index,
                     total_tool_calls=total_tool_calls,
@@ -564,7 +582,7 @@ async def stream_agent_response(
                     total_tokens=cumulative_total_tokens,
                     assistant_text_length=len(assistant_text),
                 ).info(
-                    f"Stream completed — tokens: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
+                    f"Stream completed at +{_elapsed_ms()}ms — tokens: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
                 )
                 yield f"data: {json.dumps({'done': True})}\n\n"
                 return
@@ -575,9 +593,10 @@ async def stream_agent_response(
                 service="chat",
                 trace_id=trace_id,
                 model=model,
+                elapsed_ms=_elapsed_ms(),
                 tool_round=tool_round,
                 tools_executed=len(round_func_parts),
-            ).info("Tool round complete")
+            ).info(f"Tool round complete at +{_elapsed_ms()}ms")
 
             # Phase 3: Build proper message history
             # Gemini expects: one Content(role="model") with all parts merged,
@@ -597,6 +616,7 @@ async def stream_agent_response(
             service="chat",
             trace_id=trace_id,
             model=model,
+            elapsed_ms=_elapsed_ms(),
             latency_ms=latency_ms,
             total_chunks=chunk_index,
             total_tool_calls=total_tool_calls,
@@ -605,7 +625,7 @@ async def stream_agent_response(
             total_tokens=cumulative_total_tokens,
             tool_error="max_tool_rounds_reached",
         ).warning(
-            f"Max tool rounds — tokens: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
+            f"Max tool rounds at +{_elapsed_ms()}ms — tokens: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
         )
         too_many_calls_text = (
             "I needed to make too many tool calls. Please try a more specific question."
@@ -630,6 +650,7 @@ async def stream_agent_response(
             service="chat",
             trace_id=trace_id,
             model=model,
+            elapsed_ms=_elapsed_ms(),
             latency_ms=latency_ms,
             total_chunks=chunk_index,
             total_tool_calls=total_tool_calls,
@@ -642,7 +663,7 @@ async def stream_agent_response(
             error_details=error_details,
             error_traceback=tb_mod.format_exc(),
         ).error(
-            f"Stream error | type={type(e).__name__} | code={error_code} | status={error_status} | "
+            f"Stream error at +{_elapsed_ms()}ms | type={type(e).__name__} | code={error_code} | status={error_status} | "
             f"msg={str(e)[:200]} | tool_round={tool_round} | chunks={chunk_index} | "
             f"tools={total_tool_calls} | text_len={len(assistant_text)}"
         )
