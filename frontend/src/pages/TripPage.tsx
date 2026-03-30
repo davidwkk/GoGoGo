@@ -1,11 +1,11 @@
 // frontend/src/pages/TripPage.tsx
-import { useEffect, useState, useRef } from 'react';
-import { Map, Calendar, MapPin, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronRight, Loader2, Map, MapPin } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { tripService } from '../services/tripService';
-import { TripSummary, TripDetail, Flight, DayPlan } from '../types/trip';
-import { FlightCard } from '../components/trip/FlightCard';
 import { ActivityCard } from '../components/trip/ActivityCard';
+import { FlightCard } from '../components/trip/FlightCard';
+import { tripService } from '../services/tripService';
+import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
 
 // Component for Google Maps Embed (Task #24)
 const MapEmbed = ({ url }: { url: string | null }) => {
@@ -186,7 +186,7 @@ export function TripPage() {
           <div className="max-w-3xl mx-auto p-12">
             <header className="mb-12">
               <div className="flex items-center gap-2 text-blue-600 mb-6 font-black text-[10px] uppercase tracking-[0.3em]">
-                <Calendar className="size-4" /> Confirmed Itinerary
+                <Calendar className="size-4" /> Saved Itinerary
               </div>
               <h2 className="text-6xl font-black tracking-tighter mb-8 leading-none text-slate-900">
                 {selectedTrip.title}
