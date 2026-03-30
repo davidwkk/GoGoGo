@@ -20,14 +20,13 @@ def setup_logging() -> None:
     logs_path = Path(__file__).parent.parent / "logs"
     logs_path.mkdir(exist_ok=True)
 
-    # File sink for all logs - human-readable, with multiprocessing support
+    # File sink for all logs - human-readable
     logger.add(
         logs_path / "app.log",
         rotation="10 MB",
         retention="7 days",
         level="DEBUG",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
-        enqueue=True,  # Required for multiprocessing safety
     )
 
     # Separate file sink for errors only
@@ -37,7 +36,6 @@ def setup_logging() -> None:
         retention="7 days",
         level="ERROR",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
-        enqueue=True,
     )
 
 

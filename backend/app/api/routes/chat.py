@@ -1,8 +1,9 @@
 import asyncio
 import json
-import logging
 from typing import AsyncIterator, Iterator
 from uuid import UUID, uuid4
+
+from loguru import logger
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -44,8 +45,6 @@ tool_map = {
 }
 
 router = APIRouter()
-
-logger = logging.getLogger(__name__)
 
 
 def _verify_user_exists(user_id: UUID | None, db: Session) -> None:
@@ -337,17 +336,13 @@ async def _stream_agent_thoughts(
                     part_func = getattr(part, "function_call", None)
 
                     if part_thought and part_text:
-                        logger.debug(
-                            f"[_stream_agent_thoughts] Thought: {part_text[:100]}..."
-                        )
+                        logger.info(f"[_stream_agent_thoughts] THOUGHT: {part_text}")
                         yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
                     elif part_func:
                         # Collect function call parts for later execution
                         round_func_parts.append(part)
                     elif part_text:
-                        logger.debug(
-                            f"[_stream_agent_thoughts] Text: {part_text[:100]}..."
-                        )
+                        logger.info(f"[_stream_agent_thoughts] OUTPUT: {part_text}")
                         assistant_text += part_text
                         _flush_assistant_text()
                         yield f"data: {json.dumps({'chunk': part_text})}\n\n"

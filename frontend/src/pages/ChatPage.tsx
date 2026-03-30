@@ -13,39 +13,48 @@ import { ActivityCard } from '@/components/trip/ActivityCard';
 
 function StreamingMessage({ content }: { content: string }) {
   const [displayedLength, setDisplayedLength] = useState(0);
+  const latestContentLengthRef = useRef(content.length);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isAnimatingRef = useRef(false);
 
-  // Typewriter speed: 500ms per character for obvious slow reveal
-  const CHAR_DELAY = 500;
+  // Typewriter speed: 30ms per character for smooth reveal
+  const CHAR_DELAY = 30;
 
   useEffect(() => {
-    // Clear existing interval on new content
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    // If new content is longer than what we've displayed, animate the new chars
+    if (content.length > displayedLength) {
+      // Update ref to latest content length for interval callback
+      latestContentLengthRef.current = content.length;
 
-    // If already caught up, no need to animate
-    if (displayedLength >= content.length) {
-      return;
-    }
+      // If not currently animating, start animation
+      if (!isAnimatingRef.current) {
+        isAnimatingRef.current = true;
 
-    // Animate character by character
-    intervalRef.current = setInterval(() => {
-      setDisplayedLength(prev => {
-        // If caught up to current content length, stop
-        if (prev >= content.length) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return prev;
-        }
-        // Show one more character
-        return prev + 1;
-      });
-    }, CHAR_DELAY);
+        intervalRef.current = setInterval(() => {
+          setDisplayedLength(prev => {
+            // If caught up to latest content length, stop
+            if (prev >= latestContentLengthRef.current) {
+              if (intervalRef.current) clearInterval(intervalRef.current);
+              isAnimatingRef.current = false;
+              return prev;
+            }
+            // Show one more character
+            return prev + 1;
+          });
+        }, CHAR_DELAY);
+      }
+    } else if (content.length <= displayedLength) {
+      // Content is done or shrank - show exactly what we have
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      isAnimatingRef.current = false;
+    }
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      isAnimatingRef.current = false;
     };
-  }, [content.length]); // Only restart when content length changes
+    // Intentionally exclude displayedLength from deps - we handle the transition gracefully
+  }, [content.length]);
 
   const displayed = content.slice(0, displayedLength);
   const isStreaming = displayedLength < content.length;
