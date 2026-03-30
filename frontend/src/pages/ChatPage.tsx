@@ -373,8 +373,8 @@ export function ChatPage() {
   const [showDemoLoading, setShowDemoLoading] = useState(false);
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
-  // Track whether the thinking bubble is expanded (collapsible)
-  const [thinkingExpanded, setThinkingExpanded] = useState(false);
+  // Set of user message IDs whose thinking bubble is expanded
+  const [expandedBubbles, setExpandedBubbles] = useState<Set<string>>(new Set());
   // Per-exchange thinking tracking: userMsgId -> { startStep, endStep }
   const [exchangeTracking, setExchangeTracking] = useState<
     Record<string, { startStep: number; endStep: number }>
@@ -428,7 +428,7 @@ export function ChatPage() {
     if (isLoading && !prevLoadingRef.current) {
       // Loading started — record start checkpoint for the exchange
       setTypewriterDone(false);
-      setThinkingExpanded(false);
+      setExpandedBubbles(new Set());
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
       if (lastUserMsg) {
         setCurrentThinkingUserMsgId(lastUserMsg.id);
@@ -592,7 +592,17 @@ export function ChatPage() {
                   <div className="flex justify-start">
                     <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
                       <button
-                        onClick={() => setThinkingExpanded(!thinkingExpanded)}
+                        onClick={() =>
+                          setExpandedBubbles(prev => {
+                            const next = new Set(prev);
+                            if (next.has(msg.id)) {
+                              next.delete(msg.id);
+                            } else {
+                              next.add(msg.id);
+                            }
+                            return next;
+                          })
+                        }
                         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                       >
                         <span className="text-base">💭</span>
@@ -604,12 +614,12 @@ export function ChatPage() {
                               : `Thinking process (${stepCount + (isInProgress && partialThoughtText ? 1 : 0)} steps)`}
                         </span>
                         <span
-                          className={`transition-transform ${thinkingExpanded ? 'rotate-90' : ''}`}
+                          className={`transition-transform ${expandedBubbles.has(msg.id) ? 'rotate-90' : ''}`}
                         >
                           ▶
                         </span>
                       </button>
-                      {(thinkingExpanded || isInProgress) && !isZeroSteps && (
+                      {(expandedBubbles.has(msg.id) || isInProgress) && !isZeroSteps && (
                         <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
                           {thinkingSteps.slice(exchangeStart, exchangeEnd).map((step, i) => (
                             <div key={i} className="text-xs text-muted-foreground leading-relaxed">
