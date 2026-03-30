@@ -71,7 +71,9 @@ async def _search_tavily(query: str) -> dict:
                     {
                         "title": r.get("title", ""),
                         "url": r.get("url", ""),
-                        "snippet": r.get("raw_content", r.get("content", ""))[:300],
+                        "snippet": (r.get("raw_content") or r.get("content") or "")[
+                            :300
+                        ],
                     }
                     for r in data.get("results", [])
                 ]

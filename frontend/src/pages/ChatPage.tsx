@@ -110,7 +110,7 @@ function StreamingThought({ text, done }: { text: string; done: boolean }) {
 
   return (
     <>
-      {text.slice(0, displayLength)}
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text.slice(0, displayLength)}</ReactMarkdown>
       {displayLength < text.length && (
         <span className="inline-block w-0.5 h-3 bg-yellow-500 ml-0.5 animate-blink align-middle" />
       )}
@@ -561,8 +561,7 @@ export function ChatPage() {
             const exchangeEnd = isInProgress
               ? thinkingSteps.length
               : (exchange?.endStep ?? exchangeStart);
-            const stepCount = Math.max(0, exchangeEnd - exchangeStart);
-            const isZeroSteps = stepCount === 0;
+            const isZeroSteps = exchangeEnd === exchangeStart;
 
             return (
               <>
@@ -611,13 +610,10 @@ export function ChatPage() {
                         }
                         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                       >
-                        <span className="text-base">💭</span>
                         <span>
                           {isZeroSteps && !isInProgress
                             ? 'LLM directly gives the response without thinking'
-                            : isInProgress && thinkingSteps.length === 0 && !partialThoughtText
-                              ? 'Thinking...'
-                              : `Thinking process (${stepCount + (isInProgress && partialThoughtText ? 1 : 0)} steps)`}
+                            : '💭 Thinking...'}
                         </span>
                         <span
                           className={`transition-transform ${expandedBubbles.has(msg.id) ? 'rotate-90' : ''}`}
@@ -629,7 +625,7 @@ export function ChatPage() {
                         <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
                           {thinkingSteps.slice(exchangeStart, exchangeEnd).map((step, i) => (
                             <div key={i} className="text-xs text-muted-foreground leading-relaxed">
-                              {step}
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
                             </div>
                           ))}
                           {isInProgress && partialThoughtText && (
