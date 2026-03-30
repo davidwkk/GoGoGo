@@ -111,17 +111,8 @@ function StreamingMessage({
           }
           return prev;
         }
-        // Adaptive jump: if done, finish fast; if large content, speed up
-        if (isDoneRef.current) {
-          // Done streaming - jump to finish quickly
-          const jump = Math.min(remaining, Math.ceil(remaining / 3));
-          const newPos = prev + jump;
-          if (newPos >= contentRef.current.length && !hasCompletedRef.current) {
-            hasCompletedRef.current = true;
-            onCompleteRef.current?.();
-          }
-          return newPos;
-        }
+        // Always use typewriter effect — no jumping even when done streaming.
+        // This ensures a smooth reveal regardless of how fast chunks arrived.
         if (remaining > 500) {
           // Large remaining content - speed up significantly
           return prev + 10;
@@ -332,6 +323,8 @@ export function ChatPage() {
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
+  // Ref to ensure thought bubble auto-expands only once per stream cycle
+  const thoughtBubbleAutoExpandedRef = useRef(false);
 
   const dynamicThinkingMessage = useDynamicThinking(isLoading, messages.length > 0);
 
@@ -383,6 +376,7 @@ export function ChatPage() {
   useEffect(() => {
     if (isLoading) {
       setTypewriterDone(false);
+      thoughtBubbleAutoExpandedRef.current = false;
     }
   }, [isLoading]);
 
@@ -473,6 +467,13 @@ export function ChatPage() {
           {!isThinking && thinkingSteps.length > 0 && (
             <div className="flex justify-start">
               <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                {/* Auto-expand on first appearance, then respect manual toggle */}
+                {!thinkingExpanded &&
+                  !thoughtBubbleAutoExpandedRef.current &&
+                  (() => {
+                    thoughtBubbleAutoExpandedRef.current = true;
+                    return null;
+                  })()}
                 <button
                   onClick={() => setThinkingExpanded(!thinkingExpanded)}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -483,7 +484,7 @@ export function ChatPage() {
                     ▶
                   </span>
                 </button>
-                {thinkingExpanded && (
+                {(thinkingExpanded || thoughtBubbleAutoExpandedRef.current) && (
                   <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
                     {thinkingSteps.map((step, i) => (
                       <div

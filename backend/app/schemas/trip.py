@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime as DateTime
 from typing import Any
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
@@ -9,7 +9,7 @@ class TripSummary(BaseModel):
     id: int
     title: str
     destination: str
-    created_at: datetime
+    created_at: DateTime
 
     model_config = ConfigDict(from_attributes=True)
 
