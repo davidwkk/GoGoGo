@@ -101,6 +101,20 @@ def get_session(
     return result.scalar_one_or_none()
 
 
+def get_latest_session_for_guest(
+    db: Session,
+    guest_id: UUID,
+) -> ChatSession | None:
+    """Get the most recent chat session for a guest, or None if none exists."""
+    result = db.execute(
+        select(ChatSession)
+        .where(ChatSession.guest_id == guest_id)
+        .order_by(ChatSession.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 def end_session(
     db: Session,
     session_id: int,

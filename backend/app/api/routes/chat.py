@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from typing import AsyncIterator, Iterator
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -26,6 +27,7 @@ from app.services.chat_service import invoke_agent
 from app.services.message_service import (
     append_message,
     create_session,
+    get_latest_session_for_guest,
     get_or_create_guest,
     get_session,
     update_message_content,
@@ -46,6 +48,15 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _verify_user_exists(user_id: UUID | None, db: Session) -> None:
+    """Verify that a user exists in the DB. Raises 401 if user_id is valid but user is not found."""
+    if user_id is not None:
+        from app.repositories.user_repo import get_user_by_id
+
+        if get_user_by_id(db, user_id) is None:
+            raise HTTPException(status_code=401, detail="User not found")
+
+
 async def _resolve_session(
     db: Session,
     session_id: str | None,
@@ -64,7 +75,6 @@ async def _resolve_session(
     For no session_id:
       - Creates a new session for authenticated users or guests
     """
-    from uuid import uuid4
 
     if session_id:
         # Try parsing as integer PK first (authenticated user session)
@@ -79,11 +89,13 @@ async def _resolve_session(
                 raise HTTPException(status_code=403, detail="Forbidden")
             return session
         except ValueError:
-            # Treat as guest UUID
+            # Treat as guest UUID - look up existing session or create new one
             if user_id is not None:
                 raise HTTPException(status_code=400, detail="Invalid session_id")
             guest = get_or_create_guest(db, session_id)
-            session = create_session(db, user_id=None, guest_id=guest.id)
+            session = get_latest_session_for_guest(db, guest.id)
+            if session is None:
+                session = create_session(db, user_id=None, guest_id=guest.id)
             return session
     else:
         # No session_id provided - create new session
@@ -301,9 +313,9 @@ async def _stream_agent_thoughts(
                 config=config,
             )
 
-            round_model_content: list[types.Part] = []
-            tool_calls_this_round: list[types.FunctionCall] = []
-            tool_response_parts: list[types.Content] = []
+            # Phase 1: Stream and collect parts (don't execute tools yet)
+            round_text_parts: list[types.Part] = []
+            round_func_parts: list[types.Part] = []
 
             yield f"data: {json.dumps({'status': 'thinking'})}\n\n"
 
@@ -330,49 +342,8 @@ async def _stream_agent_thoughts(
                         )
                         yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
                     elif part_func:
-                        tool_name = part_func.name or ""
-                        if not tool_name:
-                            continue
-
-                        fc_id = getattr(part_func, "id", None)
-                        args = dict(part_func.args) if part_func.args else {}
-
-                        logger.info(
-                            f"[_stream_agent_thoughts] Tool call: {tool_name} | id={fc_id}"
-                        )
-                        yield f"data: {json.dumps({'status': f'calling_{tool_name}'})}\n\n"
-                        yield f"data: {json.dumps({'tool_call': tool_name, 'args': args})}\n\n"
-
-                        tool_fn = tool_map.get(tool_name)
-                        if tool_fn:
-                            try:
-                                result = await tool_fn(**args)
-                            except Exception as e:
-                                logger.error(
-                                    f"[_stream_agent_thoughts] Tool {tool_name} exception: {e}"
-                                )
-                                result = {"error": str(e)}
-                        else:
-                            result = {"error": f"Unknown tool: {tool_name}"}
-
-                        logger.info(
-                            f"[_stream_agent_thoughts] Tool result: {str(result)[:200]}"
-                        )
-                        yield f"data: {json.dumps({'tool_result': tool_name, 'result': result})}\n\n"
-                        yield f"data: {json.dumps({'status': 'processing_results'})}\n\n"
-
-                        round_model_content.append(part)
-                        fn_response_part = types.Part(
-                            function_response=types.FunctionResponse(
-                                name=tool_name,
-                                response=result,
-                                id=fc_id,
-                            )
-                        )
-                        tool_calls_this_round.append(part_func)
-                        tool_response_parts.append(
-                            types.Content(role="tool", parts=[fn_response_part])
-                        )
+                        # Collect function call parts for later execution
+                        round_func_parts.append(part)
                     elif part_text:
                         logger.debug(
                             f"[_stream_agent_thoughts] Text: {part_text[:100]}..."
@@ -380,25 +351,79 @@ async def _stream_agent_thoughts(
                         assistant_text += part_text
                         _flush_assistant_text()
                         yield f"data: {json.dumps({'chunk': part_text})}\n\n"
-                        round_model_content.append(part)
+                        round_text_parts.append(part)
 
                 await asyncio.sleep(0)
 
-            if not tool_calls_this_round:
+            # Phase 2: Execute tools AFTER stream is exhausted
+            tool_response_parts: list[types.Part] = []
+            if round_func_parts:
+                for part in round_func_parts:
+                    part_func = getattr(part, "function_call", None)
+                    if not part_func:
+                        continue
+
+                    tool_name = part_func.name or ""
+                    if not tool_name:
+                        continue
+
+                    fc_id = getattr(part_func, "id", None)
+                    args = dict(part_func.args) if part_func.args else {}
+
+                    logger.info(
+                        f"[_stream_agent_thoughts] Tool call: {tool_name} | id={fc_id}"
+                    )
+                    yield f"data: {json.dumps({'status': f'calling_{tool_name}'})}\n\n"
+                    yield f"data: {json.dumps({'tool_call': tool_name, 'args': args})}\n\n"
+
+                    tool_fn = tool_map.get(tool_name)
+                    if tool_fn:
+                        try:
+                            result = await tool_fn(**args)
+                        except Exception as e:
+                            logger.error(
+                                f"[_stream_agent_thoughts] Tool {tool_name} exception: {e}"
+                            )
+                            result = {"error": str(e)}
+                    else:
+                        result = {"error": f"Unknown tool: {tool_name}"}
+
+                    logger.info(
+                        f"[_stream_agent_thoughts] Tool result: {str(result)[:200]}"
+                    )
+                    yield f"data: {json.dumps({'tool_result': tool_name, 'result': result})}\n\n"
+                    yield f"data: {json.dumps({'status': 'processing_results'})}\n\n"
+
+                    fn_response_part = types.Part(
+                        function_response=types.FunctionResponse(
+                            name=tool_name,
+                            response=result,
+                            id=fc_id,
+                        )
+                    )
+                    tool_response_parts.append(fn_response_part)
+
+            if not round_func_parts:
+                # No function calls - stream completed normally
                 _flush_assistant_text()
                 yield f"data: {json.dumps({'done': True})}\n\n"
                 return
 
             tool_round += 1
             logger.info(
-                f"[_stream_agent_thoughts] Round {tool_round}: {len(tool_calls_this_round)} tool(s) executed"
+                f"[_stream_agent_thoughts] Round {tool_round}: {len(round_func_parts)} tool(s) executed"
             )
 
-            if round_model_content:
+            # Phase 3: Build proper message history
+            # Gemini expects: one Content(role="model") with all parts merged,
+            # then one Content(role="user") with all function responses merged
+            model_parts = round_text_parts + round_func_parts
+            if model_parts:
+                current_messages.append(types.Content(role="model", parts=model_parts))
+            if tool_response_parts:
                 current_messages.append(
-                    types.Content(role="model", parts=round_model_content)
+                    types.Content(role="user", parts=tool_response_parts)
                 )
-            current_messages.extend(tool_response_parts)
 
         # Max tool rounds reached
         logger.warning("[_stream_agent_thoughts] Max tool rounds reached")
@@ -441,11 +466,7 @@ async def chat_stream(
     user_id = current_user["user_id"] if current_user else None
 
     # Verify user exists in DB (valid token but user deleted → 401)
-    if user_id is not None:
-        from app.repositories.user_repo import get_user_by_id
-
-        if get_user_by_id(db, user_id) is None:
-            raise HTTPException(status_code=401, detail="User not found")
+    _verify_user_exists(user_id, db)
 
     # Get or create session (uses shared helper to avoid duplication)
     session = await _resolve_session(db, body.session_id, user_id)
@@ -496,11 +517,7 @@ async def chat(
     user_id = current_user["user_id"] if current_user else None
 
     # Verify user exists in DB (valid token but user deleted → 401)
-    if user_id is not None:
-        from app.repositories.user_repo import get_user_by_id
-
-        if get_user_by_id(db, user_id) is None:
-            raise HTTPException(status_code=401, detail="User not found")
+    _verify_user_exists(user_id, db)
 
     # Get or create session (uses shared helper to avoid duplication)
     session = await _resolve_session(db, body.session_id, user_id)
