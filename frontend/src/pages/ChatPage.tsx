@@ -15,8 +15,8 @@ function StreamingMessage({ content }: { content: string }) {
   const [displayedLength, setDisplayedLength] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Typewriter speed: 12ms per character for smooth natural feel
-  const CHAR_DELAY = 12;
+  // Typewriter speed: 500ms per character for obvious slow reveal
+  const CHAR_DELAY = 500;
 
   useEffect(() => {
     // Clear existing interval on new content
@@ -53,7 +53,9 @@ function StreamingMessage({ content }: { content: string }) {
   return (
     <>
       {displayed}
-      {isStreaming && <span className="animate-pulse">▍</span>}
+      {isStreaming && (
+        <span className="inline-block w-0.5 h-4 bg-yellow-500 ml-0.5 animate-blink align-middle" />
+      )}
     </>
   );
 }
