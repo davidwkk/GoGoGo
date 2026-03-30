@@ -3,11 +3,10 @@ import json
 from typing import AsyncIterator, Iterator
 from uuid import UUID, uuid4
 
-from loguru import logger
-
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from google.genai import Client, types
+from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.agent.tools import (
@@ -15,11 +14,11 @@ from app.agent.tools import (
     build_embed_url,
 )
 from app.agent.tools.attractions import get_attraction
-from app.agent.tools.weather import get_weather
-from app.agent.tools.search import search_web
 from app.agent.tools.flights import search_flights
 from app.agent.tools.hotels import search_hotels
+from app.agent.tools.search import search_web
 from app.agent.tools.transport import get_transport
+from app.agent.tools.weather import get_weather
 from app.api.deps import get_current_user_optional, get_db
 from app.core.config import settings
 from app.db.models.chat_session import ChatSession
@@ -334,6 +333,9 @@ async def _stream_agent_thoughts(
     tool_round = 0
     total_tool_calls = 0
     prompt_tokens_first_chunk: int | None = None
+    # Cumulative token tracking across all rounds
+    cumulative_candidates_tokens = 0
+    cumulative_total_tokens = 0
 
     try:
         while tool_round < MAX_TOOL_ROUNDS:
@@ -414,10 +416,20 @@ async def _stream_agent_thoughts(
 
                 candidates = chunk.candidates
                 usage = getattr(chunk, "usage_metadata", None)
-                if usage and prompt_tokens_first_chunk is None:
-                    prompt_tokens_first_chunk = getattr(
-                        usage, "prompt_token_count", None
-                    )
+                if usage:
+                    # Accumulate tokens from each chunk (prompt only set on first chunk)
+                    if prompt_tokens_first_chunk is None:
+                        prompt_tokens_first_chunk = getattr(
+                            usage, "prompt_token_count", None
+                        )
+                    # Candidates and total are cumulative on final chunk
+                    chunk_cand_tokens = getattr(usage, "candidates_token_count", None)
+                    chunk_total_tokens = getattr(usage, "total_token_count", None)
+                    if chunk_cand_tokens is not None:
+                        cumulative_candidates_tokens = chunk_cand_tokens
+                    if chunk_total_tokens is not None:
+                        cumulative_total_tokens = chunk_total_tokens
+
                     logger.bind(
                         event="stream_chunk",
                         service="chat",
@@ -427,10 +439,8 @@ async def _stream_agent_thoughts(
                         chunk_type="usage",
                         usage={
                             "prompt_tokens": prompt_tokens_first_chunk,
-                            "candidates_tokens": getattr(
-                                usage, "candidates_token_count", None
-                            ),
-                            "total_tokens": getattr(usage, "total_token_count", None),
+                            "candidates_tokens": cumulative_candidates_tokens,
+                            "total_tokens": cumulative_total_tokens,
                             "prompt_tokens_details": str(
                                 getattr(usage, "prompt_tokens_details", None)
                             ),
@@ -438,8 +448,8 @@ async def _stream_agent_thoughts(
                                 getattr(usage, "candidates_tokens_details", None)
                             ),
                         },
-                    ).info(
-                        f"Stream chunk — usage metadata: prompt={prompt_tokens_first_chunk}, candidates={getattr(usage, 'candidates_token_count', None)}, total={getattr(usage, 'total_token_count', None)}"
+                    ).debug(
+                        f"Stream usage: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
                     )
 
                 if not candidates:
@@ -508,6 +518,7 @@ async def _stream_agent_thoughts(
                     part_thought = getattr(part, "thought", None)
                     part_text = getattr(part, "text", None)
                     part_func = getattr(part, "function_call", None)
+                    thought_sig = getattr(part, "thought_signature", None)
 
                     if part_thought:
                         if part_text:
@@ -521,9 +532,27 @@ async def _stream_agent_thoughts(
                                 chunk_type="thought",
                                 thought=part_text,
                                 thought_length=len(part_text),
+                                thought_signature_hex=thought_sig.hex()[:64]
+                                if thought_sig
+                                else None,
                                 finish_reason=finish_reason,
-                            ).info(f"Stream thought chunk: {part_text}")
+                            ).info(f"Stream thought: {part_text[:200]}")
                             yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
+                        elif thought_sig:
+                            # Thought with no text but has signature bytes
+                            logger.bind(
+                                event="stream_chunk",
+                                service="chat",
+                                trace_id=trace_id,
+                                model=model,
+                                chunk_index=chunk_index,
+                                chunk_type="thought_signature",
+                                thought_present=True,
+                                thought_signature_hex=thought_sig.hex()[:64],
+                                thought_signature_len=len(thought_sig),
+                            ).info(
+                                f"Thought signature present ({len(thought_sig)} bytes): {thought_sig.hex()[:32]}..."
+                            )
                     elif part_func is not None:
                         # Skip if this function call was already processed from chunk.function_calls
                         fc_id = getattr(part_func, "id", None)
@@ -571,7 +600,7 @@ async def _stream_agent_thoughts(
                             part_thought=part_thought,
                             part_text=repr(part_text),
                             part_func=part_func,
-                        ).warning(
+                        ).debug(
                             f"Skipped part: thought={part_thought}, text={repr(part_text)}, func={part_func}"
                         )
 
@@ -726,8 +755,12 @@ async def _stream_agent_thoughts(
                     total_chunks=chunk_index,
                     total_tool_calls=total_tool_calls,
                     prompt_tokens=prompt_tokens_first_chunk,
+                    candidates_tokens=cumulative_candidates_tokens,
+                    total_tokens=cumulative_total_tokens,
                     assistant_text_length=len(assistant_text),
-                ).info("Stream completed normally")
+                ).info(
+                    f"Stream completed — tokens: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
+                )
                 yield f"data: {json.dumps({'done': True})}\n\n"
                 return
 
@@ -762,8 +795,13 @@ async def _stream_agent_thoughts(
             latency_ms=latency_ms,
             total_chunks=chunk_index,
             total_tool_calls=total_tool_calls,
+            prompt_tokens=prompt_tokens_first_chunk,
+            candidates_tokens=cumulative_candidates_tokens,
+            total_tokens=cumulative_total_tokens,
             tool_error="max_tool_rounds_reached",
-        ).warning("Max tool rounds reached")
+        ).warning(
+            f"Max tool rounds — tokens: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
+        )
         too_many_calls_text = (
             "I needed to make too many tool calls. Please try a more specific question."
         )
