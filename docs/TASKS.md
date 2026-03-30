@@ -298,7 +298,7 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds)
 - [ ] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning
 - [ ] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations
-- [ ] **Add 3x auto-retry on SSE disconnect** — currently 2 retries with exponential backoff in `_stream_chat`
+- [x] **Add 3x auto-retry on SSE disconnect** ✅ — Up to 3 retries with exponential backoff (500ms base) on SSE disconnect or fetch error; yields reconnecting status to UI on retry attempts
 - [ ] **Upgrade `useTTS.ts` from `window.speechSynthesis` → Gemini TTS**
 - [ ] **Gemini Live API** — single multimodal session replacing ASR + agent + TTS hooks entirely
 
@@ -451,7 +451,7 @@ async def get_current_user(
 - [x] Stream agent tool calls to frontend (casual setting) ✅ — Thinking bubbles show intermediate steps in UI
 - [ ] **Trip planning NOT yet migrated to streaming** — Travel planning agent still uses full output waiting; needs refactor to SSE streaming
 - [ ] Update `useChat.ts` for trip planning — consume SSE, show intermediate steps in UI during trip generation
-- [ ] Add 3x auto-retry on SSE disconnect (currently 2 retries with exponential backoff in `_stream_chat`)
+- [x] Add 3x auto-retry on SSE disconnect (up to 3 retries with exponential backoff on SSE disconnect or fetch error) ✅
 
 ### Voice Upgrade
 
