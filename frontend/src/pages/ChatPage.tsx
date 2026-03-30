@@ -69,6 +69,53 @@ function useDynamicThinking(isLoading: boolean, hasMessages: boolean): string {
 }
 import { useNavigate } from 'react-router-dom';
 
+/** Renders partial thought text with a blinking cursor typewriter effect */
+function StreamingThought({ text, done }: { text: string; done: boolean }) {
+  const [displayLength, setDisplayLength] = useState(0);
+  const textRef = useRef(text);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  textRef.current = text;
+
+  useEffect(() => {
+    setDisplayLength(0);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      setDisplayLength(prev => {
+        const remaining = textRef.current.length - prev;
+        if (remaining <= 0) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          return prev;
+        }
+        if (done) return prev + 10;
+        if (remaining > 200) return prev + 3;
+        return prev + 1;
+      });
+    }, 20);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [done]);
+
+  useEffect(() => {
+    setDisplayLength(prev => {
+      const max = textRef.current.length;
+      return prev >= max ? max : prev;
+    });
+  }, [text]);
+
+  return (
+    <>
+      {text.slice(0, displayLength)}
+      {displayLength < text.length && (
+        <span className="inline-block w-0.5 h-3 bg-yellow-500 ml-0.5 animate-blink align-middle" />
+      )}
+    </>
+  );
+}
+
 function StreamingMessage({
   content,
   isDone,
@@ -113,6 +160,10 @@ function StreamingMessage({
         }
         // Always use typewriter effect — no jumping even when done streaming.
         // This ensures a smooth reveal regardless of how fast chunks arrived.
+        // Once the full response is received (isDone=true), finish at max speed.
+        if (isDoneRef.current) {
+          return prev + 10;
+        }
         if (remaining > 500) {
           // Large remaining content - speed up significantly
           return prev + 10;
@@ -311,8 +362,8 @@ export function ChatPage() {
   const navigate = useNavigate();
   const messages = useChatStore(s => s.messages);
   const isLoading = useChatStore(s => s.isLoading);
-  const isThinking = useChatStore(s => s.isThinking);
   const thinkingSteps = useChatStore(s => s.thinkingSteps);
+  const partialThoughtText = useChatStore(s => s.partialThoughtText);
   const isLoggedIn = !!localStorage.getItem('access_token');
   const clearMessages = useChatStore(s => s.clearMessages);
   const setSessionId = useChatStore(s => s.setSessionId);
@@ -320,11 +371,16 @@ export function ChatPage() {
 
   const [demoItinerary, setDemoItinerary] = useState<TripItinerary | null>(null);
   const [showDemoLoading, setShowDemoLoading] = useState(false);
-  const [thinkingExpanded, setThinkingExpanded] = useState(false);
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
-  // Ref to ensure thought bubble auto-expands only once per stream cycle
-  const thoughtBubbleAutoExpandedRef = useRef(false);
+  // Track whether the thinking bubble is expanded (collapsible)
+  const [thinkingExpanded, setThinkingExpanded] = useState(false);
+  // Per-exchange thinking tracking: userMsgId -> { startStep, endStep }
+  const [exchangeTracking, setExchangeTracking] = useState<
+    Record<string, { startStep: number; endStep: number }>
+  >({});
+  // Track which user message initiated the current (in-progress) exchange
+  const [currentThinkingUserMsgId, setCurrentThinkingUserMsgId] = useState<string | null>(null);
 
   const dynamicThinkingMessage = useDynamicThinking(isLoading, messages.length > 0);
 
@@ -366,19 +422,46 @@ export function ChatPage() {
     }
   };
 
-  // Determine if the last message is still streaming
-  const lastMsg = messages[messages.length - 1];
-  // Show StreamingMessage when: last message is assistant AND typewriter not yet done
-  // This ensures typewriter completes even after isLoading becomes false
-  const isStreaming = lastMsg?.role === 'assistant' && !typewriterDone;
-
-  // Reset typewriterDone when loading starts for a new message
+  // Track thinking checkpoints and typewriter state across loading transitions
+  const prevLoadingRef = useRef(isLoading);
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading && !prevLoadingRef.current) {
+      // Loading started — record start checkpoint for the exchange
       setTypewriterDone(false);
-      thoughtBubbleAutoExpandedRef.current = false;
+      setThinkingExpanded(false);
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+      if (lastUserMsg) {
+        setCurrentThinkingUserMsgId(lastUserMsg.id);
+        setExchangeTracking(prev => ({
+          ...prev,
+          [lastUserMsg.id]: { startStep: thinkingSteps.length, endStep: thinkingSteps.length },
+        }));
+      }
+    } else if (!isLoading && prevLoadingRef.current) {
+      // Loading ended — record end checkpoint for the completed exchange
+      if (currentThinkingUserMsgId && thinkingSteps.length > 0) {
+        setExchangeTracking(prev => ({
+          ...prev,
+          [currentThinkingUserMsgId]: {
+            ...prev[currentThinkingUserMsgId],
+            endStep: thinkingSteps.length,
+          },
+        }));
+      }
+      // Also record exchanges with zero steps
+      if (currentThinkingUserMsgId && thinkingSteps.length === 0) {
+        setExchangeTracking(prev => ({
+          ...prev,
+          [currentThinkingUserMsgId]: {
+            startStep: 0,
+            endStep: 0,
+          },
+        }));
+      }
+      setCurrentThinkingUserMsgId(null);
     }
-  }, [isLoading]);
+    prevLoadingRef.current = isLoading;
+  }, [isLoading, messages, thinkingSteps.length]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -463,95 +546,89 @@ export function ChatPage() {
             </div>
           )}
 
-          {/* Collapsible thinking process — shown above assistant message when content has started */}
-          {!isThinking && thinkingSteps.length > 0 && (
-            <div className="flex justify-start">
-              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
-                {/* Auto-expand on first appearance, then respect manual toggle */}
-                {!thinkingExpanded &&
-                  !thoughtBubbleAutoExpandedRef.current &&
-                  (() => {
-                    thoughtBubbleAutoExpandedRef.current = true;
-                    return null;
-                  })()}
-                <button
-                  onClick={() => setThinkingExpanded(!thinkingExpanded)}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                >
-                  <span className="text-base">💭</span>
-                  <span>Thinking process ({thinkingSteps.length} steps)</span>
-                  <span className={`transition-transform ${thinkingExpanded ? 'rotate-90' : ''}`}>
-                    ▶
-                  </span>
-                </button>
-                {(thinkingExpanded || thoughtBubbleAutoExpandedRef.current) && (
-                  <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
-                    {thinkingSteps.map((step, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                      >
-                        {step}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {messages.map((msg, idx) => {
             const isLastAssistant = idx === messages.length - 1 && msg.role === 'assistant';
+            const isStreaming = isLastAssistant && !typewriterDone;
+            // Check if this user message has a recorded thinking exchange
+            const exchange = msg.role === 'user' ? exchangeTracking[msg.id] : null;
+            const isInProgress = currentThinkingUserMsgId === msg.id && isLoading;
+            const showBubble = exchange !== null || isInProgress;
+
+            // Steps for this specific exchange
+            const exchangeStart = exchange?.startStep ?? thinkingSteps.length;
+            const exchangeEnd = isInProgress
+              ? thinkingSteps.length
+              : (exchange?.endStep ?? exchangeStart);
+            const stepCount = Math.max(0, exchangeEnd - exchangeStart);
+            const isZeroSteps = stepCount === 0;
+
             return (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+              <>
                 <div
-                  className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'bg-black text-white rounded-br-md'
-                      : 'bg-muted text-foreground rounded-bl-md'
-                  }`}
+                  key={msg.id}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {isLastAssistant && isStreaming ? (
-                    <StreamingMessage
-                      content={msg.content}
-                      isDone={!isLoading}
-                      onComplete={() => setTypewriterDone(true)}
-                    />
-                  ) : (
-                    msg.content
-                  )}
+                  <div
+                    className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
+                      msg.role === 'user'
+                        ? 'bg-black text-white rounded-br-md'
+                        : 'bg-muted text-foreground rounded-bl-md'
+                    }`}
+                  >
+                    {isLastAssistant && isStreaming ? (
+                      <StreamingMessage
+                        content={msg.content}
+                        isDone={!isLoading}
+                        onComplete={() => setTypewriterDone(true)}
+                      />
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                {/* Thinking bubble — always shown for each exchange after recording */}
+                {showBubble && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                      <button
+                        onClick={() => setThinkingExpanded(!thinkingExpanded)}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      >
+                        <span className="text-base">💭</span>
+                        <span>
+                          {isZeroSteps && !isInProgress
+                            ? 'LLM directly gives the response without thinking'
+                            : isInProgress && thinkingSteps.length === 0 && !partialThoughtText
+                              ? 'Thinking...'
+                              : `Thinking process (${stepCount + (isInProgress && partialThoughtText ? 1 : 0)} steps)`}
+                        </span>
+                        <span
+                          className={`transition-transform ${thinkingExpanded ? 'rotate-90' : ''}`}
+                        >
+                          ▶
+                        </span>
+                      </button>
+                      {(thinkingExpanded || isInProgress) && !isZeroSteps && (
+                        <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
+                          {thinkingSteps.slice(exchangeStart, exchangeEnd).map((step, i) => (
+                            <div key={i} className="text-xs text-muted-foreground leading-relaxed">
+                              {step}
+                            </div>
+                          ))}
+                          {isInProgress && partialThoughtText && (
+                            <div className="text-xs text-muted-foreground leading-relaxed">
+                              <StreamingThought text={partialThoughtText} done={!isLoading} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             );
           })}
-
-          {/* Thinking indicator — shown while waiting for first content */}
-          {isThinking && (
-            <div className="flex justify-start">
-              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md space-y-1">
-                {thinkingSteps.length > 0 ? (
-                  <div className="space-y-1">
-                    {thinkingSteps.map((step, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                      >
-                        {i === thinkingSteps.length - 1 && (
-                          <span className="animate-pulse h-1.5 w-1.5 rounded-full bg-yellow-500 inline-block" />
-                        )}
-                        {step}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="animate-pulse">{dynamicThinkingMessage}</span>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Demo trip result — shown inline after generation */}
           {showDemoLoading && <DemoLoadingSkeleton />}

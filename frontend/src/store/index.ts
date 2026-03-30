@@ -28,6 +28,9 @@ export interface ChatState {
   // Agent thinking steps (tool calls, status updates during streaming)
   thinkingSteps: string[];
 
+  // Partial thought text being currently streamed (for typewriter effect)
+  partialThoughtText: string;
+
   // Actions
   setSessionId: (id: string | null) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
@@ -37,6 +40,7 @@ export interface ChatState {
   setThinking: (thinking: boolean) => void;
   setAbortController: (controller: AbortController | null) => void;
   addThinkingStep: (step: string) => void;
+  setPartialThoughtText: (text: string) => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -47,6 +51,7 @@ export const useChatStore = create<ChatState>(set => ({
   isThinking: false,
   abortController: null,
   thinkingSteps: [],
+  partialThoughtText: '',
 
   setSessionId: id => set({ sessionId: id }),
 
@@ -75,4 +80,6 @@ export const useChatStore = create<ChatState>(set => ({
     set(state => ({
       thinkingSteps: [...state.thinkingSteps, step],
     })),
+
+  setPartialThoughtText: text => set({ partialThoughtText: text }),
 }));
