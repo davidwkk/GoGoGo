@@ -61,11 +61,12 @@ class TestRegister:
         db_session.execute(
             text(
                 """
-                INSERT INTO users (username, email, hashed_password)
-                VALUES (:username, :email, :hashed_password)
+                INSERT INTO users (id, username, email, hashed_password)
+                VALUES (:id, :username, :email, :hashed_password)
                 """
             ),
             {
+                "id": "00000000-0000-0000-0000-000000000001",
                 "username": "existing",
                 "email": "taken@example.com",
                 "hashed_password": get_password_hash("existingpass"),
@@ -106,11 +107,12 @@ class TestLogin:
         db_session.execute(
             text(
                 """
-                INSERT INTO users (username, email, hashed_password)
-                VALUES (:username, :email, :hashed_password)
+                INSERT INTO users (id, username, email, hashed_password)
+                VALUES (:id, :username, :email, :hashed_password)
                 """
             ),
             {
+                "id": "00000000-0000-0000-0000-000000000002",
                 "username": "logintest",
                 "email": "login@example.com",
                 "hashed_password": get_password_hash("correctpassword"),
@@ -147,11 +149,12 @@ class TestLogin:
         db_session.execute(
             text(
                 """
-                INSERT INTO users (username, email, hashed_password)
-                VALUES (:username, :email, :hashed_password)
+                INSERT INTO users (id, username, email, hashed_password)
+                VALUES (:id, :username, :email, :hashed_password)
                 """
             ),
             {
+                "id": "00000000-0000-0000-0000-000000000003",
                 "username": "wrongpw",
                 "email": "wrongpw@example.com",
                 "hashed_password": get_password_hash("thecorrectpassword"),
