@@ -15,7 +15,7 @@ os.environ.setdefault("OPENWEATHER_API_KEY", "test-openweather-key")
 os.environ.setdefault("GOOGLE_MAPS_API_KEY", "test-maps-key")
 
 import pytest
-from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, text
+from sqlalchemy import MetaData, Table, Column, String, DateTime, text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -26,7 +26,7 @@ _test_metadata = MetaData()
 _users_table = Table(
     "users",
     _test_metadata,
-    Column("id", Integer, primary_key=True),
+    Column("id", String, primary_key=True),
     Column("username", String(50), unique=True, nullable=False),
     Column("email", String(100), unique=True, nullable=False),
     Column("hashed_password", String(255), nullable=False),

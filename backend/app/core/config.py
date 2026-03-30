@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     LLM_PROXY_ENABLED: bool = False
     SOCKS5_PROXY_URL: str = "socks5://host.docker.internal:1080"
 
+    # VPN settings (optional, used by some deployment configs)
+    ovpn_username: str = ""
+    ovpn_password: str = ""
+    ovpn_server: str = ""
+    ovpn_proto: str = ""
+
     @model_validator(mode="before")
     @classmethod
     def _parse_env_strings(cls, data: Any) -> Any:

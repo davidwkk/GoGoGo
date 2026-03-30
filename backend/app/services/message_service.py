@@ -41,6 +41,22 @@ def append_message(
     return message
 
 
+def update_message_content(
+    db: Session,
+    message_id: int,
+    content: str,
+) -> Message | None:
+    """Update the content of an existing message."""
+    result = db.execute(select(Message).where(Message.id == message_id))
+    message = result.scalar_one_or_none()
+    if message is None:
+        return None
+    message.content = content
+    db.commit()
+    db.refresh(message)
+    return message
+
+
 def get_session_messages(
     db: Session,
     session_id: int,

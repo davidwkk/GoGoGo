@@ -1,15 +1,26 @@
 import asyncio
 import json
-import socket
-from typing import AsyncIterator
+import logging
+from typing import AsyncIterator, Iterator
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from google.genai import Client, types
 from sqlalchemy.orm import Session
 
+from app.agent.tools import (
+    ALL_TOOLS,
+    build_embed_url,
+    get_attraction,
+    get_transport,
+    get_weather,
+    search_flights,
+    search_hotels,
+    search_web,
+)
 from app.api.deps import get_current_user_optional, get_db
 from app.core.config import settings
+from app.db.models.chat_session import ChatSession
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import invoke_agent
 from app.services.message_service import (
@@ -17,36 +28,101 @@ from app.services.message_service import (
     create_session,
     get_or_create_guest,
     get_session,
+    update_message_content,
 )
+
+tool_map = {
+    "get_attraction": get_attraction,
+    "get_weather": get_weather,
+    "search_web": search_web,
+    "search_flights": search_flights,
+    "search_hotels": search_hotels,
+    "get_transport": get_transport,
+    "build_embed_url": build_embed_url,
+}
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
 
-def _is_proxy_reachable() -> bool:
+
+async def _resolve_session(
+    db: Session,
+    session_id: str | None,
+    user_id: int | None,
+) -> ChatSession:
+    """
+    Resolve a session from a session_id string (integer PK or guest UUID).
+
+    For integer session_id:
+      - Authenticated users can only access their own sessions
+      - Guests cannot access integer-PK sessions
+
+    For guest UUID session_id:
+      - Only guests may use it; creates a new session if none exists
+
+    For no session_id:
+      - Creates a new session for authenticated users or guests
+    """
+    from uuid import uuid4
+
+    if session_id:
+        # Try parsing as integer PK first (authenticated user session)
+        try:
+            session_pk = int(session_id)
+            session = get_session(db, session_pk)
+            if session is None:
+                raise HTTPException(status_code=404, detail="Session not found")
+            if user_id is None:
+                raise HTTPException(status_code=403, detail="Forbidden")
+            if session.user_id != user_id:
+                raise HTTPException(status_code=403, detail="Forbidden")
+            return session
+        except ValueError:
+            # Treat as guest UUID
+            if user_id is not None:
+                raise HTTPException(status_code=400, detail="Invalid session_id")
+            guest = get_or_create_guest(db, session_id)
+            session = create_session(db, user_id=None, guest_id=guest.id)
+            return session
+    else:
+        # No session_id provided - create new session
+        if user_id is not None:
+            return create_session(db, user_id=user_id)
+        else:
+            guest_uid = str(uuid4())
+            guest = get_or_create_guest(db, guest_uid)
+            return create_session(db, user_id=None, guest_id=guest.id)
+
+
+async def _is_proxy_reachable() -> bool:
     """Returns True if a proxy is configured and the SOCKS5 proxy is reachable."""
-    # BYPASS: Always return True because we are using a system-wide VPN on the Mac host
-    return True  # TODO: remove later if needed
+    return True  # Bypass for now, it is NOT A BUG, it is INTENTIONAL!
 
-    if not settings.LLM_PROXY_ENABLED:
-        return False  # No proxy — direct call not allowed
-    proxy_url = settings.SOCKS5_PROXY_URL
-    try:
-        host = proxy_url.split("://")[1].rsplit(":", 1)[0]
-        port = int(proxy_url.split("://")[1].rsplit(":", 1)[1])
-    except (IndexError, ValueError):
-        return False
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
-        sock.connect((host, port))
-        # SOCKS5 handshake: version 5, 1 auth method (no auth)
-        sock.send(b"\x05\x01\x00")
-        resp = sock.recv(2)
-        sock.close()
-        # Valid SOCKS5 response: version 5, method 0 (no auth accepted)
-        return resp == b"\x05\x00"
-    except Exception:
-        return False
+    # if not settings.LLM_PROXY_ENABLED:
+    #     return False  # No proxy — direct call not allowed
+    # proxy_url = settings.SOCKS5_PROXY_URL
+    # try:
+    #     host = proxy_url.split("://")[1].rsplit(":", 1)[0]
+    #     port = int(proxy_url.split("://")[1].rsplit(":", 1)[1])
+    # except (IndexError, ValueError):
+    #     return False
+
+    # def _check() -> bool:
+    #     try:
+    #         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #         sock.settimeout(5)
+    #         sock.connect((host, port))
+    #         # SOCKS5 handshake: version 5, 1 auth method (no auth)
+    #         sock.send(b"\x05\x01\x00")
+    #         resp = sock.recv(2)
+    #         sock.close()
+    #         return resp == b"\x05\x00"
+    #     except Exception:
+    #         return False
+
+    # loop = asyncio.get_running_loop()
+    # return await loop.run_in_executor(None, _check)
 
 
 @router.get("/test-llm")
@@ -54,7 +130,7 @@ async def test_llm() -> dict:
     """
     Simple test endpoint that calls Gemini 3.1 flash lite preview directly.
     """
-    if not _is_proxy_reachable():
+    if not await _is_proxy_reachable():
         return {
             "model": settings.GEMINI_LITE_MODEL,
             "response": None,
@@ -116,36 +192,69 @@ async def test_llm() -> dict:
     }
 
 
-MAX_RETRIES = 3  # 1 initial attempt + 3 retries = 4 total calls; display shows only retry count (1/3–3/3)
+async def _sync_stream_to_async(
+    sync_iter: Iterator[types.GenerateContentResponse],
+) -> AsyncIterator[types.GenerateContentResponse]:
+    """
+    Wrap a synchronous iterator as an async generator.
+
+    Runs each synchronous next() call in the default thread pool,
+    yielding control to the event loop while waiting for the next chunk.
+    This prevents the sync iterator from blocking the event loop.
+
+    StopIteration is caught inside the thread to avoid
+    "StopIteration interacts badly with generators" Future exception.
+    """
+    loop = asyncio.get_running_loop()
+
+    def _next() -> tuple[bool, types.GenerateContentResponse | None]:
+        try:
+            return (True, next(sync_iter))
+        except StopIteration:
+            return (False, None)
+
+    while True:
+        has_value, chunk = await loop.run_in_executor(None, _next)
+        if not has_value:
+            return
+        assert chunk is not None
+        yield chunk
 
 
 async def _stream_agent_thoughts(
     message: str,
+    session_id: int,
+    db: Session,
     preferences: dict | None = None,
-    max_retries: int = MAX_RETRIES,
 ) -> AsyncIterator[str]:
     """
-    Stream agent thinking + tool calls + text via SSE.
+    Stream agent thinking + tool calls + text via TRUE SSE streaming.
 
-    Runs the full Gemini agent loop with tools and yields SSE events for each step:
-      - thought:    model is thinking / deciding what to do
-      - tool_call:  tool name + args being executed
+    Uses generate_content_stream() to receive text chunks as they arrive.
+    When function_call parts appear in the stream, executes tools and continues
+    the stream with results — all visible to the user in real-time.
+
+    Yields SSE events:
+      - chunk:       text content streamed in real-time
+      - model_thought: reasoning thoughts (when include_thoughts=True)
+      - tool_call:   tool name + args being executed
       - tool_result: tool response (or error)
-      - chunk:      text content from the model
-      - done:       stream complete
+      - done:        stream complete
+      - error:       error message if something fails
 
-    Retries on transient errors (503, rate limit) with exponential backoff.
+    Persists assistant text chunks to the DB as they arrive.
     """
-    import logging
-
-    logger = logging.getLogger(__name__)
     logger.info(f"[_stream_agent_thoughts] Starting for message: {message[:100]}...")
     logger.info(f"[_stream_agent_thoughts] Preferences: {preferences}")
 
-    if not _is_proxy_reachable() and not settings.LLM_PROXY_ENABLED:
-        logger.warning("[_stream_agent_thoughts] Proxy not reachable")
-        yield f"data: {json.dumps({'error': 'Proxy not reachable. Please check your VPN/proxy connection.'})}\n\n"
-        return
+    assistant_msg = append_message(
+        db, session_id=session_id, role="assistant", content=""
+    )
+    assistant_text = ""
+
+    def _flush_assistant_text() -> None:
+        nonlocal assistant_text
+        update_message_content(db, assistant_msg.id, assistant_text)
 
     http_opts = (
         types.HttpOptionsDict(client_args={"proxy": settings.SOCKS5_PROXY_URL})
@@ -162,28 +271,6 @@ async def _stream_agent_thoughts(
         f"{prefs_section}"
     )
 
-    # Import tools from agent to reuse the same tool map
-    from app.agent.tools import (
-        ALL_TOOLS,
-        build_embed_url,
-        get_attraction,
-        get_transport,
-        get_weather,
-        search_flights,
-        search_hotels,
-        search_web,
-    )
-
-    tool_map = {
-        "get_attraction": get_attraction,
-        "get_weather": get_weather,
-        "search_web": search_web,
-        "search_flights": search_flights,
-        "search_hotels": search_hotels,
-        "get_transport": get_transport,
-        "build_embed_url": build_embed_url,
-    }
-
     messages: list[types.Content] = [
         types.Content(
             role="user",
@@ -191,121 +278,69 @@ async def _stream_agent_thoughts(
         )
     ]
 
-    MAX_ITERATIONS = 5
+    MAX_TOOL_ROUNDS = 5
+    config = types.GenerateContentConfig(
+        system_instruction=system_instruction,
+        tools=ALL_TOOLS,
+        thinking_config=types.ThinkingConfig(
+            thinking_level=types.ThinkingLevel.MINIMAL,
+            include_thoughts=True,
+        ),
+    )
 
-    def _is_transient_error(e: Exception) -> bool:
-        error_type = type(e).__name__
-        error_str = str(e)
-        if error_type == "ServerError":
-            return True
-        error_lower = error_str.lower()
-        return (
-            "503" in error_str
-            or "unavailable" in error_lower
-            or "rate limit" in error_lower
-            or "429" in error_str
-            or "timeout" in error_lower
-            or error_type.endswith("Timeout")
-        )
+    current_messages: list[types.Content] = list(messages)
+    tool_round = 0
 
-    def _user_message(msg: str) -> str:
-        msg_lower = msg.lower()
-        if "unavailable" in msg_lower or "503" in msg:
-            return (
-                "The AI service is temporarily unavailable due to high demand. "
-                "This is usually temporary - please try again in a few moments."
-            )
-        if "rate limit" in msg_lower or "429" in msg:
-            return "You've reached the rate limit. Please wait a moment and try again."
-        if (
-            "name or service not known" in msg_lower
-            or "errno -2" in msg_lower
-            or "connecterror" in msg_lower
-        ):
-            return (
-                "Cannot reach the AI service — VPN may be disconnected. "
-                "Please connect your VPN and try again."
-            )
-        return "An error occurred. Please try again."
+    try:
+        while tool_round < MAX_TOOL_ROUNDS:
+            logger.info(f"[_stream_agent_thoughts] Tool round {tool_round + 1}")
 
-    for attempt in range(max_retries + 1):
-        try:
-            logger.info(
-                f"[_stream_agent_thoughts] Iteration attempt {attempt + 1}/{max_retries + 1}"
+            stream = client.models.generate_content_stream(
+                model=settings.GEMINI_LITE_MODEL,
+                contents=current_messages,
+                config=config,
             )
 
-            for iteration in range(MAX_ITERATIONS):
-                logger.info(
-                    f"[_stream_agent_thoughts] Iteration {iteration + 1}/{MAX_ITERATIONS}"
-                )
+            round_model_content: list[types.Part] = []
+            tool_calls_this_round: list[types.FunctionCall] = []
+            tool_response_parts: list[types.Content] = []
 
-                # Notify frontend we're thinking
-                yield f"data: {json.dumps({'thought': f'Thinking (step {iteration + 1})...'})}\n\n"
+            yield f"data: {json.dumps({'status': 'thinking'})}\n\n"
 
-                config = types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    tools=ALL_TOOLS,
-                    thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel.MINIMAL,
-                        include_thoughts=True,
-                    ),
-                )
+            async for chunk in _sync_stream_to_async(stream):
+                candidates = chunk.candidates
+                if not candidates:
+                    continue
+                candidate = candidates[0]
+                if not candidate.content:
+                    continue
+                content = candidate.content
+                parts = getattr(content, "parts", None)
+                if not parts:
+                    continue
 
-                response = client.models.generate_content(
-                    model=settings.GEMINI_LITE_MODEL,
-                    contents=messages,
-                    config=config,
-                )
+                for part in parts:
+                    part_thought = getattr(part, "thought", None)
+                    part_text = getattr(part, "text", None)
+                    part_func = getattr(part, "function_call", None)
 
-                # Extract thought summaries from the model response (when include_thoughts=True)
-                logger.info(
-                    f"[_stream_agent_thoughts] Response candidates: {len(response.candidates) if response.candidates else 0}"
-                )
-                if response.candidates and response.candidates[0].content:
-                    content = response.candidates[0].content
-                    parts = getattr(content, "parts", None)
-                    logger.info(
-                        f"[_stream_agent_thoughts] Content parts count: {len(parts) if parts else 0}"
-                    )
-                    if parts:
-                        logger.info(
-                            f"[_stream_agent_thoughts] Found {len(parts)} parts in response"
+                    if part_thought and part_text:
+                        logger.debug(
+                            f"[_stream_agent_thoughts] Thought: {part_text[:100]}..."
                         )
-                        for i, part in enumerate(parts):
-                            part_thought = getattr(part, "thought", None)
-                            part_text = getattr(part, "text", None)
-                            part_sig = getattr(part, "thought_signature", None)
-                            # Log all part info for debugging
-                            text_repr = repr(part_text[:100]) if part_text else None
-                            sig_repr = repr(part_sig) if part_sig else None
-                            logger.info(
-                                f"[_stream_agent_thoughts] Part({i}): thought={part_thought}, "
-                                f"text={text_repr}, sig={sig_repr}"
-                            )
-                            # part.thought is a bool flag - when True, the reasoning text is in part.text
-                            if part_thought and part_text:
-                                thought_text = part_text
-                                preview = (
-                                    thought_text[:200] + "..."
-                                    if len(thought_text) > 200
-                                    else thought_text
-                                )
-                                logger.info(
-                                    f"[_stream_agent_thoughts] Thought found: {preview}"
-                                )
-                                yield f"data: {json.dumps({'model_thought': thought_text})}\n\n"
-                    messages.append(content)
-
-                if response.function_calls:
-                    for fc in response.function_calls:
-                        tool_name = fc.name or ""
+                        yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
+                    elif part_func:
+                        tool_name = part_func.name or ""
                         if not tool_name:
                             continue
-                        args = dict(fc.args) if fc.args else {}
+
+                        fc_id = getattr(part_func, "id", None)
+                        args = dict(part_func.args) if part_func.args else {}
 
                         logger.info(
-                            f"[_stream_agent_thoughts] Tool call: {tool_name} | args: {str(args)[:200]}"
+                            f"[_stream_agent_thoughts] Tool call: {tool_name} | id={fc_id}"
                         )
+                        yield f"data: {json.dumps({'status': f'calling_{tool_name}'})}\n\n"
                         yield f"data: {json.dumps({'tool_call': tool_name, 'args': args})}\n\n"
 
                         tool_fn = tool_map.get(tool_name)
@@ -320,69 +355,68 @@ async def _stream_agent_thoughts(
                         else:
                             result = {"error": f"Unknown tool: {tool_name}"}
 
-                        # Truncate result for streaming
-                        result_preview = (
-                            str(result)[:300] + "..."
-                            if len(str(result)) > 300
-                            else str(result)
-                        )
                         logger.info(
-                            f"[_stream_agent_thoughts] Tool {tool_name} result: {result_preview}"
+                            f"[_stream_agent_thoughts] Tool result: {str(result)[:200]}"
                         )
                         yield f"data: {json.dumps({'tool_result': tool_name, 'result': result})}\n\n"
+                        yield f"data: {json.dumps({'status': 'processing_results'})}\n\n"
 
-                        fn_response = types.Part.from_function_response(
-                            name=tool_name,
-                            response=result,
+                        round_model_content.append(part)
+                        fn_response_part = types.Part(
+                            function_response=types.FunctionResponse(
+                                name=tool_name,
+                                response=result,
+                                id=fc_id,
+                            )
                         )
-                        tool_content = types.Content(role="tool", parts=[fn_response])
-                        messages.append(tool_content)
-                        await asyncio.sleep(0)
-                else:
-                    # No more tool calls — final text response
-                    final_text = response.text or ""
-                    logger.info(
-                        f"[_stream_agent_thoughts] Final response: {final_text[:200]}"
-                    )
-                    if final_text:
-                        yield f"data: {json.dumps({'chunk': final_text})}\n\n"
-                    yield f"data: {json.dumps({'done': True})}\n\n"
-                    return
+                        tool_calls_this_round.append(part_func)
+                        tool_response_parts.append(
+                            types.Content(role="tool", parts=[fn_response_part])
+                        )
+                    elif part_text:
+                        logger.debug(
+                            f"[_stream_agent_thoughts] Text: {part_text[:100]}..."
+                        )
+                        assistant_text += part_text
+                        _flush_assistant_text()
+                        yield f"data: {json.dumps({'chunk': part_text})}\n\n"
+                        round_model_content.append(part)
 
-            # Max iterations reached
-            logger.warning("[_stream_agent_thoughts] Max iterations reached")
-            yield f"data: {json.dumps({'chunk': 'I ran out of time planning your trip. Please try again.'})}\n\n"
-            yield f"data: {json.dumps({'done': True})}\n\n"
-            return
+                await asyncio.sleep(0)
 
-        except Exception as e:
-            error_msg = str(e)
-            is_transient = _is_transient_error(e)
-            logger.warning(
-                f"[_stream_agent_thoughts] Exception attempt {attempt + 1}/{max_retries + 1}: "
-                f"{type(e).__name__}: {error_msg[:200]} | transient={is_transient}"
-            )
-
-            if is_transient and attempt < max_retries:
-                wait_time = 2**attempt  # Exponential backoff: 1s, 2s, 4s
-                logger.info(
-                    f"[_stream_agent_thoughts] Transient error, retrying in {wait_time}s..."
-                )
-                # Skip count on attempt=0 (initial call); show 1/3–3/3 for actual retries
-                if attempt > 0:
-                    yield f"data: {json.dumps({'status': f'Retrying ({attempt}/{max_retries}) due to high demand...'})}\n\n"
-                await asyncio.sleep(wait_time)
-                continue
-            else:
-                user_msg = _user_message(error_msg)
-                logger.error(
-                    f"[_stream_agent_thoughts] Failed after {attempt + 1} attempt(s): {error_msg[:200]}"
-                )
-                yield f"data: {json.dumps({'error': user_msg})}\n\n"
-                yield f"data: {json.dumps({'done': True, 'error': user_msg})}\n\n"
+            if not tool_calls_this_round:
+                _flush_assistant_text()
+                yield f"data: {json.dumps({'done': True})}\n\n"
                 return
 
-    yield f"data: {json.dumps({'error': 'Failed after retries. Please try again later.'})}\n\n"
+            tool_round += 1
+            logger.info(
+                f"[_stream_agent_thoughts] Round {tool_round}: {len(tool_calls_this_round)} tool(s) executed"
+            )
+
+            if round_model_content:
+                current_messages.append(
+                    types.Content(role="model", parts=round_model_content)
+                )
+            current_messages.extend(tool_response_parts)
+
+        # Max tool rounds reached
+        logger.warning("[_stream_agent_thoughts] Max tool rounds reached")
+        too_many_calls_text = (
+            "I needed to make too many tool calls. Please try a more specific question."
+        )
+        assistant_text += too_many_calls_text
+        _flush_assistant_text()
+        yield f"data: {json.dumps({'chunk': too_many_calls_text})}\n\n"
+        yield f"data: {json.dumps({'done': True})}\n\n"
+
+    except Exception as e:
+        logger.error(
+            f"[_stream_agent_thoughts] Error: {type(e).__name__}: {str(e)[:200]}"
+        )
+        _flush_assistant_text()
+        yield f"data: {json.dumps({'error': f'An error occurred: {e}'})}\n\n"
+        yield f"data: {json.dumps({'done': True})}\n\n"
 
 
 @router.post("/stream")
@@ -406,52 +440,15 @@ async def chat_stream(
 
     user_id = current_user["user_id"] if current_user else None
 
-    # Verify user exists in DB (token may be valid but user deleted)
+    # Verify user exists in DB (valid token but user deleted → 401)
     if user_id is not None:
         from app.repositories.user_repo import get_user_by_id
 
         if get_user_by_id(db, user_id) is None:
-            # User no longer exists — treat as unauthenticated (guest)
-            user_id = None
+            raise HTTPException(status_code=401, detail="User not found")
 
-    # Get or create session
-    session = None
-    if body.session_id:
-        try:
-            session_pk = int(body.session_id)
-        except ValueError:
-            if user_id is not None:
-                raise HTTPException(status_code=400, detail="Invalid session_id")
-            guest = get_or_create_guest(db, body.session_id)
-            from sqlalchemy import desc, select
-
-            from app.db.models.chat_session import ChatSession
-
-            result = db.execute(
-                select(ChatSession)
-                .where(ChatSession.guest_id == guest.id)
-                .order_by(desc(ChatSession.created_at))
-                .limit(1)
-            )
-            session = result.scalar_one_or_none()
-            if session is None:
-                session = create_session(db, user_id=None, guest_id=guest.id)
-        else:
-            session = get_session(db, session_pk)
-            if session is None:
-                raise HTTPException(status_code=404, detail="Session not found")
-            if session.user_id != user_id:
-                raise HTTPException(status_code=403, detail="Forbidden")
-    else:
-        if user_id is not None:
-            session = create_session(db, user_id=user_id)
-        else:
-            # Generate new guest UID if none provided
-            from uuid import uuid4
-
-            guest_uid = body.session_id or str(uuid4())
-            guest = get_or_create_guest(db, guest_uid)
-            session = create_session(db, user_id=None, guest_id=guest.id)
+    # Get or create session (uses shared helper to avoid duplication)
+    session = await _resolve_session(db, body.session_id, user_id)
 
     # Save user message
     append_message(
@@ -461,12 +458,15 @@ async def chat_stream(
         content=body.message,
     )
 
-    prefs_dict = None
-    if body.user_preferences:
-        prefs_dict = body.user_preferences.model_dump()
+    prefs_dict = body.user_preferences.model_dump() if body.user_preferences else None
 
     return StreamingResponse(
-        _stream_agent_thoughts(message=body.message, preferences=prefs_dict),
+        _stream_agent_thoughts(
+            message=body.message,
+            session_id=session.id,
+            db=db,
+            preferences=prefs_dict,
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -495,58 +495,15 @@ async def chat(
     """
     user_id = current_user["user_id"] if current_user else None
 
-    # Verify user exists in DB (token may be valid but user deleted)
+    # Verify user exists in DB (valid token but user deleted → 401)
     if user_id is not None:
         from app.repositories.user_repo import get_user_by_id
 
         if get_user_by_id(db, user_id) is None:
-            # User no longer exists — treat as unauthenticated (guest)
-            user_id = None
+            raise HTTPException(status_code=401, detail="User not found")
 
-    # Get or create session
-    # session_id can be:
-    #   - integer str (DB pk) for registered users
-    #   - guest_uid (UUID str) for guests — resolved to latest guest session
-    #   - absent → create new session
-    if body.session_id:
-        try:
-            session_pk = int(body.session_id)
-        except ValueError:
-            # Treat as guest_uid (UUID string)
-            if user_id is not None:
-                raise HTTPException(status_code=400, detail="Invalid session_id")
-            guest = get_or_create_guest(db, body.session_id)
-            # Find the guest's most recent session, or create one
-            from sqlalchemy import desc, select
-
-            from app.db.models.chat_session import ChatSession
-
-            result = db.execute(
-                select(ChatSession)
-                .where(ChatSession.guest_id == guest.id)
-                .order_by(desc(ChatSession.created_at))
-                .limit(1)
-            )
-            session = result.scalar_one_or_none()
-            if session is None:
-                session = create_session(db, user_id=None, guest_id=guest.id)
-        else:
-            session = get_session(db, session_pk)
-            if session is None:
-                raise HTTPException(status_code=404, detail="Session not found")
-            # Security: verify the session belongs to the authenticated user
-            if session.user_id != user_id:
-                raise HTTPException(status_code=403, detail="Forbidden")
-    else:
-        if user_id is not None:
-            session = create_session(db, user_id=user_id)
-        else:
-            # Generate new guest UID if none provided
-            from uuid import uuid4
-
-            guest_uid = body.session_id or str(uuid4())
-            guest = get_or_create_guest(db, guest_uid)
-            session = create_session(db, user_id=None, guest_id=guest.id)
+    # Get or create session (uses shared helper to avoid duplication)
+    session = await _resolve_session(db, body.session_id, user_id)
 
     # Save user message
     append_message(
