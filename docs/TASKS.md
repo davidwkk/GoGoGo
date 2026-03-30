@@ -12,22 +12,22 @@
 | Agent Core, Tools, Structured Output      | **David**                                                          |
 | Preference Extraction (Flash-Lite)        | **David**                                                          |
 | Voice — ASR + TTS                         | **David**                                                          |
-| Auth — Register/Login, JWT, Login UI      | **Minqi**                                                          |
-| Chat — Session, Message History, Chat UI  | **Minqi**                                                          |
-| Trip — CRUD, Itinerary Display, Map Embed | **Xuan**                                                           |
+| Auth — Register/Login, JWT, Login UI      | **David**                                                          |
+| Chat — Session, Message History, Chat UI  | **David**                                                          |
+| Trip — CRUD, Itinerary Display, Map Embed | **David**                                                          |
 | DB Models + Migrations (all tables)       | **David** (owns all migrations and all models to remove conflicts) |
 
 ---
 
-## 🙋 David — Agent Core + Voice
+## 🙋 David
 
 ### 🎯 Goal
 
-Build the intelligent core of the app: agent loop, all tools, structured output, preference extraction, and voice I/O.
+Build the intelligent core of the app: agent loop, all tools, structured output, preference extraction, voice I/O, auth, chat persistence, and trip display.
 
 ### 📦 Files Owned
 
-````
+```
 backend/app/agent/
 ├── agent.py                  # Gemini 3 Flash agent setup (gemini-3-flash-preview)
 ├── callbacks.py              # Loguru logging callbacks
@@ -38,55 +38,90 @@ backend/app/agent/
     ├── hotels.py             # SerpAPI Google Hotels
     ├── weather.py            # OpenWeatherMap
     ├── maps.py               # Google Maps Static/Embed URL builder
-    ├── transport.py          # SerpAPI Google Maps (route/transport options)
-    └── attractions.py       # Wikipedia REST API (attraction details)
+    ├── transport.py           # SerpAPI Google Maps (route/transport options)
+    └── attractions.py        # Wikipedia REST API (attraction details)
+
 backend/app/services/
-├── chat_service.py           # Invoke agent, return TripItinerary (David)
-└── preference_service.py     # Flash-Lite extraction (gemini-3.1-flash-lite-preview) + save preferences
+├── chat_service.py           # Invoke agent, return TripItinerary
+├── preference_service.py      # Flash-Lite extraction (gemini-3.1-flash-lite-preview) + save preferences
+├── auth_service.py           # Register, login, password verify
+└── message_service.py        # Message persistence — create_session, get_session, append_message
 
 backend/app/db/models/
+├── user.py                   # users table
+├── chat_session.py           # chat_sessions table
+├── message.py                # messages table
 └── preference.py             # user_preferences table
 
 backend/app/repositories/
+├── user_repo.py              # User DB access
+├── session_repo.py           # ChatSession DB access
+├── message_repo.py           # Message DB access
 └── preference_repo.py        # Preference DB access (no expire_all!)
 
 backend/app/schemas/
-└── chat.py                   # ChatRequest / ChatResponse schemas
+├── chat.py                   # ChatRequest / ChatResponse schemas
+├── auth.py                   # RegisterRequest, LoginRequest, TokenResponse
+└── user.py                   # UserOut schema
 
 backend/app/api/routes/
 ├── chat.py                   # POST /chat
-├── chat_sessions.py           # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages (Minqi owns endpoint logic; David owns route stub)
+├── chat_sessions.py           # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages
+├── auth.py                   # POST /auth/register, POST /auth/login
+├── users.py                  # GET /users/me
 └── health.py                 # /health
 
 backend/app/core/
 ├── config.py                 # pydantic-settings env config
 ├── logging.py                # Loguru setup
+├── security.py               # JWT encode/decode, password hashing
 └── middleware.py             # CORS setup
 
 backend/app/main.py            # FastAPI app entrypoint
 
+backend/app/repositories/
+└── trip_repo.py              # Trip DB access
+
+backend/app/services/
+└── trip_service.py           # Save trip, list trips, get trip by id
+
+backend/app/api/routes/
+└── trips.py                  # GET/DELETE /trips (POST /trips is internal — called by chat_service directly)
+
 frontend/src/
+├── pages/
+│   ├── LoginPage.tsx         # Login + Register form
+│   ├── ChatPage.tsx          # Message list, input bar
+│   └── TripPage.tsx          # Trip history list + detail view
+├── components/
+│   ├── chat/
+│   │   ├── ChatWindow.tsx    # Chat container
+│   │   ├── MessageBubble.tsx # User vs assistant styling
+│   │   └── InputBar.tsx      # Text input bar
+│   ├── trip/
+│   │   ├── ItineraryCard.tsx # Day-by-day plan display (as ActivityCard.tsx)
+│   │   └── FlightCard.tsx    # Flight info + booking link
+│   └── voice/
+│       ├── VoiceButton.tsx   # Mic toggle button
+│       └── TTSPlayer.tsx     # Auto-play TTS on agent response
 ├── hooks/
 │   ├── useASR.ts             # Web Speech API hook
 │   ├── useTTS.ts             # Web Speech Synthesis hook
-│   └── useChat.ts            # Chat request hook
-├── components/voice/
-│   ├── VoiceButton.tsx       # Mic toggle button
-│   └── TTSPlayer.tsx         # Auto-play TTS on agent response
+│   ├── useChat.ts            # Chat request hook
+│   └── useAuth.ts            # Auth state, login/logout actions
+├── store/
+│   ├── chatSlice.ts          # Chat state (session, messages)
+│   └── tripSlice.ts          # Trip state (trip list, current trip)
 └── services/
-    └── chatService.ts        # POST /chat API call
-
-frontend/src/store/
-└── chatSlice.ts             # Chat state (session, messages)
+    ├── chatService.ts        # POST /chat API call
+    ├── tripService.ts        # GET/DELETE /trips API calls
+    └── authService.ts        # POST /auth/register, /auth/login
+```
 
 ### ✅ Task Breakdown
 
-> **⚠️ HARD REQUIREMENTS — Must be implemented FIRST, in this order:**
-> 1. **Voice I/O** (ASR + TTS + text fallback) — deployed and testable by Day 4
-> 2. **Live Search** (no hallucination, live data, dynamic APIs) — all tool calls required on every plan
-> 3. **Core Functions**: `Plan` (itinerary), `Introduce` (attractions via Wikipedia), `Route` (transport via SerpAPI)
-
 #### Phase 1A — Voice UI First (Days 1–4)
+
 > **⚠️ Feedback Loop Risk**: `useASR` must explicitly mute/pause `useTTS` when recording starts. Add a pulsing mic visual indicator so users can distinguish listening vs. speaking states.
 > **⚠️ Text Fallback**: Every voice interaction must have a text fallback — if ASR fails or TTS is unavailable, fall back to on-screen text input/display.
 
@@ -103,6 +138,7 @@ frontend/src/store/
 - [x] `useChat.ts` — wire VoiceButton → `chatService.ts` → `POST /chat`; handle `ChatResponse` (text + itinerary + message_type); needed for Phase 1A voice integration ✅
 
 #### Phase 1B — Live Search Tools (Days 1–6)
+
 > **⚠️ No Hallucination**: Every itinerary item must be fetched via live API — the agent MUST call at least one tool for every flight, hotel, attraction, transport, or weather data point. Pure LLM generation without tool calls is not acceptable.
 > **⚠️ API Error Handling**: Each tool must catch exceptions and return `{"error": "..."}` dicts instead of raising — do not let external API failures become 500 errors.
 
@@ -128,6 +164,7 @@ frontend/src/store/
   - System prompt enforces: **every response item must come from a tool call** — no pure LLM text for facts/prices/times
 
 #### Phase 1C — Agent Loop + Structured Output (Days 4–9)
+
 > **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
 > **⚠️ Function call iteration**: Iterate ALL parts — `function_calls = [p.function_call for p in response.candidates[0].content.parts if p.function_call]`. Do NOT assume `parts[0]` is the only function call — Gemini 3 Flash supports parallel calls in one turn.
 > **⚠️ Loop termination**: If `function_calls` is non-empty, execute tools and continue; if empty (plain text), the loop is done.
@@ -143,8 +180,9 @@ frontend/src/store/
     > ⚠️ **Demo-grade**: acceptable for low-concurrency demo use. All `httpx.AsyncClient` calls use `async with` so connections clean up on cancel. Add comment: `# Demo-grade: acceptable for low-concurrency demo use`
   - Return `ChatResponse` (not bare `TripItinerary`): `ChatResponse(text=str, itinerary=TripItinerary|None, message_type=Literal["chat","itinerary","error"])`
   - **Text fallback**: if TTS fails, return text response as well
-  > **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation/google-ai/gemini-api-structured-outputs/)
-> **Correct pattern for structured output** (confirmed working):
+    > **References:** [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting) · [Gemini Structured Outputs](https://blog.google/innovation/google-ai/gemini-api-structured-outputs/)
+    > **Correct pattern for structured output** (confirmed working):
+
 ```python
 from google import genai
 client = genai.Client()
@@ -157,7 +195,7 @@ response = client.models.generate_content(
     },
 )
 result = TripItinerary.model_validate_json(response.text)  # validate response
-````
+```
 
 - [x] Expose `POST /chat` in `api/routes/chat.py` ✅
   - Use **mocked auth** (`get_current_user` returns dummy user)
@@ -184,121 +222,7 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 
 #### Phase 3 — Auth Wiring + Integration (Days 13–20)
 
-- [x] Remove mock `get_current_user` — deps.py now uses real JWT decode, returns `user_id` int from token ✅
-- [x] Wire message saving — chat.py calls `append_message` before/after `invoke_agent` ✅
-- [x] Wire `save_trip` — `chat_service.invoke_agent` calls `trip_service.save_trip` when `generate_plan=True` ✅
-- [x] Wire voice into Chat UI — ChatPage/InputBar already integrate VoiceButton + useASR/useTTS ✅
-
-#### Phase 4 — Streaming UI + Observability (Post-Phase 3)
-
-- [x] **Typewriter effects in frontend** — Stream LLM response tokens to frontend instead of waiting for full reply; update `useChat.ts` to handle SSE token streaming; render tokens as they arrive in `MessageBubble.tsx`
-- [x] **Add log to track LLM full cycle** — Instrument `chat_service.py` and `agent.py` with structured logging (Loguru → JSON format); add metrics for: LLM call latency, tool call counts, token usage, end-to-end response time; configure Grafana dashboard to visualize these metrics
-- [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds)
-- [ ] **Stream agent tool calls to frontend** — Add frontend states to display when agent is actively calling tools (e.g., "Searching flights...", "Checking weather...", "Finding hotels..."); show these intermediate steps in the UI during the agent loop, not just a generic "thinking" indicator
-- [ ] **Migrate trip planning to streaming** — Change agent call (trip planning) from waiting for full output to using stream; requires adding a tool to fetch the current time/day for date-aware planning
-- [ ] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations
-
-### 🧪 Tests to Write
-
-```
-backend/tests/unit/
-├── test_tools/
-│   ├── test_search.py        # Returns expected shape
-│   ├── test_flights.py
-│   ├── test_hotels.py
-│   ├── test_weather.py       ✅ (3 tests)
-│   ├── test_maps.py          ✅ (5 tests)
-│   ├── test_transport.py     # SerpAPI Google Maps returns transport options
-│   └── test_attractions.py   ✅ (3 tests)
-└── test_schemas/
-    └── test_trip_itinerary.py  ✅ DONE — 9 tests covering roundtrip, validation, constraints
-```
-
-backend/tests/integration/
-└── test_chat/
-└── test_chat_endpoint.py # POST /chat returns TripItinerary shape
-
-````
-
-### ⚠️ Mocking Strategy (Unblock yourself)
-```python
-# deps.py — temporary mock, swap when Minqi's JWT middleware is ready
-DEV_USER_ID = 1  # use named constant, NOT inline magic number
-
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),  # real version uses JWT Bearer token
-):
-    return User(id=DEV_USER_ID, username="dev", email="dev@test.com")
-# ⚠️ Swap the body only — keep the function signature identical when removing mock.
-# Minqi: your real get_current_user MUST return User(id, username, email) shape.
-# Do NOT change the return type or field names or David's routes break silently.
-````
-
-> Remove mock once Minqi's JWT middleware is ready.
-
----
-
-## 🙋 Minqi — Auth + Chat
-
-### 🎯 Goal
-
-Own the full authentication flow and chat session/message persistence, end-to-end from DB to UI.
-
-### 📦 Files Owned
-
-```
-backend/app/db/models/
-├── user.py                   # users table
-├── chat_session.py           # chat_sessions table
-└── message.py                # messages table
-
-backend/app/repositories/
-├── user_repo.py              # User DB access
-├── session_repo.py           # ChatSession DB access
-└── message_repo.py           # Message DB access
-
-backend/app/schemas/
-├── auth.py                   # RegisterRequest, LoginRequest, TokenResponse
-└── user.py                   # UserOut schema
-
-backend/app/services/
-├── auth_service.py           # Register, login, password verify — owned by Minqi
-├── message_service.py        # Message persistence — owned by Minqi
-└── chat_history_service.py   # append_user/agent_message — owned by Minqi
-
-backend/app/core/
-└── security.py               # JWT encode/decode, password hashing
-
-backend/app/api/
-├── routes/
-│   ├── auth.py               # POST /auth/register, POST /auth/login
-│   └── users.py              # GET /users/me
-└── deps.py                   # get_current_user, get_db
-
-frontend/src/
-├── components/layout/
-│   └── Sidebar.tsx           # Left sidebar — nav icons only; rest of page is content area
-├── pages/
-│   ├── LoginPage.tsx         # Login + Register form
-│   └── ChatPage.tsx          # Message list, input bar (owned by Minqi)
-
-> **📐 Layout Design Rule**: All main app pages (Chat, Trips, Profile) share a single fixed sidebar on the left (56px wide, black `GG` logo top, icon nav). The remaining full-width area is the page's content. LoginPage is full-screen with no sidebar.
-├── components/
-│   └── chat/
-│       ├── ChatWindow.tsx    # Chat container
-│       ├── MessageBubble.tsx # User vs assistant styling
-│       └── InputBar.tsx     # Text input bar
-├── hooks/
-│   └── useAuth.ts            # Auth state, login/logout actions
-├── store/                    # Zustand auth slice
-└── services/
-    ├── api.ts                # Axios base client (shared)
-    └── authService.ts        # POST /auth/register, /auth/login
-```
-
-### ✅ Task Breakdown
-
-#### Phase 1 — Auth Backend (Days 1–6)
+##### Auth Backend
 
 - [x] Define `users` table in `db/models/user.py` ✅
 - [x] Write Alembic migration for `users` ✅
@@ -313,104 +237,19 @@ frontend/src/
   - `get_db` — async session dependency
   - `get_current_user` — decode JWT via `oauth2_scheme: OAuth2PasswordBearer` (David's mock uses the same signature); must return `User(id, username, email)` — do NOT change return type or field names
 - [x] Expose `GET /users/me` in `api/routes/users.py` ✅
-- [x] **Notify David** once `deps.py` → `get_current_user` is ready so he removes the mock ✅ (done, David confirmed)
 
-#### Phase 2 — Chat Persistence (Days 7–12)
-
-> **Note:** Session operations are in `message_service.py` (not separate `session_repo.py`); `chat_history_service.py` is `message_service.py`.
+##### Chat Persistence
 
 - [x] Define `chat_sessions` + `messages` tables ✅
 - [x] Write Alembic migrations for both tables ✅
 - [x] Implement `message_service.py` — `create_session`, `get_session`, `append_message`, `get_session_messages`, `get_or_create_guest` ✅
 - [x] Build `chat_history_service.py` with `append_user_message()` and `append_agent_message()` methods ✅ (in `message_service.py`)
-- [x] Update `chat_service.py` (coordinate with David) ✅
+- [x] Update `chat_service.py` ✅
   - Save user message before agent call ✅
   - Save assistant response after agent call ✅
 - [x] Expose session history endpoint: `GET /chat/sessions/{session_id}/messages` ✅
-- [x] **Notify David** once `message_repo.py` is ready to wire message saving in `chat_service.py` ✅ (done, wired)
 
-#### Phase 3 — Auth + Chat UI (Days 10–14)
-
-- [ ] **Verify voice component** — Test ASR (useASR) and TTS (useTTS) in both frontend and backend to ensure the full voice input → agent → voice output pipeline works end-to-end
-
-- [x] `LoginPage.tsx` — login + register tabs, form validation, error display; full-screen centered card, no sidebar ✅
-- [x] "Continue as Guest" button — bypasses auth, stores `guest_uid` in localStorage, navigates to chat; `useChat.ts` sends guest_uid as session_id; backend resolves guest sessions ✅
-- [x] `useAuth.ts` — login/logout, persist token in localStorage
-- [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
-- [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
-- [ ] Protected route wrapper — redirect to login if unauthenticated
-- [x] `ChatPage.tsx` — basic scaffold exists with message list + InputBar; MessageBubble rendered inline ✅/❌
-- [x] `MessageBubble.tsx` — user vs assistant styling (currently inline in ChatPage)
-- [ ] Display fake loading steps ("Searching flights...", "Checking weather...") during POST /chat request
-- [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
-- [ ] Display chat history on session load
-
-### 🧪 Tests to Write
-
-```
-backend/tests/unit/
-└── test_security/
-    ├── test_jwt.py           # encode/decode roundtrip
-    └── test_password.py      # hash + verify
-
-backend/tests/integration/
-└── test_auth/
-    ├── test_register.py      # 201, duplicate 409
-    └── test_login.py         # 200 + token, wrong password 401
-```
-
-### 🤝 Handoff to Team
-
-> Once `deps.py` → `get_current_user` is ready, notify **David** to remove the mock.
-> Once `message_repo.py` is ready, notify **David** to wire message saving in `chat_service.py`.
-
----
-
-## 🙋 Xuan — Trip + Itinerary Display
-
-### 🎯 Goal
-
-Own the full trip persistence and display flow — saving structured itineraries, CRUD API, and the rich frontend itinerary/map UI.
-
-### 📦 Files Owned
-
-```
-backend/app/db/models/
-└── trip.py                   # trips table (itinerary_json as JSONB)
-
-backend/app/repositories/
-└── trip_repo.py              # Trip DB access
-
-backend/app/schemas/
-└── trip.py                   # TripOut, TripCreate, TripSummary schemas
-
-backend/app/services/
-└── trip_service.py           # Save trip, list trips, get trip by id
-
-backend/app/api/routes/
-└── trips.py                  # GET/DELETE /trips (POST /trips is internal — called by chat_service directly)
-
-frontend/src/
-├── pages/
-│   └── TripPage.tsx          # Trip history list + detail view (uses Sidebar layout)
-├── components/
-│   ├── trip/
-│   │   ├── ItineraryCard.tsx  # Day-by-day plan display
-│   │   ├── HotelCard.tsx      # Hotel info + booking link
-│   │   ├── FlightCard.tsx     # Flight info + booking link
-│   │   └── AttractionCard.tsx # Attraction info + photo
-│   └── map/
-│       └── MapEmbed.tsx       # Google Maps Embed iframe
-└── services/
-    └── tripService.ts         # GET/DELETE /trips API calls (POST /trips is internal — called by chat_service directly)
-
-frontend/src/store/
-└── tripSlice.ts             # Trip state (trip list, current trip)
-```
-
-### ✅ Task Breakdown
-
-#### Phase 1 — Trip Backend (Days 1–6)
+##### Trip Backend
 
 - [x] Define `trips` table in `db/models/trip.py` ✅
   - `itinerary_json` as JSONB column
@@ -429,58 +268,142 @@ frontend/src/store/
   - `GET /trips/{trip_id}` — full itinerary
   - `DELETE /trips/{trip_id}` — delete
 
-#### Phase 2 — Coordinate with David (Days 4–10)
+##### Auth + Chat Wiring
 
-- [x] **Day 1 — Align `TripItinerary` schema with David** — schema is owned by David (`agent/schemas.py`), no unilateral changes ✅
-- [x] Develop against David's `MOCK_ITINERARY` fixture (available Day 3) — no need to wait for real agent ✅
-- [x] `trip_service.save_trip()` accepts `TripItinerary` directly — no re-parsing ✅
-- [x] **Notify David** when `trip_service.save_trip()` is ready to wire into `chat_service.py` ✅ (wired)
+- [x] Remove mock `get_current_user` — deps.py now uses real JWT decode, returns `user_id` int from token ✅
+- [x] Wire message saving — chat.py calls `append_message` before/after `invoke_agent` ✅
+- [x] Wire `save_trip` — `chat_service.invoke_agent` calls `trip_service.save_trip` when `generate_plan=True` ✅
+- [x] Wire voice into Chat UI — ChatPage/InputBar already integrate VoiceButton + useASR/useTTS ✅
 
-#### Phase 3 — Trip UI (Days 10–14)
+##### Frontend UI
 
-- [ ] **Fix frontend display for trips and other components** — Audit and fix any display issues in TripPage, HotelCard, AttractionCard, and other trip-related components
-- [x] `TripPage.tsx` — list of saved trips, click to expand detail ✅
-- [x] `ItineraryCard.tsx` — render `DayPlan[]`, day tabs or accordion ✅ (as `ActivityCard.tsx`)
-- [ ] `HotelCard.tsx` — name, price, rating, booking link button
-- [x] `FlightCard.tsx` — airline, departure/arrival, price, booking link ✅
-- [ ] `AttractionCard.tsx` — name, category badge, photo, rating
-- [ ] `MapEmbed.tsx` — render Google Maps Embed iframe from `map_embed_url` (inline in TripPage instead)
-- [x] `tripService.ts` — Axios calls for all trip endpoints ✅
-- [x] Wire `TripPage` into app routing (coordinate with Minqi's auth guard) ✅
+- [x] `LoginPage.tsx` — login + register tabs, form validation, error display; full-screen centered card, no sidebar ✅
+- [x] "Continue as Guest" button — bypasses auth, stores `guest_uid` in localStorage, navigates to chat; `useChat.ts` sends guest_uid as session_id; backend resolves guest sessions ✅
+- [x] `useAuth.ts` — login/logout, persist token in localStorage ✅
+- [x] `ChatPage.tsx` — basic scaffold exists with message list + InputBar; MessageBubble rendered inline ✅
+- [x] `MessageBubble.tsx` — user vs assistant styling ✅
+- [x] **Trip UI** ✅ — `TripPage.tsx`, `ItineraryCard.tsx` (as `ActivityCard.tsx`), `FlightCard.tsx`, `tripService.ts`, wire TripPage into routing
+
+#### Phase 4 — Streaming UI + Observability (Post-Phase 3)
+
+- [x] **Typewriter effects in frontend** (casual chat) ✅ — Stream LLM response tokens to frontend for casual chat; update `useChat.ts` to handle SSE token streaming; render tokens as they arrive in `MessageBubble.tsx`
+- [x] **Add log to track LLM full cycle** ✅ — Instrument `chat_service.py` and `agent.py` with structured logging (Loguru → JSON format); add metrics for: LLM call latency, tool call counts, token usage, end-to-end response time
+- [x] **Stream agent tool calls to frontend** (casual setting) ✅ — Thinking bubbles display when agent is actively calling tools (e.g., "Searching flights...", "Checking weather..."); show intermediate steps in UI during agent loop
+- [x] **SSE Streaming** ✅ — Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint ✅ (`POST /chat/stream` in `chat.py`)
+- [x] **Stream agent tool calls to frontend** (casual setting) ✅ — Thinking bubbles show intermediate steps in UI
+
+### 🔲 Remaining Tasks
+
+- [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds)
+- [ ] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning
+- [ ] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations
+- [ ] **Update `useChat.ts` for trip planning** — consume SSE, show intermediate steps in UI during trip generation
+- [ ] **Add 3x auto-retry on SSE disconnect** — currently 2 retries with exponential backoff in `_stream_chat`
+- [ ] **Upgrade `useTTS.ts` from `window.speechSynthesis` → Gemini TTS**
+- [ ] **Gemini Live API** — single multimodal session replacing ASR + agent + TTS hooks entirely
 
 ### 🧪 Tests to Write
 
 ```
+backend/tests/unit/
+├── test_tools/
+│   ├── test_search.py        # Returns expected shape
+│   ├── test_flights.py
+│   ├── test_hotels.py
+│   ├── test_weather.py       ✅ (3 tests)
+│   ├── test_maps.py          ✅ (5 tests)
+│   ├── test_transport.py     # SerpAPI Google Maps returns transport options
+│   └── test_attractions.py   ✅ (3 tests)
+└── test_schemas/
+    └── test_trip_itinerary.py  ✅ DONE — 9 tests covering roundtrip, validation, constraints
+
+backend/tests/unit/
+└── test_security/
+    ├── test_jwt.py           # encode/decode roundtrip
+    └── test_password.py      # hash + verify
+
 backend/tests/integration/
+├── test_auth/
+│   ├── test_register.py      # 201, duplicate 409
+│   └── test_login.py         # 200 + token, wrong password 401
 └── test_trips/
     ├── test_save_trip.py     # POST /trips saves correctly
     ├── test_list_trips.py    # GET /trips returns user's trips only
     └── test_get_trip.py      # GET /trips/{id} returns full itinerary
+
+backend/tests/integration/
+└── test_chat/
+└── test_chat_endpoint.py # POST /chat returns TripItinerary shape
 ```
 
-### 🤝 Handoff to Team
+### ⚠️ Mocking Strategy (Unblock yourself)
 
-> Depends on **David** for `TripItinerary` schema — align on Day 1, develop against mock from Day 3.
-> Depends on **Minqi** for auth guard on trip routes — use mock `get_current_user` until ready.
+```python
+# deps.py — temporary mock, swap when Minqi's JWT middleware is ready
+DEV_USER_ID = 1  # use named constant, NOT inline magic number
+
+async def get_current_user(
+    token: str = Depends(oauth2Scheme),  # real version uses JWT Bearer token
+):
+    return User(id=DEV_USER_ID, username="dev", email="dev@test.com")
+# ⚠️ Swap the body only — keep the function signature identical when removing mock.
+# Minqi: your real get_current_user MUST return User(id, username, email) shape.
+# Do NOT change the return type or field names or David's routes break silently.
+```
+
+---
+
+## 🙋 Minqi
+
+### ✅ Task Breakdown
+
+#### Phase 3 — Auth + Chat UI
+
+- [x] Verify STT working properly
+- [ ] Increase STT duration to at least 30s
+- [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
+- [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
+- [ ] Protected route wrapper — redirect to login if unauthenticated
+- [ ] Display fake loading steps ("Searching flights...", "Checking weather...") during POST /chat request
+- [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
+- [ ] Display chat history on session load
+
+---
+
+## 🙋 Xuan
+
+### ✅ Task Breakdown
+
+#### Phase 3 — Trip UI
+
+- [x] **Implement frontend display in My Trip Page and display of Trip Itinerary** ✅
+
+### 🔲 Remaining Tasks
+
+- [ ] **Fix frontend display for trips and other components** — Audit and fix any display issues in TripPage, HotelCard, AttractionCard, and other trip-related components
+- [ ] `HotelCard.tsx` — name, price, rating, booking link button
+- [ ] `AttractionCard.tsx` — name, category badge, photo, rating
+- [ ] `MapEmbed.tsx` — render Google Maps Embed iframe from `map_embed_url` (inline in TripPage instead)
 
 ---
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area     | Issue                                                                                                                                     |
-| --- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 17  | 🟡       | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume) |
-| 21  | 🟡       | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                     |
-| 24  | 🟡       | Frontend | ⚠️ Partial — `TripPage.tsx` implemented; `HotelCard.tsx`, `AttractionCard.tsx` still missing (Xuan)                                       |
-| 26  | 🟡       | Frontend | ⚠️ Open — Minqi Phase 3 incomplete: `useAuth.ts`, auth store, `MessageBubble.tsx`, "Save & Finish Trip" button, chat history on reload    |
-| —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                   |
+| #   | Severity | Area     | Issue                                                                                                                                                   |
+| --- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 17  | 🟡        | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
+| 21  | 🟡        | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                                    |
+| 24  | 🟡        | Frontend | ⚠️ Partial — `HotelCard.tsx`, `AttractionCard.tsx`, `MapEmbed.tsx` still missing (Xuan); TripPage and FlightCard implemented ✅                           |
+| 26  | 🟡        | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
+| —   | 🟡        | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                 |
+| —   | 🟡        | Frontend | ⚠️ Open — Increase STT duration to at least 30s (Minqi)                                                                                                  |
 
 ---
 
 ## 🔗 Integration Points & Coordination
 
-| When       | Who           | Action                                                                                             |
-| ---------- | ------------- | -------------------------------------------------------------------------------------------------- |
+| When       | Who           | Action                                                                                            |
+| ---------- | ------------- | ------------------------------------------------------------------------------------------------- |
 | Day 1      | David + Xuan  | ✅ Finalize `TripItinerary` Pydantic schema together                                               |
 | Day 1      | David + Minqi | ✅ Session ID creation flow — `chat.py` creates session on first message when `session_id` is null |
 | Day 3      | David → All   | ✅ Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                           |
@@ -501,7 +424,7 @@ backend/tests/integration/
 | **4–9**   | Agent loop + `chat_service.py` + callbacks + `POST /chat`                             | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
 | **9–13**  | Preference extraction + auth wiring                                                   | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
 | **13–17** | Wire real auth + DB into chat, import chat_history_service                            | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
-| **18–20** | 🔴 Buffer — integration bugs, demo prep                                               | 🔴 Buffer — integration bugs, demo prep           | 🔴 Buffer — integration bugs, demo prep           |
+| **18–20** | 🔴 Buffer — integration bugs, demo prep                                                | 🔴 Buffer — integration bugs, demo prep            | 🔴 Buffer — integration bugs, demo prep            |
 
 ---
 
@@ -525,8 +448,9 @@ backend/tests/integration/
 > **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
 
 - [x] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint ✅ (`POST /chat/stream` in `chat.py`)
-- [ ] Stream agent thinking steps + tool calls to frontend
-- [ ] Update `useChat.ts` — consume SSE, show intermediate steps in UI (basic streaming working, thinking steps not streamed)
+- [x] Stream agent tool calls to frontend (casual setting) ✅ — Thinking bubbles show intermediate steps in UI
+- [ ] **Trip planning NOT yet migrated to streaming** — Travel planning agent still uses full output waiting; needs refactor to SSE streaming
+- [ ] Update `useChat.ts` for trip planning — consume SSE, show intermediate steps in UI during trip generation
 - [ ] Add 3x auto-retry on SSE disconnect (currently 2 retries with exponential backoff in `_stream_chat`)
 
 ### Voice Upgrade
