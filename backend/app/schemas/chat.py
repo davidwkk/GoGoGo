@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from datetime import date, datetime
+from typing import Literal
+
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.enums import GroupType, TripPurpose
 from app.schemas.itinerary import TripItinerary
@@ -13,8 +16,8 @@ from app.schemas.user import UserPreference
 
 class TripParameters(BaseModel):
     destination: str
-    start_date: str = Field(description="ISO 8601 date string, e.g. 2025-06-01")
-    end_date: str = Field(description="ISO 8601 date string, e.g. 2025-06-10")
+    start_date: date = Field(description="ISO 8601 date string, e.g. 2025-06-01")
+    end_date: date = Field(description="ISO 8601 date string, e.g. 2025-06-10")
     group_type: GroupType
     group_size: int = Field(ge=1)
     purpose: TripPurpose
@@ -27,9 +30,9 @@ class TripParameters(BaseModel):
 
 
 class ChatMessage(BaseModel):
-    role: str = Field(description="'user' or 'assistant'")
+    role: Literal["user", "assistant"]
     content: str
-    created_at: str = Field(description="ISO 8601 datetime")
+    created_at: datetime = Field(description="ISO 8601 datetime")
 
 
 # ─────────────────────────────────────────
@@ -39,20 +42,34 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    session_id: str | None = (
-        None  # None on first message; UUID anonymous token or logged-in session
+    session_id: str | None = Field(
+        default=None,
+        description="None on first message; UUID anonymous token or logged-in session",
     )
-    # Gate for expensive agent loop — if False, simple generate_content (no tools)
-    generate_plan: bool = False
-    trip_parameters: TripParameters | None = (
-        None  # Required only when generate_plan=True
+    generate_plan: bool = Field(
+        default=False,
+        description="Gate for expensive agent loop — if False, simple generate_content (no tools)",
+    )
+    trip_parameters: TripParameters | None = Field(
+        default=None,
+        description="Required only when generate_plan=True",
     )
     user_preferences: UserPreference | None = None  # None if guest
 
 
 class ChatResponse(BaseModel):
-    session_id: str  # always returned so frontend can store it
-    text: str  # plain text response (used when message_type="chat" or "error")
-    itinerary: TripItinerary | None = None  # populated only when generate_plan=True
-    message_type: str = "chat"  # "chat" | "itinerary" | "error"
+    session_id: str = Field(description="Always returned so frontend can store it")
+    text: str = Field(
+        description="Plain text response, used when message_type is 'chat' or 'error'"
+    )
+    itinerary: TripItinerary | None = None
+    message_type: Literal["chat", "itinerary", "error"] = "chat"
     history: list[ChatMessage] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def sync_message_type(self) -> ChatResponse:
+        if self.itinerary is not None and self.message_type != "itinerary":
+            raise ValueError(
+                'message_type must be "itinerary" when itinerary is populated'
+            )
+        return self

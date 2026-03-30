@@ -6,6 +6,8 @@ for UI development and testing before the real agent is ready.
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 from app.schemas.enums import FlightDirection
 from app.schemas.itinerary import (
     Activity,
@@ -25,7 +27,7 @@ MOCK_ITINERARY = TripItinerary(
     days=[
         DayPlan(
             day_number=1,
-            date="2025-06-01",
+            date=date(2025, 6, 1),
             morning=[
                 Activity(
                     name="Senso-ji Temple",
@@ -53,7 +55,7 @@ MOCK_ITINERARY = TripItinerary(
         ),
         DayPlan(
             day_number=2,
-            date="2025-06-02",
+            date=date(2025, 6, 2),
             morning=[
                 Activity(
                     name="Meiji Shrine",
@@ -81,7 +83,7 @@ MOCK_ITINERARY = TripItinerary(
         ),
         DayPlan(
             day_number=3,
-            date="2025-06-03",
+            date=date(2025, 6, 3),
             morning=[
                 Activity(
                     name="Tsukiji Outer Market",
@@ -109,7 +111,7 @@ MOCK_ITINERARY = TripItinerary(
         ),
         DayPlan(
             day_number=4,
-            date="2025-06-04",
+            date=date(2025, 6, 4),
             morning=[
                 Activity(
                     name="Day trip to Nikko",
@@ -130,7 +132,7 @@ MOCK_ITINERARY = TripItinerary(
         ),
         DayPlan(
             day_number=5,
-            date="2025-06-05",
+            date=date(2025, 6, 5),
             morning=[
                 Activity(
                     name="Kyoto Morning Market",
@@ -160,8 +162,8 @@ MOCK_ITINERARY = TripItinerary(
     hotels=[
         HotelInfo(
             name="Park Hyatt Tokyo",
-            check_in_date="2025-06-01",
-            check_out_date="2025-06-06",
+            check_in_date=date(2025, 6, 1),
+            check_out_date=date(2025, 6, 6),
             price_per_night_min_hkd=3500.0,
             price_per_night_max_hkd=5000.0,
         ),
@@ -173,8 +175,8 @@ MOCK_ITINERARY = TripItinerary(
             flight_number="NH847",
             departure_airport="HKG",
             arrival_airport="NRT",
-            departure_time="2025-06-01T08:30:00",
-            arrival_time="2025-06-01T13:00:00",
+            departure_time=datetime(2025, 6, 1, 8, 30, 0),
+            arrival_time=datetime(2025, 6, 1, 13, 0, 0),
             stops=[],
             booking_url="https://www.google.com/flights/NH847",
         ),
@@ -184,8 +186,8 @@ MOCK_ITINERARY = TripItinerary(
             flight_number="NH846",
             departure_airport="NRT",
             arrival_airport="HKG",
-            departure_time="2025-06-05T15:00:00",
-            arrival_time="2025-06-05T18:30:00",
+            departure_time=datetime(2025, 6, 5, 15, 0, 0),
+            arrival_time=datetime(2025, 6, 5, 18, 30, 0),
             stops=[],
             booking_url="https://www.google.com/flights/NH846",
         ),

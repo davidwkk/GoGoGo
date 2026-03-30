@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
@@ -17,5 +17,5 @@ class TripSummary(BaseModel):
 # Full schema for the detail view
 class TripOut(TripSummary):
     user_id: UUID
-    session_id: Optional[int] = None
-    itinerary_json: dict | Any  # This holds David's generated AI plan
+    session_id: int | None = None
+    itinerary_json: dict[str, Any]  # This holds the generated AI plan

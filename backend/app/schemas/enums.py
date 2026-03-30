@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Literal
 
 
 class TripPurpose(str, Enum):
@@ -39,14 +40,11 @@ class FlightDirection(str, Enum):
     RETURN = "return"
 
 
-class MaxStops(int, Enum):
-    DIRECT = 0
-    ONE_STOP = 1
-    TWO_STOPS = 2
+MaxStops = Literal[0, 1, 2]
 
 
 class DietaryRestriction(str, Enum):
-    NONE = "none"
+    NO_RESTRICTION = "none"
     VEGETARIAN = "vegetarian"
     VEGAN = "vegan"
     HALAL = "halal"
