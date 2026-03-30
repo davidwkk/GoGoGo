@@ -15,6 +15,7 @@ class Activity(BaseModel):
     location: str
     map_url: str | None = None
     estimated_duration_minutes: int = Field(ge=0)
+    image_url: str | None = None
 
 
 # ─────────────────────────────────────────

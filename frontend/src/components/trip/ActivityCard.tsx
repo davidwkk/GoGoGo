@@ -1,6 +1,6 @@
-import { MapPin, Clock } from 'lucide-react';
+import { Clock, MapPin } from 'lucide-react';
+import type { Activity } from '@/types/trip';
 
-// TODO: Wire up image_url from activity data (data.image_url or data.thumbnail_url from backend)
 const ActivityImage = ({ imageUrl, name }: { imageUrl?: string | null; name: string }) => {
   if (!imageUrl) return null;
   return (
@@ -14,7 +14,13 @@ const ActivityImage = ({ imageUrl, name }: { imageUrl?: string | null; name: str
   );
 };
 
-export const ActivityCard = ({ activity, label }: { activity: any; label: string }) => {
+export const ActivityCard = ({
+  activity,
+  label,
+}: {
+  activity: Activity | Activity[];
+  label: string;
+}) => {
   // If activity is null or an empty array/object, don't show the card
   if (!activity || (Array.isArray(activity) && activity.length === 0)) return null;
 
@@ -28,7 +34,6 @@ export const ActivityCard = ({ activity, label }: { activity: any; label: string
       <div className="absolute left-0 top-1 size-[23px] rounded-full border-4 border-white bg-blue-600 shadow-sm z-10" />
 
       <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:border-blue-200 transition-all hover:shadow-md">
-        {/* TODO: Display attraction image using ActivityImage component */}
         <ActivityImage
           imageUrl={data.image_url || data.thumbnail_url}
           name={data.name || 'Activity'}
