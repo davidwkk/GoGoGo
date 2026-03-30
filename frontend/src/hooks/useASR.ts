@@ -43,13 +43,17 @@ export function useASR({ onTranscript, onError }: UseASROptions) {
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event: any) => {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        onTranscript({
-          transcript: result[0].transcript,
-          isFinal: result.isFinal,
-        });
+      // Build one string per event: interim updates refine the same segments; callers
+      // must replace the live utterance, not append each fire (avoids "I I want I want to…").
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
       }
+      const last = event.results[event.results.length - 1];
+      onTranscript({
+        transcript: transcript.trim(),
+        isFinal: last?.isFinal ?? false,
+      });
     };
 
     recognition.onerror = (event: any) => {

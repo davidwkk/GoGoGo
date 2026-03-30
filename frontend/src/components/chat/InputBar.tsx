@@ -1,13 +1,13 @@
 // InputBar — Text input + Send + Generate Trip Plan + Voice input
 // Wired to useChat hook; voice button uses ASR to populate input field.
 
-import { Map, Send } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { Send, Map } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { VoiceButton } from '@/components/voice/VoiceButton';
-import { useASR } from '@/hooks/useASR';
 import { useChat } from '@/hooks/useChat';
+import { useASR } from '@/hooks/useASR';
 import { useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
 
@@ -18,7 +18,8 @@ interface InputBarProps {
 
 export function InputBar({ disabled, onItinerary }: InputBarProps) {
   const [text, setText] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  /** Text in the field when mic was turned on — voice replaces only the new utterance, not appended per interim chunk. */
+  const textWhenVoiceStartedRef = useRef('');
   const voiceAvailable = useChatStore(s => s.voiceAvailable);
   const isLoading = useChatStore(s => s.isLoading);
   const addMessage = useChatStore(s => s.addMessage);
@@ -26,24 +27,16 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
   const { sendMessage } = useChat({ onItinerary });
   const { isListening, startListening, stopListening } = useASR({
     onTranscript: result => {
-      // Append transcript to existing text (allows multiple utterances)
-      setText(prev => {
-        const next = prev ? `${prev} ${result.transcript}` : result.transcript;
-        return next;
-      });
+      const base = textWhenVoiceStartedRef.current.trimEnd();
+      const piece = result.transcript.trim();
+      if (!piece) return;
+      const sep = base ? ' ' : '';
+      setText(`${base}${sep}${piece}`);
     },
     onError: error => {
       console.warn('ASR error:', error);
     },
   });
-
-  const adjustTextareaHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
-    }
-  };
 
   const handleSend = async (generatePlan: boolean) => {
     const trimmed = text.trim();
@@ -54,10 +47,6 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
     setThinking(true);
 
     setText(''); // Clear after adding message
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
     try {
       await sendMessage(trimmed, generatePlan);
     } catch {
@@ -71,6 +60,7 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
     if (isListening) {
       stopListening();
     } else {
+      textWhenVoiceStartedRef.current = text;
       startListening();
     }
   };
@@ -89,15 +79,12 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
         )}
 
         {/* Text input */}
-        <textarea
-          ref={textareaRef}
-          className="flex-1 min-h-[36px] max-h-[120px] h-auto rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-          placeholder="Message GoGoGo... (Shift+Enter for new line)"
+        <input
+          type="text"
+          className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder="Message GoGoGo..."
           value={text}
-          onChange={e => {
-            setText(e.target.value);
-            adjustTextareaHeight();
-          }}
+          onChange={e => setText(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
@@ -105,7 +92,6 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
             }
           }}
           disabled={disabled || isLoading}
-          rows={1}
         />
 
         {/* Send button — simple chat */}
