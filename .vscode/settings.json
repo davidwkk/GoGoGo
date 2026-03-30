@@ -4,5 +4,16 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
-  "cSpell.words": ["gogogo", "Minqi", "prefs", "Qing", "SERPAPI", "TAVILY", "Xuan"]
+  "cSpell.words": [
+    "cand",
+    "gogogo",
+    "logprobs",
+    "Minqi",
+    "Multimodal",
+    "prefs",
+    "Qing",
+    "SERPAPI",
+    "TAVILY",
+    "Xuan"
+  ]
 }

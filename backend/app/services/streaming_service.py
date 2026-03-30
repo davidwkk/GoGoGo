@@ -3,12 +3,12 @@
 import asyncio
 import json
 import time as time_mod
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
+from uuid import uuid4
 
 from google.genai import Client, types
 from loguru import logger
 from sqlalchemy.orm import Session
-from uuid import uuid4
 
 from app.agent.tools import (
     ALL_TOOLS,
@@ -125,7 +125,8 @@ async def stream_agent_response(
         system_instruction=system_instruction,
         tools=ALL_TOOLS,
         thinking_config=types.ThinkingConfig(
-            thinking_level=types.ThinkingLevel.MINIMAL
+            thinking_level=types.ThinkingLevel.MINIMAL,
+            include_thoughts=True,
         ),
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
@@ -506,10 +507,14 @@ async def stream_agent_response(
                                 trace_id=trace_id,
                                 model=model,
                                 tool_name=tool_name,
+                                tool_args=args,
                                 tool_error=f"{type(e).__name__}: {str(e)}",
                                 tool_traceback=tb_str,
                                 tool_duration_ms=tool_duration_ms,
-                            ).error("Tool exception")
+                            ).error(
+                                f"Tool exception | tool={tool_name} | args={args} | "
+                                f"error={type(e).__name__}: {str(e)[:200]} | duration_ms={tool_duration_ms}"
+                            )
                             result = {"error": str(e)}
                     else:
                         result = {"error": f"Unknown tool: {tool_name}"}
@@ -614,6 +619,12 @@ async def stream_agent_response(
         import traceback as tb_mod
 
         latency_ms = round(time_mod.perf_counter() * 1000 - start_ms, 1)
+
+        # Extract structured error details for APIError (google.genai errors)
+        error_code: int | None = getattr(e, "code", None)
+        error_status: str | None = getattr(e, "status", None)
+        error_details: Any = getattr(e, "details", None)
+
         logger.bind(
             event="stream_error",
             service="chat",
@@ -622,10 +633,19 @@ async def stream_agent_response(
             latency_ms=latency_ms,
             total_chunks=chunk_index,
             total_tool_calls=total_tool_calls,
+            tool_round=tool_round,
+            assistant_text_length=len(assistant_text),
             error_type=type(e).__name__,
-            error_message=str(e)[:300],
+            error_code=error_code,
+            error_status=error_status,
+            error_message=str(e)[:500],
+            error_details=error_details,
             error_traceback=tb_mod.format_exc(),
-        ).error("Stream error")
+        ).error(
+            f"Stream error | type={type(e).__name__} | code={error_code} | status={error_status} | "
+            f"msg={str(e)[:200]} | tool_round={tool_round} | chunks={chunk_index} | "
+            f"tools={total_tool_calls} | text_len={len(assistant_text)}"
+        )
         _flush_assistant_text()
         yield f"data: {json.dumps({'error': f'An error occurred: {e}'})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
