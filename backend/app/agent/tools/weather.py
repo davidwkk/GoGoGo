@@ -49,7 +49,8 @@ async def get_weather(city: str) -> dict:
             response.raise_for_status()
             data = response.json()
 
-            weather = data.get("weather", [{}])[0]
+            weather_list = data.get("weather") or []
+            weather = weather_list[0] if weather_list else {}
             main = data.get("main", {})
 
             result = {

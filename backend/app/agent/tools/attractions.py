@@ -53,7 +53,7 @@ async def get_attraction(attraction_name: str) -> dict:
             result = {
                 "name": data.get("title", attraction_name),
                 "description": data.get("extract", ""),
-                "thumbnail_url": data.get("thumbnail", {}).get("source"),
+                "thumbnail_url": (data.get("thumbnail") or {}).get("source"),
                 "coordinates": coords,
                 "category": None,
             }

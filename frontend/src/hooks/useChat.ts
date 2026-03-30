@@ -6,6 +6,35 @@ import { chatService, ChatRequest, guestPreferences } from '@/services/api';
 import { useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
 
+// Map raw tool names to user-friendly display labels
+const TOOL_LABELS: Record<string, string> = {
+  get_attraction: 'Getting attraction info',
+  get_weather: 'Getting weather',
+  search_web: 'Searching the web',
+  search_flights: 'Searching flights',
+  search_hotels: 'Searching hotels',
+  get_transport: 'Getting transport info',
+  build_embed_url: 'Building map',
+  build_static_url: 'Building map',
+};
+
+function formatThinkingStep(raw: string): string {
+  const s = raw.trim();
+
+  if (s === 'thinking') return '💭 Thinking...';
+  if (s === 'processing_results') return '📊 Processing results...';
+
+  if (s.startsWith('calling_')) {
+    const tool = s.slice('calling_'.length);
+    const label = TOOL_LABELS[tool] ?? tool.replace(/_/g, ' ');
+    return `🔍 ${label}...`;
+  }
+
+  // Tool result
+  const label = TOOL_LABELS[s] ?? s.replace(/_/g, ' ');
+  return `✅ ${label}`;
+}
+
 interface UseChatOptions {
   onItinerary?: (itinerary: TripItinerary) => void;
   onError?: (error: string) => void;
@@ -108,19 +137,19 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                 if (chunk.startsWith('__TOOL_CALL__:')) {
                   commitPartialThought();
                   const toolName = chunk.slice('__TOOL_CALL__:'.length);
-                  addThinkingStep(`🔧 Calling ${toolName}...`);
+                  addThinkingStep(formatThinkingStep(`calling_${toolName}`));
                   continue;
                 }
                 if (chunk.startsWith('__TOOL_RESULT__:')) {
                   commitPartialThought();
                   const toolName = chunk.slice('__TOOL_RESULT__:'.length);
-                  addThinkingStep(`✅ ${toolName} done`);
+                  addThinkingStep(formatThinkingStep(toolName));
                   continue;
                 }
                 if (chunk.startsWith('__STATUS__:')) {
                   commitPartialThought();
                   const status = chunk.slice('__STATUS__:'.length);
-                  addThinkingStep(status);
+                  addThinkingStep(formatThinkingStep(status));
                   continue;
                 }
               }
