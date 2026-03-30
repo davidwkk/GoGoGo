@@ -1,7 +1,7 @@
 // Zustand store for app state
 
-import { create } from 'zustand';
 import { isVoiceSupported } from '@/hooks/useASR';
+import { create } from 'zustand';
 
 export interface Message {
   id: string;
@@ -37,7 +37,6 @@ export interface ChatState {
   setThinking: (thinking: boolean) => void;
   setAbortController: (controller: AbortController | null) => void;
   addThinkingStep: (step: string) => void;
-  clearThinkingSteps: () => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -76,6 +75,4 @@ export const useChatStore = create<ChatState>(set => ({
     set(state => ({
       thinkingSteps: [...state.thinkingSteps, step],
     })),
-
-  clearThinkingSteps: () => set({ thinkingSteps: [] }),
 }));

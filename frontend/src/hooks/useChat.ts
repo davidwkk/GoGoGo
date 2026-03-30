@@ -20,7 +20,6 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
     setAbortController,
     setThinking,
     addThinkingStep,
-    clearThinkingSteps,
   } = useChatStore();
 
   const sendMessage = useCallback(
@@ -75,7 +74,6 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                 if (chunk.startsWith('__ERROR__:')) {
                   const errorMsg = chunk.slice('__ERROR__:'.length);
                   setThinking(false);
-                  clearThinkingSteps();
                   if (msgId !== null) {
                     useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
                   } else {
@@ -147,7 +145,6 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             if (err instanceof Error && err.name === 'AbortError') {
               console.log('[useChat] Stream cancelled by user');
               setThinking(false);
-              clearThinkingSteps();
               setAbortController(null);
               return;
             }
@@ -159,7 +156,6 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             }
             console.error('[useChat] Stream error:', errorMsg);
             setThinking(false);
-            clearThinkingSteps();
             // If we already have a message, update it; otherwise create one with the error
             if (msgId !== null) {
               useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
@@ -169,7 +165,6 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             onError?.(errorMsg);
           } finally {
             setThinking(false);
-            clearThinkingSteps();
             setAbortController(null);
           }
 

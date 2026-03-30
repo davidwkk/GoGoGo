@@ -128,7 +128,7 @@ async def stream_agent_response(
         system_instruction=system_instruction,
         tools=ALL_TOOLS,
         thinking_config=types.ThinkingConfig(
-            thinking_level=types.ThinkingLevel.MINIMAL,
+            thinking_level=types.ThinkingLevel.HIGH,
             include_thoughts=True,
         ),
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
