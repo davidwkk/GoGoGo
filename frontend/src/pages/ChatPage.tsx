@@ -9,6 +9,8 @@ import { useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
 import { Calendar, MapPin, MessageSquare, PlusCircle, Settings, Sparkles, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Dynamic thinking placeholder that cycles based on elapsed time
 const THINKING_MESSAGES = [
@@ -190,7 +192,7 @@ function StreamingMessage({
 
   return (
     <>
-      {content.slice(0, displayLength)}
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content.slice(0, displayLength)}</ReactMarkdown>
       {isStreaming && (
         <span className="inline-block w-0.5 h-4 bg-yellow-500 ml-0.5 animate-blink align-middle" />
       )}
@@ -569,7 +571,7 @@ export function ChatPage() {
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
+                    className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
                       msg.role === 'user'
                         ? 'bg-black text-white rounded-br-md'
                         : 'bg-muted text-foreground rounded-bl-md'
@@ -581,6 +583,10 @@ export function ChatPage() {
                         isDone={!isLoading}
                         onComplete={() => setTypewriterDone(true)}
                       />
+                    ) : msg.role === 'assistant' ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      </div>
                     ) : (
                       msg.content
                     )}
