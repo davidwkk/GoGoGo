@@ -246,7 +246,7 @@ async def _stream_agent_thoughts(
                     system_instruction=system_instruction,
                     tools=ALL_TOOLS,
                     thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel.MEDIUM,
+                        thinking_level=types.ThinkingLevel.MINIMAL,
                         include_thoughts=True,
                     ),
                 )
