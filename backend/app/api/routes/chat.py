@@ -258,20 +258,40 @@ async def _stream_agent_thoughts(
                 )
 
                 # Extract thought summaries from the model response (when include_thoughts=True)
+                logger.info(
+                    f"[_stream_agent_thoughts] Response candidates: {len(response.candidates) if response.candidates else 0}"
+                )
                 if response.candidates and response.candidates[0].content:
                     content = response.candidates[0].content
-                    if hasattr(content, "parts") and content.parts:
-                        for part in content.parts:
-                            # part.thought contains the thought summary text when include_thoughts=True
-                            thought_text = getattr(part, "thought", None)
-                            if thought_text and isinstance(thought_text, str):
+                    parts = getattr(content, "parts", None)
+                    logger.info(
+                        f"[_stream_agent_thoughts] Content parts count: {len(parts) if parts else 0}"
+                    )
+                    if parts:
+                        logger.info(
+                            f"[_stream_agent_thoughts] Found {len(parts)} parts in response"
+                        )
+                        for i, part in enumerate(parts):
+                            part_thought = getattr(part, "thought", None)
+                            part_text = getattr(part, "text", None)
+                            part_sig = getattr(part, "thought_signature", None)
+                            # Log all part info for debugging
+                            text_repr = repr(part_text[:100]) if part_text else None
+                            sig_repr = repr(part_sig) if part_sig else None
+                            logger.info(
+                                f"[_stream_agent_thoughts] Part({i}): thought={part_thought}, "
+                                f"text={text_repr}, sig={sig_repr}"
+                            )
+                            # part.thought is a bool flag - when True, the reasoning text is in part.text
+                            if part_thought and part_text:
+                                thought_text = part_text
                                 preview = (
                                     thought_text[:200] + "..."
                                     if len(thought_text) > 200
                                     else thought_text
                                 )
                                 logger.info(
-                                    f"[_stream_agent_thoughts] Thought: {preview}"
+                                    f"[_stream_agent_thoughts] Thought found: {preview}"
                                 )
                                 yield f"data: {json.dumps({'model_thought': thought_text})}\n\n"
                     messages.append(content)
