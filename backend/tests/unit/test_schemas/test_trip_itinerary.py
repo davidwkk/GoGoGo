@@ -1,6 +1,8 @@
 """Tests for TripItinerary schema validation."""
 
-from datetime import date, datetime
+from __future__ import annotations
+
+from datetime import date as Date, datetime as DateTime
 
 import pytest
 
@@ -35,7 +37,15 @@ class TestTripItineraryValidation:
             destination="Hong Kong",
             duration_days=1,
             summary="Quick HK trip.",
-            days=[],
+            days=[
+                DayPlan(
+                    day_number=1,
+                    date=Date(2025, 7, 1),
+                    morning=[],
+                    afternoon=[],
+                    evening=[],
+                ),
+            ],
             hotels=[],
             flights=[],
             weather_summary="Hot and humid.",
@@ -59,7 +69,7 @@ class TestTripItineraryValidation:
         """DayPlan validates with morning/afternoon/evening activities."""
         day = DayPlan(
             day_number=1,
-            date=date(2025, 7, 1),
+            date=Date(2025, 7, 1),
             morning=[
                 Activity(
                     name="Star Ferry",
@@ -86,8 +96,8 @@ class TestTripItineraryValidation:
         """HotelInfo validates with required fields."""
         hotel = HotelInfo(
             name="Grand Hyatt Hong Kong",
-            check_in_date=date(2025, 7, 1),
-            check_out_date=date(2025, 7, 3),
+            check_in_date=Date(2025, 7, 1),
+            check_out_date=Date(2025, 7, 3),
             price_per_night_min_hkd=1800.0,
             price_per_night_max_hkd=2500.0,
         )
@@ -102,14 +112,14 @@ class TestTripItineraryValidation:
             flight_number="CX883",
             departure_airport="HKG",
             arrival_airport="LAX",
-            departure_time=datetime(2025, 7, 1, 0, 30, 0),
-            arrival_time=datetime(2025, 7, 1, 21, 30, 0),
+            departure_time=DateTime(2025, 7, 1, 0, 30, 0),
+            arrival_time=DateTime(2025, 7, 1, 21, 30, 0),
             stops=[
                 FlightStop(
                     airport_code="NRT",
                     airport_name="Narita International Airport",
-                    arrival_time=datetime(2025, 7, 1, 8, 0, 0),
-                    departure_time=datetime(2025, 7, 1, 10, 0, 0),
+                    arrival_time=DateTime(2025, 7, 1, 8, 0, 0),
+                    departure_time=DateTime(2025, 7, 1, 10, 0, 0),
                 ),
             ],
         )
@@ -125,8 +135,8 @@ class TestTripItineraryValidation:
             flight_number="CX883",
             departure_airport="HKG",
             arrival_airport="LAX",
-            departure_time=datetime(2025, 7, 1, 0, 30, 0),
-            arrival_time=datetime(2025, 7, 1, 21, 30, 0),
+            departure_time=DateTime(2025, 7, 1, 0, 30, 0),
+            arrival_time=DateTime(2025, 7, 1, 21, 30, 0),
             stops=[],
             booking_url="https://www.google.com/flights/CX883",
         )
@@ -140,8 +150,8 @@ class TestTripItineraryValidation:
             flight_number="CX883",
             departure_airport="HKG",
             arrival_airport="LAX",
-            departure_time=datetime(2025, 7, 1, 0, 30, 0),
-            arrival_time=datetime(2025, 7, 1, 21, 30, 0),
+            departure_time=DateTime(2025, 7, 1, 0, 30, 0),
+            arrival_time=DateTime(2025, 7, 1, 21, 30, 0),
             stops=[],
         )
         assert flight.booking_url is None
