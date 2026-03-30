@@ -3,13 +3,115 @@
 Tavily API: POST https://api.tavily.com/search
 SerpAPI fallback: GET https://serpapi.com/search.json?q={query}&api_key={SERPAPI_KEY}
 
-Returns:
-    {
-        "results": [
-            {"title": "...", "url": "...", "snippet": "..."},
-            ...
-        ]
-    }
+--- Tavily Full Response Schema ---
+{
+    "query": str,                          # original search query
+    "answer": str | None,                  # AI-generated answer (when include_answer=True)
+    "results": [
+        {
+            "title": str,                  # page title
+            "url": str,                    # website URL
+            "content": str,                # short content snippet
+            "score": float | None,         # relevance score (0.0 - 1.0)
+            "raw_content": str | None,     # full raw content (when include_raw_content=True)
+            "images": list[str] | None,    # image URLs
+            "favicon": str | None,         # favicon URL
+        },
+        ...
+    ],
+    "images": list[str] | None,             # aggregated image URLs
+    "usage": {"credits_used": int},         # API credits consumed
+}
+
+--- SerpAPI Full Response Schema (organic_results) ---
+{
+    "search_metadata": {...},
+    "search_parameters": {...},
+    "search_information": {...},
+    "organic_results": [
+        {
+            "position": int,                         # result position in the list
+            "title": str,                             # page title
+            "link": str | None,                       # website URL (may be absent; use displayed_link)
+            "redirect_link": str | None,              # full Google redirect URL
+            "displayed_link": str,                    # human-readable displayed URL
+            "thumbnail": str | None,                 # result thumbnail image
+            "favicon": str | None,                    # favicon URL
+            "snippet": str,                            # content snippet
+            "snippet_highlighted_words": list[str],   # words highlighted in snippet
+            "date": str | None,                       # date published (when available)
+            "author": str | None,                     # author (for articles)
+            "cited_by": int | None,                   # citation count
+            "extracted_cited_by": str | None,
+            "cached_page_link": str | None,
+            "about_page_link": str | None,
+            "about_page_serpapi_link": str | None,
+            "related_pages_link": str | None,
+            "about_this_result": {
+                "source": {
+                    "description": str | None,
+                    "source_info_link": str | None,
+                    "security": str,               # e.g., "secure"
+                    "icon": str | None,
+                }
+            } | None,
+            "source": str | None,                    # data source name (e.g., "Wikipedia")
+            "sitelinks": {
+                "inline": [
+                    {"title": str, "link": str},
+                    ...
+                ],
+                "expanded": [
+                    {"title": str, "link": str},
+                    ...
+                ]
+            } | None,
+            "rich_snippet": {
+                "top": {
+                    "detected_extensions": {
+                        "rating": float | None,      # e.g., 4 (stars)
+                        "reviews": int | None,       # e.g., 2251
+                        "price_range": str | None,   # e.g., "$$"
+                    },
+                    "extensions": list[str] | None,
+                } | None,
+                "bottom": {...} | None,
+            } | None,
+            "rich_snippet_table": {...} | None,
+            "extensions": list[str] | None,
+            "reviews": int | None,                    # review count
+            "ratings": float | None,                 # star rating
+            "answers": str | None,                   # direct answer
+            "related_questions": [...],
+            "carousel": [...],
+        },
+        ...
+    ],
+    "images": [...],
+    "knowledge_graph": {...} | None,
+    "top_stories": [...],
+    "shopping_results": [...],
+    "local_results": {...} | None,
+    "recipes_results": [...] | None,
+}
+
+# Notes:
+# - Minimum 3 results always returned. Total = 3 + start (if start parameter is used).
+# - The "link" field may be absent; prefer "displayed_link" for display purposes.
+# - rich_snippet.top.detected_extensions commonly contains rating, reviews, price_range.
+
+--- Our Normalized Output Schema ---
+{
+    "results": [
+        {
+            "title": str,                  # page title
+            "url": str,                    # website URL
+            "snippet": str,                # content snippet (max 300 chars)
+            "score": float | None,         # relevance score (Tavily only; None for SerpAPI)
+        },
+        ...
+    ]
+}
 """
 
 from __future__ import annotations
@@ -74,6 +176,7 @@ async def _search_tavily(query: str) -> dict:
                         "snippet": (r.get("raw_content") or r.get("content") or "")[
                             :300
                         ],
+                        "score": r.get("score"),
                     }
                     for r in data.get("results", [])
                 ]
