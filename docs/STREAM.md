@@ -43,14 +43,13 @@ Display chunk 3
 Setting Up the Basics
 Start by defining your tools and creating the model.
 
-
 Copy
 import vertexai
 from vertexai.generative_models import (
-    GenerativeModel,
-    FunctionDeclaration,
-    Part,
-    Tool,
+GenerativeModel,
+FunctionDeclaration,
+Part,
+Tool,
 )
 
 # Initialize Vertex AI
@@ -58,61 +57,63 @@ from vertexai.generative_models import (
 vertexai.init(project="your-project-id", location="us-central1")
 
 # Define tools that the model can call
+
 get_stock_price = FunctionDeclaration(
-    name="get_stock_price",
-    description="Get the current stock price for a ticker symbol.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "ticker": {
-                "type": "string",
-                "description": "Stock ticker symbol, e.g. GOOGL"
-            }
-        },
-        "required": ["ticker"]
-    }
+name="get_stock_price",
+description="Get the current stock price for a ticker symbol.",
+parameters={
+"type": "object",
+"properties": {
+"ticker": {
+"type": "string",
+"description": "Stock ticker symbol, e.g. GOOGL"
+}
+},
+"required": ["ticker"]
+}
 )
 
 get_company_info = FunctionDeclaration(
-    name="get_company_info",
-    description="Get basic company information like sector, market cap, and CEO.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "company_name": {
-                "type": "string",
-                "description": "The company name"
-            }
-        },
-        "required": ["company_name"]
-    }
+name="get_company_info",
+description="Get basic company information like sector, market cap, and CEO.",
+parameters={
+"type": "object",
+"properties": {
+"company_name": {
+"type": "string",
+"description": "The company name"
+}
+},
+"required": ["company_name"]
+}
 )
 
 # Bundle tools together
+
 finance_tools = Tool(
-    function_declarations=[get_stock_price, get_company_info]
+function_declarations=[get_stock_price, get_company_info]
 )
 
 # Create the model with tools
+
 model = GenerativeModel(
-    "gemini-2.0-flash",
-    tools=[finance_tools],
-    system_instruction=(
-        "You are a financial analysis assistant. Use the available tools "
-        "to get real-time data when answering questions about stocks "
-        "and companies."
-    )
+"gemini-2.0-flash",
+tools=[finance_tools],
+system_instruction=(
+"You are a financial analysis assistant. Use the available tools "
+"to get real-time data when answering questions about stocks "
+"and companies."
+)
 )
 Implementing the Tool Executor
 You need a function that executes tool calls when the model requests them.
-
 
 Copy
 import random
 
 def execute_tool(function_name, args):
-    """Execute a tool and return the result."""
-    args_dict = dict(args)
+"""Execute a tool and return the result."""
+args_dict = dict(args)
 
     if function_name == "get_stock_price":
         # In production, call a real stock API
@@ -138,15 +139,14 @@ def execute_tool(function_name, args):
 
     else:
         return {"error": f"Unknown function: {function_name}"}
+
 Handling the Streaming Response
 The core of a streaming function call application is the response handler. It needs to process text chunks, detect function calls, execute them, and continue the stream.
 
-
 Copy
 def process_streaming_response(chat, user_message):
-    """Process a streaming response that may include function calls."""
-    # Send message with streaming
-    responses = chat.send_message(user_message, stream=True)
+"""Process a streaming response that may include function calls.""" # Send message with streaming
+responses = chat.send_message(user_message, stream=True)
 
     collected_text = ""
     function_calls = []
@@ -195,18 +195,18 @@ def process_streaming_response(chat, user_message):
     return collected_text
 
 # Usage
+
 chat = model.start_chat()
 result = process_streaming_response(
-    chat,
-    "What is the current stock price for Google and tell me about the company?"
+chat,
+"What is the current stock price for Google and tell me about the company?"
 )
 Building a Full Streaming Agent
 Here is a more robust agent that handles multiple rounds of function calls and maintains conversation state.
 
-
 Copy
 class StreamingFunctionAgent:
-    """A streaming agent that can call functions during response generation."""
+"""A streaming agent that can call functions during response generation."""
 
     def __init__(self, model, tool_executor, max_tool_rounds=3):
         self.model = model
@@ -273,53 +273,54 @@ class StreamingFunctionAgent:
         return full_response
 
 # Create the agent
+
 agent = StreamingFunctionAgent(
-    model=model,
-    tool_executor=execute_tool
+model=model,
+tool_executor=execute_tool
 )
 
 # Use the agent
+
 print("Agent: ", end="")
 response = agent.process_message(
-    "Compare Google and Microsoft stock prices and give me a brief analysis."
+"Compare Google and Microsoft stock prices and give me a brief analysis."
 )
 print()
 Handling Errors During Streaming
 Function calls can fail. You need graceful error handling that does not break the stream.
 
-
 Copy
 def safe_tool_executor(function_name, args):
-    """Execute a tool with error handling."""
-    try:
-        result = execute_tool(function_name, args)
-        return result
-    except TimeoutError:
-        return {"error": "Tool call timed out. The service may be temporarily unavailable."}
-    except ConnectionError:
-        return {"error": "Could not connect to the external service."}
-    except Exception as e:
-        return {"error": f"Tool execution failed: {str(e)}"}
+"""Execute a tool with error handling."""
+try:
+result = execute_tool(function_name, args)
+return result
+except TimeoutError:
+return {"error": "Tool call timed out. The service may be temporarily unavailable."}
+except ConnectionError:
+return {"error": "Could not connect to the external service."}
+except Exception as e:
+return {"error": f"Tool execution failed: {str(e)}"}
 
 # Use the safe executor with the agent
+
 agent = StreamingFunctionAgent(
-    model=model,
-    tool_executor=safe_tool_executor
+model=model,
+tool_executor=safe_tool_executor
 )
 Web Application Integration
 In a web application, you stream responses to the client using server-sent events (SSE) or WebSockets.
-
 
 Copy
 from flask import Flask, Response, request
 import json
 
-app = Flask(__name__)
+app = Flask(**name**)
 
 @app.route("/chat", methods=["POST"])
 def chat_endpoint():
-    """Stream a chat response with function calling."""
-    user_message = request.json.get("message", "")
+"""Stream a chat response with function calling."""
+user_message = request.json.get("message", "")
 
     def generate():
         agent = StreamingFunctionAgent(
@@ -348,6 +349,7 @@ def chat_endpoint():
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     return Response(generate(), mimetype="text/event-stream")
+
 Performance Considerations
 Streaming function call applications have unique performance characteristics:
 
@@ -360,13 +362,13 @@ Copy
 import asyncio
 
 async def execute_tools_parallel(function_calls):
-    """Execute multiple tool calls in parallel."""
-    tasks = []
-    for fc in function_calls:
-        task = asyncio.create_task(
-            async_execute_tool(fc.name, dict(fc.args))
-        )
-        tasks.append((fc.name, task))
+"""Execute multiple tool calls in parallel."""
+tasks = []
+for fc in function_calls:
+task = asyncio.create_task(
+async_execute_tool(fc.name, dict(fc.args))
+)
+tasks.append((fc.name, task))
 
     results = []
     for name, task in tasks:
@@ -379,5 +381,6 @@ async def execute_tools_parallel(function_calls):
         )
 
     return results
+
 Wrapping Up
 Streaming function calls create responsive AI agents that feel fast even when they need to fetch external data. The implementation requires careful handling of interleaved text and function call chunks, but the patterns shown here give you a solid foundation. Start with a simple agent, add error handling, then integrate with your web framework. Monitor streaming performance and tool call latency with OneUptime to ensure your agent stays responsive as usage grows.
