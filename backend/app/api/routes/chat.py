@@ -13,13 +13,13 @@ from sqlalchemy.orm import Session
 from app.agent.tools import (
     ALL_TOOLS,
     build_embed_url,
-    get_attraction,
-    get_transport,
-    get_weather,
-    search_flights,
-    search_hotels,
-    search_web,
 )
+from app.agent.tools.attractions import get_attraction
+from app.agent.tools.weather import get_weather
+from app.agent.tools.search import search_web
+from app.agent.tools.flights import search_flights
+from app.agent.tools.hotels import search_hotels
+from app.agent.tools.transport import get_transport
 from app.api.deps import get_current_user_optional, get_db
 from app.core.config import settings
 from app.db.models.chat_session import ChatSession
@@ -34,6 +34,7 @@ from app.services.message_service import (
     update_message_content,
 )
 
+# Sync tool_map for the Gemini SDK (uses _make_sync wrappers internally)
 tool_map = {
     "get_attraction": get_attraction,
     "get_weather": get_weather,
@@ -293,10 +294,24 @@ async def _stream_agent_thoughts(
     prefs_section = f"User preferences: {preferences}" if preferences else ""
     system_instruction = (
         "You are a helpful travel planning assistant backed by real-time data. "
-        "IMPORTANT: Use tools to fetch live information — flights, hotels, attractions, weather. "
-        "Never invent prices or times. "
+        "IMPORTANT RULES:\n"
+        "1. EVERY itinerary item (flight, hotel, attraction, transport, weather) MUST be "
+        "fetched via a tool call — never invent prices, times, or names.\n"
+        "2. If you don't have data for something, use the search tool first.\n"
+        "3. When a user asks about weather, you MUST call the get_weather tool.\n"
+        "4. Always use HKD for prices when the destination is in Asia.\n"
+        "5. Dates should be ISO 8601 format (YYYY-MM-DD).\n"
         f"{prefs_section}"
     )
+
+    logger.bind(
+        event="system_instruction",
+        service="chat",
+        trace_id=trace_id,
+        system_instruction=system_instruction,
+        tools_count=len(ALL_TOOLS),
+        tool_names=[t.__name__ for t in ALL_TOOLS],
+    ).info("System instruction prepared")
 
     messages: list[types.Content] = [
         types.Content(
@@ -310,9 +325,9 @@ async def _stream_agent_thoughts(
         system_instruction=system_instruction,
         tools=ALL_TOOLS,
         thinking_config=types.ThinkingConfig(
-            thinking_level=types.ThinkingLevel.MINIMAL,
-            include_thoughts=True,
+            thinking_level=types.ThinkingLevel.MINIMAL
         ),
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
 
     current_messages: list[types.Content] = list(messages)
@@ -345,6 +360,58 @@ async def _stream_agent_thoughts(
             yield f"data: {json.dumps({'status': 'thinking'})}\n\n"
 
             async for chunk in _sync_stream_to_async(stream):
+                # Track function call IDs we've already processed from chunk.function_calls
+                # to avoid double-counting when the same calls appear in candidate.content.parts
+                chunk_function_call_ids: set[str] = set()
+                # Map function_call.id -> thought_signature from candidate parts
+                thought_signatures: dict[str, bytes] = {}
+
+                # Check for function_calls directly on chunk (not just in candidates)
+                chunk_function_calls = getattr(chunk, "function_calls", None)
+                if chunk_function_calls:
+                    logger.bind(
+                        event="function_calls_on_chunk",
+                        service="chat",
+                        trace_id=trace_id,
+                        function_calls=repr(chunk_function_calls)[:500],
+                    ).info(
+                        f"Function calls found on chunk directly: {chunk_function_calls}"
+                    )
+                    # First pass: collect thought_signatures from candidate content parts
+                    if candidates := chunk.candidates:
+                        candidate = candidates[0]
+                        if candidate.content and candidate.content.parts:
+                            for p in candidate.content.parts:
+                                fc = getattr(p, "function_call", None)
+                                if fc:
+                                    ts = getattr(p, "thought_signature", None)
+                                    if ts:
+                                        fc_id = getattr(fc, "id", None)
+                                        if fc_id:
+                                            thought_signatures[fc_id] = ts
+                    # Convert chunk-level function calls to Part format
+                    for fc in chunk_function_calls:
+                        fc_id = getattr(fc, "id", None)
+                        if fc_id:
+                            chunk_function_call_ids.add(fc_id)
+                        ts = thought_signatures.get(fc_id) if fc_id else None
+                        part = types.Part(function_call=fc, thought_signature=ts)
+                        round_func_parts.append(part)
+
+                # Log raw chunk for debugging
+                logger.bind(
+                    event="raw_chunk",
+                    service="chat",
+                    trace_id=trace_id,
+                    chunk=str(chunk)[:500],
+                    chunk_repr=repr(chunk),
+                    has_candidates=hasattr(chunk, "candidates")
+                    and chunk.candidates is not None,
+                    has_function_calls=chunk_function_calls is not None,
+                ).debug(
+                    f"Raw chunk received: candidates={hasattr(chunk, 'candidates')}, candidates_value={getattr(chunk, 'candidates', None)}, function_calls={chunk_function_calls}"
+                )
+
                 candidates = chunk.candidates
                 usage = getattr(chunk, "usage_metadata", None)
                 if usage and prompt_tokens_first_chunk is None:
@@ -376,13 +443,43 @@ async def _stream_agent_thoughts(
                     )
 
                 if not candidates:
+                    logger.bind(
+                        event="no_candidates",
+                        service="chat",
+                        trace_id=trace_id,
+                    ).warning("Chunk has no candidates")
                     continue
                 candidate = candidates[0]
+                logger.bind(
+                    event="candidate",
+                    service="chat",
+                    trace_id=trace_id,
+                    finish_reason=str(candidate.finish_reason)
+                    if hasattr(candidate, "finish_reason")
+                    else None,
+                    content_repr=repr(candidate.content)[:300]
+                    if candidate.content
+                    else None,
+                    content_type=type(candidate.content).__name__
+                    if candidate.content
+                    else None,
+                ).debug(
+                    f"Candidate: finish_reason={getattr(candidate, 'finish_reason', None)}, content={repr(candidate.content)[:200]}"
+                )
                 if not candidate.content:
                     continue
                 content = candidate.content
                 parts = getattr(content, "parts", None)
                 if not parts:
+                    logger.bind(
+                        event="no_parts",
+                        service="chat",
+                        trace_id=trace_id,
+                        parts_value=parts,
+                        content_type=type(content).__name__,
+                    ).warning(
+                        f"No parts in content: parts={parts}, content_type={type(content).__name__}"
+                    )
                     continue
 
                 finish_reason = (
@@ -392,29 +489,50 @@ async def _stream_agent_thoughts(
                 )
 
                 for part in parts:
+                    # Log full part for debugging
+                    logger.bind(
+                        event="part",
+                        service="chat",
+                        trace_id=trace_id,
+                        part_type=type(part).__name__,
+                        part_repr=repr(part)[:300],
+                        part_attrs={
+                            attr: getattr(part, attr, None)
+                            for attr in dir(part)
+                            if not attr.startswith("_")
+                        },
+                    ).debug(
+                        f"Part received: thought={getattr(part, 'thought', None)}, text={repr(getattr(part, 'text', None))[:100]}, func={getattr(part, 'function_call', None)}"
+                    )
+
                     part_thought = getattr(part, "thought", None)
                     part_text = getattr(part, "text", None)
                     part_func = getattr(part, "function_call", None)
 
-                    if part_thought and part_text:
-                        chunk_index += 1
-                        logger.bind(
-                            event="stream_chunk",
-                            service="chat",
-                            trace_id=trace_id,
-                            model=model,
-                            chunk_index=chunk_index,
-                            chunk_type="thought",
-                            thought=part_text,
-                            thought_length=len(part_text),
-                            finish_reason=finish_reason,
-                        ).info(f"Stream thought chunk: {part_text}")
-                        yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
-                    elif part_func:
+                    if part_thought:
+                        if part_text:
+                            chunk_index += 1
+                            logger.bind(
+                                event="stream_chunk",
+                                service="chat",
+                                trace_id=trace_id,
+                                model=model,
+                                chunk_index=chunk_index,
+                                chunk_type="thought",
+                                thought=part_text,
+                                thought_length=len(part_text),
+                                finish_reason=finish_reason,
+                            ).info(f"Stream thought chunk: {part_text}")
+                            yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
+                    elif part_func is not None:
+                        # Skip if this function call was already processed from chunk.function_calls
+                        fc_id = getattr(part_func, "id", None)
+                        if fc_id and fc_id in chunk_function_call_ids:
+                            continue
                         chunk_index += 1
                         round_func_parts.append(part)
                         fc_name = getattr(part_func, "name", None) or ""
-                        fc_id = getattr(part_func, "id", None)
+                        fc_args = dict(part_func.args) if part_func.args else {}
                         logger.bind(
                             event="stream_chunk",
                             service="chat",
@@ -424,9 +542,10 @@ async def _stream_agent_thoughts(
                             chunk_type="function_call",
                             tool_name=fc_name,
                             function_call_id=fc_id,
+                            tool_args=fc_args,
                             finish_reason=finish_reason,
-                        ).info("Stream function_call chunk")
-                    elif part_text:
+                        ).info(f"Stream function_call chunk: {fc_name}({fc_args})")
+                    elif part_text is not None and part_text != "":
                         chunk_index += 1
                         logger.bind(
                             event="stream_chunk",
@@ -443,8 +562,35 @@ async def _stream_agent_thoughts(
                         _flush_assistant_text()
                         yield f"data: {json.dumps({'chunk': part_text})}\n\n"
                         round_text_parts.append(part)
+                    else:
+                        # part_thought is None/falsy, part_func is None/falsy, part_text is None or ''
+                        logger.bind(
+                            event="skipped_part",
+                            service="chat",
+                            trace_id=trace_id,
+                            part_thought=part_thought,
+                            part_text=repr(part_text),
+                            part_func=part_func,
+                        ).warning(
+                            f"Skipped part: thought={part_thought}, text={repr(part_text)}, func={part_func}"
+                        )
 
                 await asyncio.sleep(0)
+
+            # Log what was collected
+            logger.bind(
+                event="stream_round_complete",
+                service="chat",
+                trace_id=trace_id,
+                tool_round=tool_round + 1,
+                round_text_parts_count=len(round_text_parts),
+                round_func_parts_count=len(round_func_parts),
+                round_func_parts_repr=[repr(p)[:200] for p in round_func_parts],
+                assistant_text_length=len(assistant_text),
+                assistant_text_preview=assistant_text[:200],
+            ).info(
+                f"Stream round complete: text_parts={len(round_text_parts)}, func_parts={len(round_func_parts)}, assistant_text='{assistant_text[:100]}...'"
+            )
 
             # Log usage metadata on final chunk of this round
             if usage:
@@ -522,6 +668,9 @@ async def _stream_agent_thoughts(
                             tool_duration_ms = round(
                                 time_mod.perf_counter() * 1000 - tool_start, 1
                             )
+                            import traceback
+
+                            tb_str = traceback.format_exc()
                             logger.bind(
                                 event="tool_error",
                                 service="chat",
@@ -529,6 +678,7 @@ async def _stream_agent_thoughts(
                                 model=model,
                                 tool_name=tool_name,
                                 tool_error=f"{type(e).__name__}: {str(e)}",
+                                tool_traceback=tb_str,
                                 tool_duration_ms=tool_duration_ms,
                             ).error("Tool exception")
                             result = {"error": str(e)}
@@ -623,6 +773,8 @@ async def _stream_agent_thoughts(
         yield f"data: {json.dumps({'done': True})}\n\n"
 
     except Exception as e:
+        import traceback as tb_mod
+
         latency_ms = round(time_mod.perf_counter() * 1000 - start_ms, 1)
         logger.bind(
             event="stream_error",
@@ -634,6 +786,7 @@ async def _stream_agent_thoughts(
             total_tool_calls=total_tool_calls,
             error_type=type(e).__name__,
             error_message=str(e)[:300],
+            error_traceback=tb_mod.format_exc(),
         ).error("Stream error")
         _flush_assistant_text()
         yield f"data: {json.dumps({'error': f'An error occurred: {e}'})}\n\n"

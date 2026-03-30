@@ -23,6 +23,7 @@ Returns:
 from __future__ import annotations
 
 import httpx
+from loguru import logger
 
 from app.core.config import settings
 
@@ -41,6 +42,8 @@ async def search_flights(
     if date:
         query += f" on {date}"
 
+    logger.info(f"[flights] Searching: {query}")
+
     params = {
         "q": query,
         "api_key": settings.SERPAPI_KEY,
@@ -54,8 +57,10 @@ async def search_flights(
                 params=params,
             )
             if response.status_code == 401:
+                logger.warning("[flights] Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "flights": []}
             if response.status_code == 404:
+                logger.warning("[flights] Flights endpoint not found")
                 return {"error": "SerpAPI flights endpoint not found", "flights": []}
             response.raise_for_status()
             data = response.json()
@@ -83,10 +88,16 @@ async def search_flights(
                 }
             )
 
+        logger.info(
+            f"[flights] Found {len(flights)} flights for {departure} → {arrival}"
+        )
         return {"flights": flights}
     except httpx.TimeoutException:
+        logger.warning(f"[flights] Timeout: {query}")
         return {"error": f"Timeout searching flights: {query}", "flights": []}
     except httpx.HTTPStatusError as e:
+        logger.warning(f"[flights] HTTP error: {e}")
         return {"error": f"HTTP error searching flights: {e}", "flights": []}
     except Exception as e:
+        logger.warning(f"[flights] Failed: {e}")
         return {"error": f"Flight search failed: {e}", "flights": []}

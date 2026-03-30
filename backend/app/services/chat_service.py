@@ -60,6 +60,22 @@ async def invoke_agent(
                 timeout=TIMEOUT_SECONDS,
             )
             latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+
+            # Extract summary from itinerary for logging
+            tool_summary: dict = {}
+            if itinerary:
+                tool_summary = {
+                    "destination": itinerary.destination,
+                    "duration_days": itinerary.duration_days,
+                    "flights_count": len(itinerary.flights) if itinerary.flights else 0,
+                    "hotels_count": len(itinerary.hotels) if itinerary.hotels else 0,
+                    "days_count": len(itinerary.days) if itinerary.days else 0,
+                    "total_activities": sum(
+                        len(day.morning) + len(day.afternoon) + len(day.evening)
+                        for day in (itinerary.days or [])
+                    ),
+                }
+
             logger.bind(
                 event="invoke_done",
                 service="chat",
@@ -67,6 +83,7 @@ async def invoke_agent(
                 latency_ms=latency_ms,
                 message_type="itinerary",
                 destination=itinerary.destination if itinerary else None,
+                tool_summary=tool_summary,
             ).info("invoke_agent done — itinerary")
 
             # Save trip to DB if db session provided and user is authenticated

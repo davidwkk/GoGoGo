@@ -22,6 +22,7 @@ Returns:
 from __future__ import annotations
 
 import httpx
+from loguru import logger
 
 from app.core.config import settings
 
@@ -41,6 +42,8 @@ async def search_hotels(
     if check_out:
         query += f" check-out {check_out}"
 
+    logger.info(f"[hotels] Searching: {query}")
+
     params = {
         "q": query,
         "api_key": settings.SERPAPI_KEY,
@@ -54,8 +57,10 @@ async def search_hotels(
                 params=params,
             )
             if response.status_code == 401:
+                logger.warning("[hotels] Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "hotels": []}
             if response.status_code == 404:
+                logger.warning("[hotels] Hotels endpoint not found")
                 return {"error": "SerpAPI hotels endpoint not found", "hotels": []}
             response.raise_for_status()
             data = response.json()
@@ -93,10 +98,14 @@ async def search_hotels(
                 }
             )
 
+        logger.info(f"[hotels] Found {len(hotels)} hotels in {destination}")
         return {"hotels": hotels}
     except httpx.TimeoutException:
+        logger.warning(f"[hotels] Timeout for: {destination}")
         return {"error": f"Timeout searching hotels for: {destination}", "hotels": []}
     except httpx.HTTPStatusError as e:
+        logger.warning(f"[hotels] HTTP error: {e}")
         return {"error": f"HTTP error searching hotels: {e}", "hotels": []}
     except Exception as e:
+        logger.warning(f"[hotels] Failed: {e}")
         return {"error": f"Hotel search failed: {e}", "hotels": []}

@@ -315,6 +315,8 @@ async def run_agent_structured(
     messages.append(user_content)
 
     # ── Phase 1: Tool-calling loop ──────────────────────────────────────────
+    tool_results: dict[str, dict] = {}
+
     for iteration in range(MAX_ITERATIONS):
         logger.bind(
             event="agent_iteration",
@@ -324,11 +326,14 @@ async def run_agent_structured(
             iteration=iteration + 1,
             max_iterations=MAX_ITERATIONS,
             phase="tool_gathering",
-        ).debug("Agent iteration")
+        ).info(f"Agent iteration {iteration + 1}/{MAX_ITERATIONS}")
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=ALL_TOOLS,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=True
+            ),
             thinking_config=types.ThinkingConfig(
                 thinking_level=types.ThinkingLevel.MINIMAL
             ),
@@ -350,7 +355,35 @@ async def run_agent_structured(
         _log_usage(response)
 
         if response.candidates and response.candidates[0].content:
-            messages.append(response.candidates[0].content)
+            content = response.candidates[0].content
+            messages.append(content)
+
+            # Log the model's raw response for diagnostics
+            content_parts = []
+            if content.parts:
+                for part in content.parts:
+                    if hasattr(part, "text") and part.text:
+                        content_parts.append({"text": part.text[:200]})
+                    elif hasattr(part, "function_call") and part.function_call:
+                        fc = part.function_call
+                        content_parts.append(
+                            {
+                                "function_call": {
+                                    "name": fc.name,
+                                    "args": dict(fc.args) if fc.args else {},
+                                }
+                            }
+                        )
+            logger.bind(
+                event="llm_response",
+                service="agent",
+                trace_id=trace_id,
+                iteration=iteration + 1,
+                content_parts=content_parts,
+                has_function_calls=bool(response.function_calls),
+            ).info(
+                f"LLM response: {len(content_parts)} parts, function_calls={response.function_calls is not None}"
+            )
 
         if response.function_calls:
             for fc in response.function_calls:
@@ -384,6 +417,21 @@ async def run_agent_structured(
                     model=model,
                 )
 
+                # Track tool result for summary
+                if tool_name not in tool_results:
+                    tool_results[tool_name] = result
+                else:
+                    # Aggregate multiple calls to same tool
+                    existing = tool_results[tool_name]
+                    if "flights" in existing and "flights" in result:
+                        existing["flights"].extend(result["flights"])
+                    elif "hotels" in existing and "hotels" in result:
+                        existing["hotels"].extend(result["hotels"])
+                    elif "attractions" in existing and "attractions" in result:
+                        existing["attractions"].extend(result["attractions"])
+                    elif "results" in existing and "results" in result:
+                        existing["results"].extend(result["results"])
+
                 fn_response = types.Part.from_function_response(
                     name=tool_name,
                     response=result,
@@ -392,15 +440,55 @@ async def run_agent_structured(
                 messages.append(tool_content)
         else:
             # No more function calls — tool gathering complete
+            # Build summary of gathered data
+            tools_summary = {}
+            for name, res in tool_results.items():
+                if "flights" in res:
+                    tools_summary[name] = {
+                        "type": "flights",
+                        "count": len(res["flights"]),
+                    }
+                elif "hotels" in res:
+                    tools_summary[name] = {
+                        "type": "hotels",
+                        "count": len(res["hotels"]),
+                    }
+                elif "weather" in res:
+                    tools_summary[name] = {
+                        "type": "weather",
+                        "data": res.get("weather"),
+                    }
+                elif "attractions" in res:
+                    tools_summary[name] = {
+                        "type": "attractions",
+                        "count": len(res["attractions"]),
+                    }
+                elif "results" in res:
+                    tools_summary[name] = {
+                        "type": "search",
+                        "count": len(res["results"]),
+                    }
+                elif "options" in res:
+                    tools_summary[name] = {
+                        "type": "transport",
+                        "count": len(res["options"]),
+                    }
+                elif "error" in res:
+                    tools_summary[name] = {"type": "error", "error": res["error"]}
+
             logger.bind(
-                event="phase_complete",
+                event="tool_gathering_summary",
                 service="agent",
                 trace_id=trace_id,
                 model=model,
                 phase="tool_gathering",
                 iterations=iteration + 1,
                 max_iterations=MAX_ITERATIONS,
-            ).info("Tool gathering complete, moving to structured output")
+                tools_called=list(tool_results.keys()),
+                tools_summary=tools_summary,
+            ).info(
+                f"Tool gathering complete — {len(tool_results)} tools called, moving to structured output"
+            )
             break
     else:
         logger.bind(
