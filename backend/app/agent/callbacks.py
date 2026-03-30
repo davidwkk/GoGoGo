@@ -5,6 +5,60 @@ from __future__ import annotations
 from loguru import logger
 
 
+def _summarize_tool_result(tool_name: str, result: dict) -> dict:
+    """Extract useful summary info from tool results for logging."""
+    summary: dict = {"result_count": 0, "has_error": "error" in result}
+
+    if "error" in result:
+        summary["error"] = result["error"]
+        return summary
+
+    if "flights" in result:
+        flights = result.get("flights", [])
+        summary["result_count"] = len(flights)
+        summary["items"] = [
+            {"airline": f.get("airline"), "price": f.get("price")} for f in flights[:3]
+        ]
+    elif "hotels" in result:
+        hotels = result.get("hotels", [])
+        summary["result_count"] = len(hotels)
+        summary["items"] = [
+            {"name": h.get("name"), "price": h.get("price_per_night")}
+            for h in hotels[:3]
+        ]
+    elif "weather" in result:
+        summary["weather"] = result.get("weather")
+    elif "options" in result:
+        options = result.get("options", [])
+        summary["result_count"] = len(options)
+        summary["items"] = [
+            {
+                "type": o.get("type"),
+                "duration": o.get("duration"),
+                "cost": o.get("cost"),
+            }
+            for o in options[:3]
+        ]
+    elif "results" in result:
+        results = result.get("results", [])
+        summary["result_count"] = len(results)
+        summary["items"] = [
+            {"title": r.get("title", "")[:50], "url": r.get("url", "")}
+            for r in results[:3]
+        ]
+    elif "attractions" in result:
+        attractions = result.get("attractions", [])
+        summary["result_count"] = len(attractions)
+        summary["items"] = [
+            {"name": a.get("name"), "category": a.get("category")}
+            for a in attractions[:3]
+        ]
+    elif isinstance(result, dict) and not result:
+        summary["empty"] = True
+
+    return summary
+
+
 def log_tool_call(
     tool_name: str,
     args: dict,
@@ -13,6 +67,8 @@ def log_tool_call(
     model: str | None = None,
 ) -> None:
     """Called when the agent makes a tool call."""
+    # Build readable args string
+    args_str = ", ".join(f"{k}={repr(v)}" for k, v in args.items())
     logger.bind(
         event="tool_call",
         service=service,
@@ -20,7 +76,7 @@ def log_tool_call(
         model=model,
         tool=tool_name,
         tool_args=args,
-    ).info("Agent tool call")
+    ).info(f"[TOOL CALL] {tool_name}({args_str})")
 
 
 def log_tool_response(
@@ -43,17 +99,17 @@ def log_tool_response(
             tool_duration_ms=duration_ms,
         ).warning("Agent tool error")
     else:
-        # Truncate long results for logging
-        preview = str(result)[:500]
+        # Extract meaningful summary from result
+        summary = _summarize_tool_result(tool_name, result)
         logger.bind(
             event="tool_response",
             service=service,
             trace_id=trace_id,
             model=model,
             tool=tool_name,
-            tool_result_preview=preview,
+            tool_result_summary=summary,
             tool_duration_ms=duration_ms,
-        ).info("Agent tool response")
+        ).info(f"Agent tool response — {summary.get('result_count', 0)} results")
 
 
 def log_agent_finish(

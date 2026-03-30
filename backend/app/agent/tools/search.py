@@ -15,19 +15,30 @@ Returns:
 from __future__ import annotations
 
 import httpx
+from loguru import logger
 
 from app.core.config import settings
 
 
 async def search_web(query: str) -> dict:
     """Search the web using Tavily with SerpAPI fallback."""
+    logger.info(f"[search] Query: {query}")
+
     if settings.TAVILY_API_KEY:
         result = await _search_tavily(query)
         if "error" not in result:
+            logger.info(
+                f"[search] Tavily returned {len(result.get('results', []))} results"
+            )
             return result
 
     # Fallback to SerpAPI
-    return await _search_serpapi(query)
+    result = await _search_serpapi(query)
+    if "error" not in result:
+        logger.info(
+            f"[search] SerpAPI returned {len(result.get('results', []))} results"
+        )
+    return result
 
 
 async def _search_tavily(query: str) -> dict:
@@ -50,6 +61,7 @@ async def _search_tavily(query: str) -> dict:
                 headers=headers,
             )
             if response.status_code == 401:
+                logger.warning("[search] Invalid Tavily API key")
                 return {"error": "Invalid Tavily API key", "results": []}
             response.raise_for_status()
             data = response.json()
@@ -65,16 +77,20 @@ async def _search_tavily(query: str) -> dict:
                 ]
             }
     except httpx.TimeoutException:
+        logger.warning(f"[search] Tavily timeout for: {query}")
         return {"error": f"Timeout during Tavily search for: {query}", "results": []}
     except httpx.HTTPStatusError as e:
+        logger.warning(f"[search] Tavily HTTP error: {e}")
         return {"error": f"Tavily HTTP error: {e}", "results": []}
     except Exception as e:
+        logger.warning(f"[search] Tavily failed: {e}")
         return {"error": f"Tavily search failed: {e}", "results": []}
 
 
 async def _search_serpapi(query: str) -> dict:
     """Fallback search via SerpAPI."""
     if not settings.SERPAPI_KEY:
+        logger.warning("[search] No search API key configured")
         return {
             "error": "No search API key configured (Tavily or SerpAPI)",
             "results": [],
@@ -93,6 +109,7 @@ async def _search_serpapi(query: str) -> dict:
                 params=params,
             )
             if response.status_code == 401:
+                logger.warning("[search] Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "results": []}
             response.raise_for_status()
             data = response.json()
@@ -109,8 +126,11 @@ async def _search_serpapi(query: str) -> dict:
 
             return {"results": results}
     except httpx.TimeoutException:
+        logger.warning(f"[search] SerpAPI timeout for: {query}")
         return {"error": f"Timeout during SerpAPI search for: {query}", "results": []}
     except httpx.HTTPStatusError as e:
+        logger.warning(f"[search] SerpAPI HTTP error: {e}")
         return {"error": f"SerpAPI HTTP error: {e}", "results": []}
     except Exception as e:
+        logger.warning(f"[search] SerpAPI failed: {e}")
         return {"error": f"SerpAPI search failed: {e}", "results": []}

@@ -24,6 +24,7 @@ Returns:
 from __future__ import annotations
 
 import httpx
+from loguru import logger
 
 from app.core.config import settings
 
@@ -44,6 +45,7 @@ async def get_transport(
     """
     cache_key = (from_location.strip().lower(), to_location.strip().lower())
     if cache_key in _cache:
+        logger.info(f"[transport] Cache hit: {from_location} → {to_location}")
         result = _cache[cache_key]
         if mode:
             result = {
@@ -59,6 +61,8 @@ async def get_transport(
         return {"error": "SERPAPI_KEY not configured", "options": []}
 
     query = f"transport from {from_location} to {to_location}"
+    logger.info(f"[transport] Searching: {query}")
+
     params = {
         "q": query,
         "api_key": settings.SERPAPI_KEY,
@@ -72,6 +76,7 @@ async def get_transport(
                 params=params,
             )
             if response.status_code == 401:
+                logger.warning("[transport] Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "options": []}
             response.raise_for_status()
             data = response.json()
@@ -99,6 +104,10 @@ async def get_transport(
         result = {"options": options}
         _cache[cache_key] = result
 
+        logger.info(
+            f"[transport] Found {len(options)} options: {from_location} → {to_location}"
+        )
+
         if mode:
             result = {
                 "options": [
@@ -108,11 +117,14 @@ async def get_transport(
         return result
 
     except httpx.TimeoutException:
+        logger.warning(f"[transport] Timeout: {from_location} → {to_location}")
         return {
             "error": f"Timeout fetching transport: {from_location} → {to_location}",
             "options": [],
         }
     except httpx.HTTPStatusError as e:
+        logger.warning(f"[transport] HTTP error: {e}")
         return {"error": f"HTTP error fetching transport: {e}", "options": []}
     except Exception as e:
+        logger.warning(f"[transport] Failed: {e}")
         return {"error": f"Transport search failed: {e}", "options": []}
