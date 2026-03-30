@@ -11,6 +11,7 @@ Key implementation notes:
 
 from __future__ import annotations
 
+import time
 from google.genai import Client, types
 from loguru import logger
 
@@ -104,16 +105,25 @@ async def run_agent(
     user_message: str,
     conversation_history: list[types.Content] | None = None,
     preferences: dict | None = None,
+    trace_id: str | None = None,
 ) -> str:
     """
     Run the agent loop in chat (non-structured) mode.
     Returns plain text response.
     """
-    logger.info(f"[AGENT] run_agent called with message: {user_message[:100]}...")
-    logger.info(f"[AGENT] Preferences: {preferences}")
+    model = settings.GEMINI_LITE_MODEL
+
+    start_ms = time.perf_counter() * 1000
+    logger.bind(
+        event="agent_start",
+        service="agent",
+        trace_id=trace_id,
+        model=model,
+        agent_mode="chat",
+        user_message_preview=user_message[:100],
+    ).info("Agent start")
     client = _get_client()
     system_instruction = _build_system_prompt(preferences)
-    logger.info(f"[AGENT] System instruction: {system_instruction[:200]}...")
 
     messages: list[types.Content] = list(conversation_history or [])
 
@@ -124,8 +134,15 @@ async def run_agent(
     messages.append(user_content)
 
     for iteration in range(MAX_ITERATIONS):
-        logger.info(f"[AGENT] Iteration {iteration + 1}/{MAX_ITERATIONS}")
-        logger.debug(f"[AGENT] Message history length: {len(messages)}")
+        logger.bind(
+            event="agent_iteration",
+            service="agent",
+            trace_id=trace_id,
+            model=model,
+            iteration=iteration + 1,
+            max_iterations=MAX_ITERATIONS,
+            message_history_len=len(messages),
+        ).debug("Agent iteration")
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
@@ -135,60 +152,83 @@ async def run_agent(
             ),
         )
 
-        logger.info(
-            f"[AGENT] Calling generate_content with model: {settings.GEMINI_LITE_MODEL}"
-        )
+        logger.bind(
+            event="llm_call",
+            service="agent",
+            trace_id=trace_id,
+            model=model,
+            iteration=iteration + 1,
+        ).info("Calling generate_content")
         response = client.models.generate_content(
-            model=settings.GEMINI_LITE_MODEL,
+            model=model,
             contents=messages,
             config=config,
         )
-        logger.info(
-            f"[AGENT] Response received. Has function_calls: {bool(response.function_calls)}"
-        )
-        if response.text:
-            logger.info(
-                f"[AGENT] Response text (first 200 chars): {response.text[:200]}"
-            )
+        token_usage = _log_usage(response)
 
         # Append model content as-is (preserves thought_signature)
         if response.candidates and response.candidates[0].content:
-            logger.debug("[AGENT] Appending candidate content to history")
             messages.append(response.candidates[0].content)
 
         # Handle function calls
         if response.function_calls:
-            logger.info(
-                f"[AGENT] Handling {len(response.function_calls)} function call(s)"
-            )
             for fc in response.function_calls:
                 tool_name = fc.name
                 if not tool_name:
                     continue
                 args = dict(fc.args) if fc.args else {}
-                logger.info(
-                    f"[AGENT] Tool call: {tool_name} with args: {str(args)[:200]}"
+                log_tool_call(
+                    tool_name, args, trace_id=trace_id, service="agent", model=model
                 )
-                log_tool_call(tool_name, args)
 
                 # Execute tool
                 tool_fn = _TOOL_MAP.get(tool_name)
+                tool_start = time.perf_counter() * 1000
+                tool_duration_ms: float | None = None
                 if tool_fn:
                     try:
                         result = await tool_fn(**args)
-                        logger.info(
-                            f"[AGENT] Tool {tool_name} result: {str(result)[:200]}"
-                        )
+                        tool_duration_ms = time.perf_counter() * 1000 - tool_start
+                        logger.bind(
+                            event="tool_result",
+                            service="agent",
+                            trace_id=trace_id,
+                            model=model,
+                            tool=tool_name,
+                            tool_result_preview=str(result)[:200],
+                            tool_duration_ms=round(tool_duration_ms, 1),
+                        ).info("Tool result")
                     except Exception as e:
-                        logger.error(
-                            f"[AGENT] Tool {tool_name} exception: {type(e).__name__}: {str(e)}"
-                        )
+                        tool_duration_ms = time.perf_counter() * 1000 - tool_start
+                        logger.bind(
+                            event="tool_error",
+                            service="agent",
+                            trace_id=trace_id,
+                            model=model,
+                            tool=tool_name,
+                            tool_error=f"{type(e).__name__}: {str(e)}",
+                            tool_duration_ms=round(tool_duration_ms, 1),
+                        ).error("Tool exception")
                         result = {"error": str(e)}
                 else:
-                    logger.warning(f"[AGENT] Unknown tool: {tool_name}")
+                    logger.bind(
+                        event="tool_error",
+                        service="agent",
+                        trace_id=trace_id,
+                        model=model,
+                        tool=tool_name,
+                        tool_error=f"Unknown tool: {tool_name}",
+                    ).warning("Unknown tool")
                     result = {"error": f"Unknown tool: {tool_name}"}
 
-                log_tool_response(tool_name, result)
+                log_tool_response(
+                    tool_name,
+                    result,
+                    duration_ms=tool_duration_ms,
+                    trace_id=trace_id,
+                    service="agent",
+                    model=model,
+                )
 
                 # Build tool response part
                 fn_response = types.Part.from_function_response(
@@ -200,13 +240,34 @@ async def run_agent(
         else:
             # No function calls — plain text response, loop done
             text = response.text or ""
-            token_usage = _log_usage(response)
-            logger.info(f"[AGENT] Final response (text only): {text[:200]}...")
-            log_agent_finish(text, token_usage)
+            latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+            logger.bind(
+                event="agent_finish",
+                service="agent",
+                trace_id=trace_id,
+                model=model,
+                agent_mode="chat",
+                iterations=iteration + 1,
+                max_iterations=MAX_ITERATIONS,
+                response_preview=text[:200],
+                token_usage=token_usage,
+                latency_ms=latency_ms,
+            ).info("Agent finished")
             return text
 
     # Max iterations reached
-    logger.warning("[AGENT] Max iterations reached")
+    latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+    logger.bind(
+        event="agent_finish",
+        service="agent",
+        trace_id=trace_id,
+        model=model,
+        agent_mode="chat",
+        iterations=MAX_ITERATIONS,
+        max_iterations=MAX_ITERATIONS,
+        latency_ms=latency_ms,
+        tool_error="max_iterations_reached",
+    ).warning("Agent max iterations")
     return "I ran out of time planning your trip. Please try again."
 
 
@@ -214,6 +275,7 @@ async def run_agent_structured(
     user_message: str,
     conversation_history: list[types.Content] | None = None,
     preferences: dict | None = None,
+    trace_id: str | None = None,
 ) -> TripItinerary:
     """
     Run the full agent loop then end with a structured generate_content call
@@ -223,6 +285,18 @@ async def run_agent_structured(
     Phase 1: Tool-calling loop (no response_schema) — gather all data via tools.
     Phase 2: Separate generate_content WITH response_json_schema → TripItinerary.
     """
+    model = settings.GEMINI_MODEL
+    start_ms = time.perf_counter() * 1000
+
+    logger.bind(
+        event="agent_start",
+        service="agent",
+        trace_id=trace_id,
+        model=model,
+        agent_mode="structured",
+        user_message_preview=user_message[:100],
+    ).info("Agent start")
+
     client = _get_client()
     system_instruction = _build_system_prompt(preferences)
 
@@ -242,9 +316,15 @@ async def run_agent_structured(
 
     # ── Phase 1: Tool-calling loop ──────────────────────────────────────────
     for iteration in range(MAX_ITERATIONS):
-        logger.debug(
-            f"[AGENT] Iteration {iteration + 1}/{MAX_ITERATIONS} (tool gathering)"
-        )
+        logger.bind(
+            event="agent_iteration",
+            service="agent",
+            trace_id=trace_id,
+            model=model,
+            iteration=iteration + 1,
+            max_iterations=MAX_ITERATIONS,
+            phase="tool_gathering",
+        ).debug("Agent iteration")
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
@@ -254,8 +334,16 @@ async def run_agent_structured(
             ),
         )
 
+        logger.bind(
+            event="llm_call",
+            service="agent",
+            trace_id=trace_id,
+            model=model,
+            iteration=iteration + 1,
+            phase="tool_gathering",
+        ).info("Calling generate_content")
         response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
+            model=model,
             contents=messages,
             config=config,
         )
@@ -270,18 +358,31 @@ async def run_agent_structured(
                 if not tool_name:
                     continue
                 args = dict(fc.args) if fc.args else {}
-                log_tool_call(tool_name, args)
+                log_tool_call(
+                    tool_name, args, trace_id=trace_id, service="agent", model=model
+                )
 
                 tool_fn = _TOOL_MAP.get(tool_name)
+                tool_start = time.perf_counter() * 1000
                 if tool_fn:
                     try:
                         result = await tool_fn(**args)
+                        tool_duration_ms = time.perf_counter() * 1000 - tool_start
                     except Exception as e:
+                        tool_duration_ms = time.perf_counter() * 1000 - tool_start
                         result = {"error": str(e)}
                 else:
+                    tool_duration_ms = None
                     result = {"error": f"Unknown tool: {tool_name}"}
 
-                log_tool_response(tool_name, result)
+                log_tool_response(
+                    tool_name,
+                    result,
+                    duration_ms=tool_duration_ms,
+                    trace_id=trace_id,
+                    service="agent",
+                    model=model,
+                )
 
                 fn_response = types.Part.from_function_response(
                     name=tool_name,
@@ -291,12 +392,36 @@ async def run_agent_structured(
                 messages.append(tool_content)
         else:
             # No more function calls — tool gathering complete
-            logger.info("[AGENT] Tool gathering complete, moving to structured output")
+            logger.bind(
+                event="phase_complete",
+                service="agent",
+                trace_id=trace_id,
+                model=model,
+                phase="tool_gathering",
+                iterations=iteration + 1,
+                max_iterations=MAX_ITERATIONS,
+            ).info("Tool gathering complete, moving to structured output")
             break
     else:
-        logger.warning("[AGENT] Max iterations reached during tool gathering")
+        logger.bind(
+            event="agent_finish",
+            service="agent",
+            trace_id=trace_id,
+            model=model,
+            agent_mode="structured",
+            iterations=MAX_ITERATIONS,
+            max_iterations=MAX_ITERATIONS,
+            tool_error="max_iterations_reached",
+        ).warning("Agent max iterations")
 
     # ── Phase 2: Structured output ─────────────────────────────────────────
+    logger.bind(
+        event="llm_call",
+        service="agent",
+        trace_id=trace_id,
+        model=model,
+        phase="structured_output",
+    ).info("Calling structured generate_content")
     structured_prompt = types.Content(
         role="user",
         parts=[
@@ -319,7 +444,7 @@ async def run_agent_structured(
     )
 
     response = client.models.generate_content(
-        model=settings.GEMINI_MODEL,
+        model=model,
         contents=all_contents,
         config=config,
     )
@@ -327,12 +452,28 @@ async def run_agent_structured(
     raw_text = response.text
     text = raw_text if raw_text is not None else ""
     token_usage = _log_usage(response)
-    log_agent_finish(text, token_usage)
+    latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+
+    log_agent_finish(
+        text,
+        token_usage=token_usage,
+        latency_ms=latency_ms,
+        trace_id=trace_id,
+        service="agent",
+        model=model,
+        agent_mode="structured",
+    )
 
     try:
         return TripItinerary.model_validate_json(text)
     except Exception as e:
-        logger.error(
-            f"[AGENT] Failed to parse TripItinerary: {e} | response={text[:500]}"
-        )
+        logger.bind(
+            event="parse_error",
+            service="agent",
+            trace_id=trace_id,
+            model=model,
+            error=f"{type(e).__name__}: {e}",
+            response_preview=text[:500],
+            latency_ms=latency_ms,
+        ).error("Failed to parse TripItinerary")
         raise
