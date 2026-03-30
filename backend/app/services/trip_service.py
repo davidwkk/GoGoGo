@@ -76,7 +76,9 @@ def _generate_title(destination: str, days: list) -> str:
     dates = [d.date for d in days if d.date]
     if not dates:
         return f"Trip to {destination}"
-    return f"{destination} ({dates[0]}{' - ' + dates[-1] if len(dates) > 1 else ''})"
+    if len(dates) > 1:
+        return f"{destination} ({dates[0]} - {dates[-1]})"
+    return f"{destination} ({dates[0]})"
 
 
 def _trip_to_response(trip) -> dict:

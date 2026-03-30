@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime as DateTime
 from uuid import UUID
 
 from pydantic import (
@@ -70,6 +70,6 @@ class UserResponse(BaseModel):
     email: EmailStr
     username: str
     preferences: UserPreference | None = None
-    created_at: datetime
+    created_at: DateTime
 
     model_config = ConfigDict(from_attributes=True)

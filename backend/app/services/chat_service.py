@@ -150,6 +150,8 @@ async def invoke_agent(
             message_type="error",
         )
     except Exception as e:
+        import traceback
+
         latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
         error_msg = str(e).lower()
         user_text: str
@@ -173,14 +175,32 @@ async def invoke_agent(
             )
         else:
             user_text = f"An error occurred: {e}"
+
+        # Extract additional context from google.genai errors
+        error_code = getattr(e, "code", None)
+        error_status = getattr(e, "status", None)
+        error_details = getattr(e, "details", None)
+
         logger.bind(
             event="invoke_error",
             service="chat",
             trace_id=trace_id,
             latency_ms=latency_ms,
+            user_id=str(user_id) if user_id else None,
+            session_id=session_id_str,
+            generate_plan=generate_plan,
+            user_message_preview=user_message[:100],
             error_type=type(e).__name__,
-            error_message=str(e)[:300],
-        ).error("invoke_agent exception")
+            error_code=error_code,
+            error_status=error_status,
+            error_details=error_details,
+            error_message=str(e),
+            error_traceback=traceback.format_exc(),
+        ).error(
+            f"invoke_agent exception | type={type(e).__name__} | "
+            f"code={error_code} | status={error_status} | "
+            f"msg={str(e)[:500]}"
+        )
         return ChatResponse(
             session_id=session_id_str,
             text=user_text,
