@@ -163,6 +163,7 @@ async def stream_agent_response(
             round_text_parts: list[types.Part] = []
             round_func_parts: list[types.Part] = []
             usage: types.GenerateContentResponseUsageMetadata | None = None
+            round_finish_reason: str | None = None
 
             yield f"data: {json.dumps({'status': 'thinking'})}\n\n"
 
@@ -309,6 +310,8 @@ async def stream_agent_response(
                     if hasattr(candidate, "finish_reason") and candidate.finish_reason
                     else None
                 )
+                # Capture for post-stream check
+                round_finish_reason = finish_reason
 
                 for part in parts:
                     # Log full part for debugging
@@ -461,6 +464,29 @@ async def stream_agent_response(
                 ).info(
                     f"Round token usage at +{_elapsed_ms()}ms: prompt={prompt_tokens_first_chunk}, candidates={cand_tokens}, total={total_tokens}"
                 )
+
+            # Check if LLM is done - if finish_reason is STOP and no function calls, exit early
+            if round_finish_reason == "STOP" and not round_func_parts:
+                latency_ms = round(time_mod.perf_counter() * 1000 - start_ms, 1)
+                _flush_assistant_text()
+                logger.bind(
+                    event="stream_done",
+                    service="chat",
+                    trace_id=trace_id,
+                    model=model,
+                    elapsed_ms=_elapsed_ms(),
+                    latency_ms=latency_ms,
+                    total_chunks=chunk_index,
+                    total_tool_calls=total_tool_calls,
+                    prompt_tokens=prompt_tokens_first_chunk,
+                    candidates_tokens=cumulative_candidates_tokens,
+                    total_tokens=cumulative_total_tokens,
+                    assistant_text_length=len(assistant_text),
+                ).info(
+                    f"Stream completed at +{_elapsed_ms()}ms (LLM done, no more tools) — tokens: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
+                )
+                yield f"data: {json.dumps({'done': True})}\n\n"
+                return
 
             # Phase 2: Execute tools AFTER stream is exhausted
             tool_response_parts: list[types.Part] = []
