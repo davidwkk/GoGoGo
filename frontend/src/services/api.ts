@@ -124,6 +124,9 @@ export const chatService = {
             } else if (data.thought) {
               // Agent is thinking — pass through with special prefix for UI display
               yield `__THOUGHT__:${data.thought}`;
+            } else if (data.model_thought) {
+              // Model's internal reasoning (when include_thoughts=True)
+              yield `__MODEL_THOUGHT__:${data.model_thought}`;
             } else if (data.tool_call) {
               // Tool call started — pass through for UI display
               yield `__TOOL_CALL__:${data.tool_call}`;

@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "everything-claude-code@everything-claude-code": true
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -34,5 +31,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "everything-claude-code@everything-claude-code": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   }
 }

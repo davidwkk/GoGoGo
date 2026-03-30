@@ -246,7 +246,8 @@ async def _stream_agent_thoughts(
                     system_instruction=system_instruction,
                     tools=ALL_TOOLS,
                     thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel.MINIMAL
+                        thinking_level=types.ThinkingLevel.MEDIUM,
+                        include_thoughts=True,
                     ),
                 )
 
@@ -256,9 +257,24 @@ async def _stream_agent_thoughts(
                     config=config,
                 )
 
-                # Append model content as-is to preserve thought_signature
+                # Extract thought summaries from the model response (when include_thoughts=True)
                 if response.candidates and response.candidates[0].content:
-                    messages.append(response.candidates[0].content)
+                    content = response.candidates[0].content
+                    if hasattr(content, "parts") and content.parts:
+                        for part in content.parts:
+                            # part.thought contains the thought summary text when include_thoughts=True
+                            thought_text = getattr(part, "thought", None)
+                            if thought_text and isinstance(thought_text, str):
+                                preview = (
+                                    thought_text[:200] + "..."
+                                    if len(thought_text) > 200
+                                    else thought_text
+                                )
+                                logger.info(
+                                    f"[_stream_agent_thoughts] Thought: {preview}"
+                                )
+                                yield f"data: {json.dumps({'model_thought': thought_text})}\n\n"
+                    messages.append(content)
 
                 if response.function_calls:
                     for fc in response.function_calls:
