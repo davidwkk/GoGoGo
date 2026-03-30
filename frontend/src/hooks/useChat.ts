@@ -122,9 +122,8 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                 '| fullText length:',
                 fullText.length
               );
-              // On first text chunk, create the assistant message and clear thinking steps
+              // On first text chunk, create the assistant message (keep thinking steps visible)
               if (msgId === null) {
-                clearThinkingSteps();
                 msgId = addMessage({ role: 'assistant', content: chunk });
                 setThinking(false);
               } else {

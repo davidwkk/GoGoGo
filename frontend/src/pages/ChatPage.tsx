@@ -9,29 +9,140 @@ import { useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
 import { Calendar, MapPin, MessageSquare, PlusCircle, Settings, Sparkles, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-function StreamingMessage({ content }: { content: string }) {
-  const [displayLength, setDisplayLength] = useState(0);
-  const contentRef = useRef(content);
-  const CHAR_DELAY = 30;
+// Dynamic thinking placeholder that cycles based on elapsed time
+const THINKING_MESSAGES = [
+  { threshold: 0, text: 'Thinking...' },
+  { threshold: 3000, text: 'Thinking really hard...' },
+  { threshold: 8000, text: 'Searching the web...' },
+  { threshold: 15000, text: 'Finding the best deals...' },
+  { threshold: 25000, text: 'Checking flight prices...' },
+  { threshold: 35000, text: 'Looking up hotels...' },
+  { threshold: 50000, text: 'Almost there...' },
+];
 
-  // Always keep ref in sync — no dependency array, no re-triggering anything
-  contentRef.current = content;
+function useDynamicThinking(isLoading: boolean, hasMessages: boolean): string {
+  const [message, setMessage] = useState(THINKING_MESSAGES[0].text);
+  const startTimeRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (isLoading && !hasMessages) {
+      // Start timing when loading begins with no messages
+      if (startTimeRef.current === null) {
+        startTimeRef.current = Date.now();
+      }
+
+      if (!intervalRef.current) {
+        intervalRef.current = setInterval(() => {
+          if (startTimeRef.current === null) return;
+          const elapsed = Date.now() - startTimeRef.current;
+
+          // Find the most recent matching threshold
+          let current = THINKING_MESSAGES[0].text;
+          for (const { threshold, text } of THINKING_MESSAGES) {
+            if (elapsed >= threshold) {
+              current = text;
+            }
+          }
+          setMessage(current);
+        }, 2000);
+      }
+    } else {
+      // Reset when loading stops
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      startTimeRef.current = null;
+      setMessage(THINKING_MESSAGES[0].text);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isLoading, hasMessages]);
+
+  return message;
+}
+import { useNavigate } from 'react-router-dom';
+
+function StreamingMessage({
+  content,
+  isDone,
+  onComplete,
+}: {
+  content: string;
+  isDone?: boolean;
+  onComplete?: () => void;
+}) {
+  const [displayLength, setDisplayLength] = useState(0);
+  const contentRef = useRef(content);
+  const lastUpdateRef = useRef(Date.now());
+  const isDoneRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasCompletedRef = useRef(false);
+
+  // Always keep refs in sync (but DON'T reset isDoneRef here - it tracks prop changes)
+  contentRef.current = content;
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    lastUpdateRef.current = Date.now();
+    hasCompletedRef.current = false;
+    // Only reset isDoneRef on mount, not on every isDone prop change
+    isDoneRef.current = false;
+
+    // Start or restart the interval
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
       setDisplayLength(prev => {
-        if (prev >= contentRef.current.length) {
-          clearInterval(interval);
+        const remaining = contentRef.current.length - prev;
+        if (remaining <= 0) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          // Signal completion once finished
+          if (!hasCompletedRef.current) {
+            hasCompletedRef.current = true;
+            onCompleteRef.current?.();
+          }
           return prev;
+        }
+        // Adaptive jump: if done, finish fast; if large content, speed up
+        if (isDoneRef.current) {
+          // Done streaming - jump to finish quickly
+          const jump = Math.min(remaining, Math.ceil(remaining / 3));
+          const newPos = prev + jump;
+          if (newPos >= contentRef.current.length && !hasCompletedRef.current) {
+            hasCompletedRef.current = true;
+            onCompleteRef.current?.();
+          }
+          return newPos;
+        }
+        if (remaining > 500) {
+          // Large remaining content - speed up significantly
+          return prev + 10;
+        }
+        if (remaining > 200) {
+          // Moderate content - speed up moderately
+          return prev + 3;
         }
         return prev + 1;
       });
-    }, CHAR_DELAY);
+    }, 20);
 
-    return () => clearInterval(interval);
-  }, []); // Mount once. One interval. No stale closures.
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  // Update isDoneRef when isDone prop changes (separate effect to avoid interval restart)
+  useEffect(() => {
+    isDoneRef.current = isDone ?? false;
+  }, [isDone]);
 
   const isStreaming = displayLength < content.length;
 
@@ -218,6 +329,11 @@ export function ChatPage() {
 
   const [demoItinerary, setDemoItinerary] = useState<TripItinerary | null>(null);
   const [showDemoLoading, setShowDemoLoading] = useState(false);
+  const [thinkingExpanded, setThinkingExpanded] = useState(false);
+  // Track when the last streaming message has finished typing
+  const [typewriterDone, setTypewriterDone] = useState(false);
+
+  const dynamicThinkingMessage = useDynamicThinking(isLoading, messages.length > 0);
 
   const startNewChat = () => {
     // Cancel any in-progress stream first
@@ -227,6 +343,7 @@ export function ChatPage() {
     clearMessages();
     setSessionId(null);
     setDemoItinerary(null);
+    setTypewriterDone(false);
     localStorage.removeItem('guest_uid');
   };
 
@@ -258,7 +375,16 @@ export function ChatPage() {
 
   // Determine if the last message is still streaming
   const lastMsg = messages[messages.length - 1];
-  const isStreaming = isLoading && lastMsg?.role === 'assistant';
+  // Show StreamingMessage when: last message is assistant AND typewriter not yet done
+  // This ensures typewriter completes even after isLoading becomes false
+  const isStreaming = lastMsg?.role === 'assistant' && !typewriterDone;
+
+  // Reset typewriterDone when loading starts for a new message
+  useEffect(() => {
+    if (isLoading) {
+      setTypewriterDone(false);
+    }
+  }, [isLoading]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -339,7 +465,37 @@ export function ChatPage() {
               <div className="flex items-center justify-center rounded-full bg-muted size-12 animate-pulse">
                 <MessageSquare className="size-5 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">Thinking...</p>
+              <p className="text-sm text-muted-foreground">{dynamicThinkingMessage}</p>
+            </div>
+          )}
+
+          {/* Collapsible thinking process — shown above assistant message when content has started */}
+          {!isThinking && thinkingSteps.length > 0 && (
+            <div className="flex justify-start">
+              <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                <button
+                  onClick={() => setThinkingExpanded(!thinkingExpanded)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <span className="text-base">💭</span>
+                  <span>Thinking process ({thinkingSteps.length} steps)</span>
+                  <span className={`transition-transform ${thinkingExpanded ? 'rotate-90' : ''}`}>
+                    ▶
+                  </span>
+                </button>
+                {thinkingExpanded && (
+                  <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
+                    {thinkingSteps.map((step, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                      >
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -351,14 +507,18 @@ export function ChatPage() {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                  className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
                     msg.role === 'user'
                       ? 'bg-black text-white rounded-br-md'
                       : 'bg-muted text-foreground rounded-bl-md'
                   }`}
                 >
                   {isLastAssistant && isStreaming ? (
-                    <StreamingMessage content={msg.content} />
+                    <StreamingMessage
+                      content={msg.content}
+                      isDone={!isLoading}
+                      onComplete={() => setTypewriterDone(true)}
+                    />
                   ) : (
                     msg.content
                   )}
@@ -368,7 +528,7 @@ export function ChatPage() {
           })}
 
           {/* Thinking indicator — shown while waiting for first content */}
-          {(isThinking || thinkingSteps.length > 0) && (
+          {isThinking && (
             <div className="flex justify-start">
               <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md space-y-1">
                 {thinkingSteps.length > 0 ? (
@@ -386,7 +546,7 @@ export function ChatPage() {
                     ))}
                   </div>
                 ) : (
-                  <span className="animate-pulse">Thinking...</span>
+                  <span className="animate-pulse">{dynamicThinkingMessage}</span>
                 )}
               </div>
             </div>
