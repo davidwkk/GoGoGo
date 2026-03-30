@@ -1,0 +1,134 @@
+{
+  "destination": "Hong Kong",
+  "duration_days": 3,
+  "summary": "A relaxing 3-day getaway in Hong Kong focusing on iconic views, harbor cruises, and mid-range comfort, ideal for a peaceful city break.",
+  "days": [
+    {
+      "day_number": 1,
+      "date": "2025-05-23",
+      "morning": [
+        {
+          "name": "Arrival and Hotel Check-in",
+          "description": "Arrive at HKG and take the Airport Express to Kowloon for a smooth transition to your hotel.",
+          "location": "Hong Kong International Airport",
+          "map_url": null,
+          "estimated_duration_minutes": 90
+        }
+      ],
+      "afternoon": [
+        {
+          "name": "Victoria Peak Tram",
+          "description": "Take the historic funicular railway to Victoria Peak for panoramic views of the city skyline and harbor.",
+          "location": "Peak Tram Lower Terminus, Central",
+          "map_url": null,
+          "estimated_duration_minutes": 180
+        }
+      ],
+      "evening": [
+        {
+          "name": "Star Ferry and Tsim Sha Tsui Promenade",
+          "description": "Enjoy a relaxing ferry ride across Victoria Harbour followed by a stroll along the promenade to see the Symphony of Lights.",
+          "location": "Tsim Sha Tsui, Kowloon",
+          "map_url": null,
+          "estimated_duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "day_number": 2,
+      "date": "2025-05-24",
+      "morning": [
+        {
+          "name": "Nan Lian Garden and Chi Lin Nunnery",
+          "description": "Explore these serene Tang Dynasty-style gardens and wooden temple complex for a quiet morning.",
+          "location": "Diamond Hill, Kowloon",
+          "map_url": null,
+          "estimated_duration_minutes": 120
+        }
+      ],
+      "afternoon": [
+        {
+          "name": "West Kowloon Cultural District",
+          "description": "Relax at the Art Park or visit the M+ Museum to experience Hong Kong's modern artistic side by the water.",
+          "location": "West Kowloon",
+          "map_url": null,
+          "estimated_duration_minutes": 180
+        }
+      ],
+      "evening": [
+        {
+          "name": "Temple Street Night Market",
+          "description": "A leisurely walk through the market for snacks, local crafts, and a glimpse of traditional street life.",
+          "location": "Jordan, Kowloon",
+          "map_url": null,
+          "estimated_duration_minutes": 90
+        }
+      ]
+    },
+    {
+      "day_number": 3,
+      "date": "2025-05-25",
+      "morning": [
+        {
+          "name": "Ngong Ping 360 Cable Car",
+          "description": "A scenic 25-minute cable car ride over Lantau Island providing spectacular mountain and sea views.",
+          "location": "Tung Chung, Lantau Island",
+          "map_url": null,
+          "estimated_duration_minutes": 150
+        }
+      ],
+      "afternoon": [
+        {
+          "name": "Po Lin Monastery and Big Buddha",
+          "description": "Visit the world-famous Tian Tan Buddha and enjoy a vegetarian lunch at the monastery.",
+          "location": "Ngong Ping, Lantau Island",
+          "map_url": null,
+          "estimated_duration_minutes": 120
+        }
+      ],
+      "evening": [
+        {
+          "name": "Departure",
+          "description": "Take the S1 bus or taxi back to the airport for your evening flight home.",
+          "location": "Hong Kong International Airport",
+          "map_url": null,
+          "estimated_duration_minutes": 60
+        }
+      ]
+    }
+  ],
+  "hotels": [
+    {
+      "name": "Eaton HK",
+      "check_in_date": "2025-05-23",
+      "check_out_date": "2025-05-25",
+      "price_per_night_min_hkd": 1100,
+      "price_per_night_max_hkd": 1500
+    }
+  ],
+  "flights": [
+    {
+      "direction": "outbound",
+      "airline": "Cathay Pacific",
+      "flight_number": "CX881",
+      "departure_airport": "LAX",
+      "arrival_airport": "HKG",
+      "departure_time": "2025-05-22T23:55:00",
+      "arrival_time": "2025-05-23T05:40:00",
+      "stops": [],
+      "booking_url": null
+    },
+    {
+      "direction": "return",
+      "airline": "Cathay Pacific",
+      "flight_number": "CX880",
+      "departure_airport": "HKG",
+      "arrival_airport": "LAX",
+      "departure_time": "2025-05-25T22:15:00",
+      "arrival_time": "2025-05-25T20:05:00",
+      "stops": [],
+      "booking_url": null
+    }
+  ],
+  "weather_summary": "Expected temperatures between 24°C and 29°C with high humidity and occasional tropical showers typical of late May."
+}
