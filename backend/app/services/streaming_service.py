@@ -3,7 +3,7 @@
 import asyncio
 import json
 import time as time_mod
-from typing import Any, AsyncIterator
+from typing import AsyncIterator
 from uuid import uuid4
 
 from google.genai import Client, types
@@ -178,14 +178,18 @@ async def stream_agent_response(
                 # Check for function_calls directly on chunk (not just in candidates)
                 chunk_function_calls = getattr(chunk, "function_calls", None)
                 if chunk_function_calls:
+                    fc_names = [
+                        getattr(fc, "name", None) for fc in chunk_function_calls
+                    ]
                     logger.bind(
-                        event="function_calls_on_chunk",
+                        event="chunk_function_calls",
                         service="chat",
                         trace_id=trace_id,
                         elapsed_ms=chunk_start_ms,
-                        function_calls=repr(chunk_function_calls),
+                        count=len(chunk_function_calls),
+                        tools=fc_names,
                     ).info(
-                        f"Function calls found on chunk directly at +{chunk_start_ms}ms: {chunk_function_calls}"
+                        f"Chunk has {len(chunk_function_calls)} function call(s): {fc_names}"
                     )
                     # First pass: collect thought_signatures from candidate content parts
                     if candidates := chunk.candidates:
@@ -208,30 +212,13 @@ async def stream_agent_response(
                         part = types.Part(function_call=fc, thought_signature=ts)
                         round_func_parts.append(part)
 
-                # Log raw chunk for debugging
-                logger.bind(
-                    event="raw_chunk",
-                    service="chat",
-                    trace_id=trace_id,
-                    elapsed_ms=chunk_start_ms,
-                    chunk=str(chunk),
-                    chunk_repr=repr(chunk),
-                    has_candidates=hasattr(chunk, "candidates")
-                    and chunk.candidates is not None,
-                    has_function_calls=chunk_function_calls is not None,
-                ).debug(
-                    f"Raw chunk received at +{chunk_start_ms}ms: candidates={hasattr(chunk, 'candidates')}, candidates_value={getattr(chunk, 'candidates', None)}, function_calls={chunk_function_calls}"
-                )
-
-                candidates = chunk.candidates
+                # Accumulate usage metadata
                 usage = getattr(chunk, "usage_metadata", None)
                 if usage:
-                    # Accumulate tokens from each chunk (prompt only set on first chunk)
                     if prompt_tokens_first_chunk is None:
                         prompt_tokens_first_chunk = getattr(
                             usage, "prompt_token_count", None
                         )
-                    # Candidates and total are cumulative on final chunk
                     chunk_cand_tokens = getattr(usage, "candidates_token_count", None)
                     chunk_total_tokens = getattr(usage, "total_token_count", None)
                     if chunk_cand_tokens is not None:
@@ -239,68 +226,15 @@ async def stream_agent_response(
                     if chunk_total_tokens is not None:
                         cumulative_total_tokens = chunk_total_tokens
 
-                    logger.bind(
-                        event="stream_chunk",
-                        service="chat",
-                        trace_id=trace_id,
-                        model=model,
-                        elapsed_ms=chunk_start_ms,
-                        chunk_index=chunk_index,
-                        chunk_type="usage",
-                        usage={
-                            "prompt_tokens": prompt_tokens_first_chunk,
-                            "candidates_tokens": cumulative_candidates_tokens,
-                            "total_tokens": cumulative_total_tokens,
-                            "prompt_tokens_details": str(
-                                getattr(usage, "prompt_tokens_details", None)
-                            ),
-                            "candidates_tokens_details": str(
-                                getattr(usage, "candidates_tokens_details", None)
-                            ),
-                        },
-                    ).debug(
-                        f"Stream usage at +{chunk_start_ms}ms: prompt={prompt_tokens_first_chunk}, candidates={cumulative_candidates_tokens}, total={cumulative_total_tokens}"
-                    )
-
+                candidates = chunk.candidates
                 if not candidates:
-                    logger.bind(
-                        event="no_candidates",
-                        service="chat",
-                        trace_id=trace_id,
-                        elapsed_ms=chunk_start_ms,
-                    ).warning(f"Chunk has no candidates at +{chunk_start_ms}ms")
                     continue
                 candidate = candidates[0]
-                logger.bind(
-                    event="candidate",
-                    service="chat",
-                    trace_id=trace_id,
-                    elapsed_ms=chunk_start_ms,
-                    finish_reason=str(candidate.finish_reason)
-                    if hasattr(candidate, "finish_reason")
-                    else None,
-                    content_repr=repr(candidate.content) if candidate.content else None,
-                    content_type=type(candidate.content).__name__
-                    if candidate.content
-                    else None,
-                ).debug(
-                    f"Candidate at +{chunk_start_ms}ms: finish_reason={getattr(candidate, 'finish_reason', None)}, content={repr(candidate.content)}"
-                )
                 if not candidate.content:
                     continue
                 content = candidate.content
                 parts = getattr(content, "parts", None)
                 if not parts:
-                    logger.bind(
-                        event="no_parts",
-                        service="chat",
-                        trace_id=trace_id,
-                        elapsed_ms=chunk_start_ms,
-                        parts_value=parts,
-                        content_type=type(content).__name__,
-                    ).warning(
-                        f"No parts in content at +{chunk_start_ms}ms: parts={parts}, content_type={type(content).__name__}"
-                    )
                     continue
 
                 finish_reason = (
@@ -312,23 +246,6 @@ async def stream_agent_response(
                 round_finish_reason = finish_reason
 
                 for part in parts:
-                    # Log full part for debugging
-                    logger.bind(
-                        event="part",
-                        service="chat",
-                        trace_id=trace_id,
-                        elapsed_ms=chunk_start_ms,
-                        part_type=type(part).__name__,
-                        part_repr=repr(part),
-                        part_attrs={
-                            attr: getattr(part, attr, None)
-                            for attr in dir(part)
-                            if not attr.startswith("_")
-                        },
-                    ).debug(
-                        f"Part received at +{chunk_start_ms}ms: thought={getattr(part, 'thought', None)}, text={repr(getattr(part, 'text', None))}, func={getattr(part, 'function_call', None)}"
-                    )
-
                     part_thought = getattr(part, "thought", None)
                     part_text = getattr(part, "text", None)
                     part_func = getattr(part, "function_call", None)
@@ -337,36 +254,24 @@ async def stream_agent_response(
                     if part_thought:
                         if part_text:
                             chunk_index += 1
+                            # Truncate long thoughts for log readability
+                            preview = part_text[:120].replace("\n", " ")
                             logger.bind(
-                                event="stream_chunk",
+                                event="chunk_thought",
                                 service="chat",
                                 trace_id=trace_id,
-                                model=model,
+                                elapsed_ms=chunk_start_ms,
                                 chunk_index=chunk_index,
-                                chunk_type="thought",
-                                thought=part_text,
-                                thought_length=len(part_text),
-                                thought_signature_hex=thought_sig.hex()
-                                if thought_sig
-                                else None,
-                                finish_reason=finish_reason,
-                            ).info(f"Stream thought: {part_text}")
+                                length=len(part_text),
+                            ).info(f"💭 {preview}...")
                             yield f"data: {json.dumps({'model_thought': part_text})}\n\n"
                         elif thought_sig:
-                            # Thought with no text but has signature bytes
                             logger.bind(
-                                event="stream_chunk",
+                                event="chunk_thought_sig",
                                 service="chat",
                                 trace_id=trace_id,
-                                model=model,
-                                chunk_index=chunk_index,
-                                chunk_type="thought_signature",
-                                thought_present=True,
-                                thought_signature_hex=thought_sig.hex(),
-                                thought_signature_len=len(thought_sig),
-                            ).info(
-                                f"Thought signature present ({len(thought_sig)} bytes): {thought_sig.hex()}..."
-                            )
+                                elapsed_ms=chunk_start_ms,
+                            ).debug(f"Thought sig ({len(thought_sig)} bytes)")
                     elif part_func is not None:
                         # Skip if this function call was already processed from chunk.function_calls
                         fc_id = getattr(part_func, "id", None)
@@ -377,64 +282,51 @@ async def stream_agent_response(
                         fc_name = getattr(part_func, "name", None) or ""
                         fc_args = dict(part_func.args) if part_func.args else {}
                         logger.bind(
-                            event="stream_chunk",
+                            event="chunk_func",
                             service="chat",
                             trace_id=trace_id,
-                            model=model,
+                            elapsed_ms=chunk_start_ms,
                             chunk_index=chunk_index,
-                            chunk_type="function_call",
-                            tool_name=fc_name,
-                            function_call_id=fc_id,
-                            tool_args=fc_args,
-                            finish_reason=finish_reason,
-                        ).info(f"Stream function_call chunk: {fc_name}({fc_args})")
+                            tool=fc_name,
+                            args_keys=list(fc_args.keys()) if fc_args else [],
+                        ).info(f"🔧 {fc_name}()")
                     elif part_text is not None and part_text != "":
                         chunk_index += 1
+                        preview = part_text[:80].replace("\n", " ")
                         logger.bind(
-                            event="stream_chunk",
+                            event="chunk_text",
                             service="chat",
                             trace_id=trace_id,
-                            model=model,
+                            elapsed_ms=chunk_start_ms,
                             chunk_index=chunk_index,
-                            chunk_type="text",
-                            text=part_text,
-                            text_length=len(part_text),
-                            finish_reason=finish_reason,
-                        ).info(f"Stream text chunk: {part_text}")
+                            length=len(part_text),
+                        ).info(f"✏️  {preview}...")
                         assistant_text += part_text
                         _flush_assistant_text()
                         yield f"data: {json.dumps({'chunk': part_text})}\n\n"
                         round_text_parts.append(part)
-                    else:
-                        # part_thought is None/falsy, part_func is None/falsy, part_text is None or ''
-                        logger.bind(
-                            event="skipped_part",
-                            service="chat",
-                            trace_id=trace_id,
-                            elapsed_ms=chunk_start_ms,
-                            part_thought=part_thought,
-                            part_text=repr(part_text),
-                            part_func=part_func,
-                        ).debug(
-                            f"Skipped part at +{chunk_start_ms}ms: thought={part_thought}, text={repr(part_text)}, func={part_func}"
-                        )
 
                 await asyncio.sleep(0)
 
             # Log what was collected
+            fc_names = [
+                getattr(getattr(p, "function_call", None), "name", None)
+                for p in round_func_parts
+            ]
             logger.bind(
                 event="stream_round_complete",
                 service="chat",
                 trace_id=trace_id,
                 tool_round=tool_round + 1,
                 elapsed_ms=_elapsed_ms(),
-                round_text_parts_count=len(round_text_parts),
-                round_func_parts_count=len(round_func_parts),
-                round_func_parts_repr=[repr(p) for p in round_func_parts],
-                assistant_text_length=len(assistant_text),
-                assistant_text_preview=assistant_text,
+                text_parts=len(round_text_parts),
+                func_parts=len(round_func_parts),
+                func_tools=fc_names,
+                assistant_len=len(assistant_text),
             ).info(
-                f"Stream round complete at +{_elapsed_ms()}ms: text_parts={len(round_text_parts)}, func_parts={len(round_func_parts)}, assistant_text='{assistant_text}...'"
+                f"Round complete: text_chunks={len(round_text_parts)}, "
+                f"tools=[{', '.join(str(n) for n in fc_names)}], "
+                f"output_len={len(assistant_text)}"
             )
 
             # Log usage metadata on final chunk of this round
@@ -442,25 +334,15 @@ async def stream_agent_response(
                 cand_tokens = getattr(usage, "candidates_token_count", None)
                 total_tokens = getattr(usage, "total_token_count", None)
                 logger.bind(
-                    event="stream_round_usage",
+                    event="stream_tokens",
                     service="chat",
                     trace_id=trace_id,
-                    model=model,
                     elapsed_ms=_elapsed_ms(),
-                    tool_round=tool_round + 1,
-                    usage={
-                        "prompt_tokens": prompt_tokens_first_chunk,
-                        "candidates_tokens": cand_tokens,
-                        "total_tokens": total_tokens,
-                        "prompt_tokens_details": str(
-                            getattr(usage, "prompt_tokens_details", None)
-                        ),
-                        "candidates_tokens_details": str(
-                            getattr(usage, "candidates_tokens_details", None)
-                        ),
-                    },
+                    prompt=prompt_tokens_first_chunk,
+                    candidates=cand_tokens,
+                    total=total_tokens,
                 ).info(
-                    f"Round token usage at +{_elapsed_ms()}ms: prompt={prompt_tokens_first_chunk}, candidates={cand_tokens}, total={total_tokens}"
+                    f"Tokens | prompt={prompt_tokens_first_chunk}, total={total_tokens}"
                 )
 
             # Check if LLM is done - if finish_reason is STOP and no function calls, exit early
@@ -506,13 +388,9 @@ async def stream_agent_response(
                         event="tool_call",
                         service="chat",
                         trace_id=trace_id,
-                        model=model,
+                        tool=tool_name,
                         elapsed_ms=_elapsed_ms(),
-                        tool_name=tool_name,
-                        function_call_id=fc_id,
-                        tool_args=args,
-                        tool_round=tool_round + 1,
-                    ).info(f"Executing tool at +{_elapsed_ms()}ms")
+                    ).info(f"⚡ {tool_name}()")
 
                     yield f"data: {json.dumps({'status': f'calling_{tool_name}'})}\n\n"
                     yield f"data: {json.dumps({'tool_call': tool_name, 'args': args})}\n\n"
@@ -526,34 +404,25 @@ async def stream_agent_response(
                                 time_mod.perf_counter() * 1000 - tool_start, 1
                             )
                             logger.bind(
-                                event="tool_response",
+                                event="tool_done",
                                 service="chat",
                                 trace_id=trace_id,
-                                model=model,
-                                tool_name=tool_name,
-                                tool_result_preview=str(result),
-                                tool_duration_ms=tool_duration_ms,
-                            ).info("Tool completed")
+                                tool=tool_name,
+                                duration_ms=tool_duration_ms,
+                            ).info(f"✅ {tool_name} done ({tool_duration_ms}ms)")
                         except Exception as e:
                             tool_duration_ms = round(
                                 time_mod.perf_counter() * 1000 - tool_start, 1
                             )
-                            import traceback
-
-                            tb_str = traceback.format_exc()
                             logger.bind(
                                 event="tool_error",
                                 service="chat",
                                 trace_id=trace_id,
-                                model=model,
-                                tool_name=tool_name,
-                                tool_args=args,
-                                tool_error=f"{type(e).__name__}: {str(e)}",
-                                tool_traceback=tb_str,
-                                tool_duration_ms=tool_duration_ms,
+                                tool=tool_name,
+                                error=f"{type(e).__name__}: {str(e)}",
+                                duration_ms=tool_duration_ms,
                             ).error(
-                                f"Tool exception | tool={tool_name} | args={args} | "
-                                f"error={type(e).__name__}: {str(e)} | duration_ms={tool_duration_ms}"
+                                f"❌ {tool_name} failed ({tool_duration_ms}ms): {type(e).__name__}: {str(e)}"
                             )
                             result = {"error": str(e)}
                     else:
@@ -562,20 +431,9 @@ async def stream_agent_response(
                             event="tool_error",
                             service="chat",
                             trace_id=trace_id,
-                            model=model,
-                            tool_name=tool_name,
-                            tool_error=f"Unknown tool: {tool_name}",
-                        ).warning("Unknown tool")
+                            tool=tool_name,
+                        ).warning(f"❓ {tool_name}: unknown tool")
 
-                    logger.bind(
-                        event="tool_result",
-                        service="chat",
-                        trace_id=trace_id,
-                        model=model,
-                        elapsed_ms=_elapsed_ms(),
-                        tool_name=tool_name,
-                        tool_result_preview=str(result),
-                    ).debug(f"Tool result at +{_elapsed_ms()}ms")
                     yield f"data: {json.dumps({'tool_result': tool_name, 'result': result})}\n\n"
                     yield f"data: {json.dumps({'status': 'processing_results'})}\n\n"
 
@@ -660,37 +518,17 @@ async def stream_agent_response(
         yield f"data: {json.dumps({'done': True})}\n\n"
 
     except Exception as e:
-        import traceback as tb_mod
-
         latency_ms = round(time_mod.perf_counter() * 1000 - start_ms, 1)
-
-        # Extract structured error details for APIError (google.genai errors)
-        error_code: int | None = getattr(e, "code", None)
-        error_status: str | None = getattr(e, "status", None)
-        error_details: Any = getattr(e, "details", None)
-
         logger.bind(
             event="stream_error",
             service="chat",
             trace_id=trace_id,
-            model=model,
             elapsed_ms=_elapsed_ms(),
             latency_ms=latency_ms,
-            total_chunks=chunk_index,
-            total_tool_calls=total_tool_calls,
-            tool_round=tool_round,
-            assistant_text_length=len(assistant_text),
-            error_type=type(e).__name__,
-            error_code=error_code,
-            error_status=error_status,
-            error_message=str(e),
-            error_details=error_details,
-            error_traceback=tb_mod.format_exc(),
-        ).error(
-            f"Stream error at +{_elapsed_ms()}ms | type={type(e).__name__} | code={error_code} | status={error_status} | "
-            f"msg={str(e)} | tool_round={tool_round} | chunks={chunk_index} | "
-            f"tools={total_tool_calls} | text_len={len(assistant_text)}"
-        )
+            chunks=chunk_index,
+            tools=total_tool_calls,
+            error=f"{type(e).__name__}: {str(e)}",
+        ).error(f"Stream error at +{latency_ms}ms: {type(e).__name__}: {str(e)}")
         _flush_assistant_text()
         yield f"data: {json.dumps({'error': f'An error occurred: {e}'})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
