@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from loguru import logger
 
@@ -25,6 +26,7 @@ async def invoke_agent(
     generate_plan: bool = False,
     preferences: dict | None = None,
     db: Session | None = None,
+    trace_id: str | None = None,
 ) -> ChatResponse:
     """
     Invoke the Gemini agent with the user's message.
@@ -34,26 +36,38 @@ async def invoke_agent(
       then saves the trip to the database via trip_service.
     """
     session_id_str = str(session_id) if session_id else ""
-    logger.info(
-        f"[invoke_agent] Called with generate_plan={generate_plan}, user_message: {user_message[:100]}..."
-    )
-    logger.info(f"[invoke_agent] user_id={user_id}, session_id={session_id}")
+    start_ms = time.perf_counter() * 1000
+    trace_id = trace_id or str(uuid4())
+
+    logger.bind(
+        event="invoke_start",
+        service="chat",
+        trace_id=trace_id,
+        user_id=str(user_id) if user_id else None,
+        session_id=session_id_str,
+        generate_plan=generate_plan,
+        user_message_preview=user_message[:100],
+    ).info("invoke_agent called")
 
     try:
         if generate_plan:
-            logger.info(
-                "[invoke_agent] Using run_agent_structured (generate_plan=True)"
-            )
             itinerary = await asyncio.wait_for(
                 run_agent_structured(
                     user_message=user_message,
                     preferences=preferences,
+                    trace_id=trace_id,
                 ),
                 timeout=TIMEOUT_SECONDS,
             )
-            logger.info(
-                f"[invoke_agent] Structured response received, itinerary destination: {itinerary.destination if itinerary else 'None'}"
-            )
+            latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+            logger.bind(
+                event="invoke_done",
+                service="chat",
+                trace_id=trace_id,
+                latency_ms=latency_ms,
+                message_type="itinerary",
+                destination=itinerary.destination if itinerary else None,
+            ).info("invoke_agent done — itinerary")
 
             # Save trip to DB if db session provided and user is authenticated
             if db is not None and itinerary is not None and user_id is not None:
@@ -65,7 +79,12 @@ async def invoke_agent(
                     session_id=session_id,
                     itinerary=itinerary,
                 )
-                logger.info("[invoke_agent] Trip saved to DB")
+                logger.bind(
+                    event="trip_saved",
+                    service="chat",
+                    trace_id=trace_id,
+                    session_id=session_id_str,
+                ).info("Trip saved to DB")
 
             return ChatResponse(
                 session_id=session_id_str,
@@ -74,18 +93,24 @@ async def invoke_agent(
                 message_type="itinerary",
             )
         else:
-            logger.info("[invoke_agent] Using run_agent (generate_plan=False)")
             text = await asyncio.wait_for(
                 run_agent(
                     user_message=user_message,
                     preferences=preferences,
+                    trace_id=trace_id,
                 ),
                 timeout=TIMEOUT_SECONDS,
             )
-            logger.info(
-                f"[invoke_agent] Agent response received, text length: {len(text)}"
-            )
-            logger.debug(f"[invoke_agent] Agent response text: {text[:200]}...")
+            latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+            logger.bind(
+                event="invoke_done",
+                service="chat",
+                trace_id=trace_id,
+                latency_ms=latency_ms,
+                message_type="chat",
+                response_length=len(text),
+                response_preview=text[:200],
+            ).info("invoke_agent done — chat")
             return ChatResponse(
                 session_id=session_id_str,
                 text=text,
@@ -93,7 +118,14 @@ async def invoke_agent(
                 message_type="chat",
             )
     except asyncio.TimeoutError:
-        logger.error("[invoke_agent] Request timed out")
+        latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+        logger.bind(
+            event="invoke_error",
+            service="chat",
+            trace_id=trace_id,
+            latency_ms=latency_ms,
+            error_type="TimeoutError",
+        ).error("Request timed out")
         return ChatResponse(
             session_id=session_id_str,
             text="Request timed out. Please try again.",
@@ -101,14 +133,16 @@ async def invoke_agent(
             message_type="error",
         )
     except Exception as e:
+        latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
         error_msg = str(e).lower()
+        user_text: str
         if "503" in error_msg or "unavailable" in error_msg:
-            user_message = (
+            user_text = (
                 "The AI service is temporarily unavailable due to high demand. "
                 "This is usually temporary - please try again in a few moments."
             )
         elif "rate limit" in error_msg or "429" in error_msg:
-            user_message = (
+            user_text = (
                 "You've reached the rate limit. Please wait a moment and try again."
             )
         elif (
@@ -116,16 +150,23 @@ async def invoke_agent(
             or "errno -2" in error_msg
             or "connecterror" in error_msg
         ):
-            user_message = (
+            user_text = (
                 "Cannot reach the AI service — VPN may be disconnected. "
                 "Please connect your VPN and try again."
             )
         else:
-            user_message = f"An error occurred: {e}"
-        logger.error(f"[invoke_agent] Exception: {type(e).__name__}: {str(e)}")
+            user_text = f"An error occurred: {e}"
+        logger.bind(
+            event="invoke_error",
+            service="chat",
+            trace_id=trace_id,
+            latency_ms=latency_ms,
+            error_type=type(e).__name__,
+            error_message=str(e)[:300],
+        ).error("invoke_agent exception")
         return ChatResponse(
             session_id=session_id_str,
-            text=user_message,
+            text=user_text,
             itinerary=None,
             message_type="error",
         )

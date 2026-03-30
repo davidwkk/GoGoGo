@@ -1,67 +1,43 @@
 // ChatPage — Main chat UI with AI travel agent
 
-import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Settings, Zap, PlusCircle, Sparkles, Calendar, MapPin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useChatStore } from '@/store';
 import { InputBar } from '@/components/chat/InputBar';
+import { ActivityCard } from '@/components/trip/ActivityCard';
+import { FlightCard } from '@/components/trip/FlightCard';
 import { apiClient } from '@/services/api';
 import { tripService } from '@/services/tripService';
-import type { TripItinerary, Flight, DayPlan } from '@/types/trip';
-import { FlightCard } from '@/components/trip/FlightCard';
-import { ActivityCard } from '@/components/trip/ActivityCard';
+import { useChatStore } from '@/store';
+import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
+import { Calendar, MapPin, MessageSquare, PlusCircle, Settings, Sparkles, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function StreamingMessage({ content }: { content: string }) {
-  const [displayedLength, setDisplayedLength] = useState(0);
-  const latestContentLengthRef = useRef(content.length);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isAnimatingRef = useRef(false);
-
-  // Typewriter speed: 30ms per character for smooth reveal
+  const [displayLength, setDisplayLength] = useState(0);
+  const contentRef = useRef(content);
   const CHAR_DELAY = 30;
 
+  // Always keep ref in sync — no dependency array, no re-triggering anything
+  contentRef.current = content;
+
   useEffect(() => {
-    // If new content is longer than what we've displayed, animate the new chars
-    if (content.length > displayedLength) {
-      // Update ref to latest content length for interval callback
-      latestContentLengthRef.current = content.length;
+    const interval = setInterval(() => {
+      setDisplayLength(prev => {
+        if (prev >= contentRef.current.length) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, CHAR_DELAY);
 
-      // If not currently animating, start animation
-      if (!isAnimatingRef.current) {
-        isAnimatingRef.current = true;
+    return () => clearInterval(interval);
+  }, []); // Mount once. One interval. No stale closures.
 
-        intervalRef.current = setInterval(() => {
-          setDisplayedLength(prev => {
-            // If caught up to latest content length, stop
-            if (prev >= latestContentLengthRef.current) {
-              if (intervalRef.current) clearInterval(intervalRef.current);
-              isAnimatingRef.current = false;
-              return prev;
-            }
-            // Show one more character
-            return prev + 1;
-          });
-        }, CHAR_DELAY);
-      }
-    } else if (content.length <= displayedLength) {
-      // Content is done or shrank - show exactly what we have
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      isAnimatingRef.current = false;
-    }
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      isAnimatingRef.current = false;
-    };
-    // Intentionally exclude displayedLength from deps - we handle the transition gracefully
-  }, [content.length]);
-
-  const displayed = content.slice(0, displayedLength);
-  const isStreaming = displayedLength < content.length;
+  const isStreaming = displayLength < content.length;
 
   return (
     <>
-      {displayed}
+      {content.slice(0, displayLength)}
       {isStreaming && (
         <span className="inline-block w-0.5 h-4 bg-yellow-500 ml-0.5 animate-blink align-middle" />
       )}
