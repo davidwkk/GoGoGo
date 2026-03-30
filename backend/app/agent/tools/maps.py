@@ -9,7 +9,11 @@ Returns:
 
 from __future__ import annotations
 
+from typing import Literal
+
 from app.core.config import settings
+
+TravelMode = Literal["driving", "walking", "bicycling", "transit"]
 
 
 def build_embed_url(
@@ -18,19 +22,23 @@ def build_embed_url(
     place: str | None = None,
     zoom: int = 14,
 ) -> str:
-    """Build a Google Maps Embed API URL."""
+    """Build a Google Maps Embed API URL (place mode)."""
     if not settings.GOOGLE_MAPS_API_KEY:
         return ""
 
     if lat is not None and lon is not None:
-        query = f"place/{lat},{lon}"
+        q = f"{lat},{lon}"
     elif place:
-        query = f"search/?query={place.replace(' ', '+')}"
+        q = place.replace(" ", "+")
     else:
         return ""
 
-    params = f"key={settings.GOOGLE_MAPS_API_KEY}"
-    return f"https://www.google.com/maps/embed/v1/{query}?{params}"
+    return (
+        "https://www.google.com/maps/embed/v1/place"
+        f"?key={settings.GOOGLE_MAPS_API_KEY}"
+        f"&q={q}"
+        f"&zoom={zoom}"
+    )
 
 
 def build_static_url(
@@ -57,9 +65,15 @@ def build_static_url(
 def build_directions_url(
     from_place: str,
     to_place: str,
-    mode: str = "driving",
+    mode: TravelMode = "driving",
 ) -> str:
-    """Build a Google Maps directions URL."""
+    """Build a Google Maps directions URL (opens in browser/app)."""
     f = from_place.replace(" ", "+")
     t = to_place.replace(" ", "+")
-    return f"https://www.google.com/maps/dir/{f}/{t}/@{mode}"
+    return (
+        "https://www.google.com/maps/dir/"
+        f"?api=1"
+        f"&origin={f}"
+        f"&destination={t}"
+        f"&travelmode={mode}"
+    )

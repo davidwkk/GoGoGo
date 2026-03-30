@@ -1,22 +1,141 @@
 """SerpAPI Google Hotels — search for hotels.
 
 API: GET https://serpapi.com/search.json
-Params: q={query}, api_key={SERPAPI_KEY}, engine=google_hotels
+Params: engine=google_hotels, q=Bali, check_in_date=2026-03-31,
+        check_out_date=2026-04-01, adults=2, currency=USD, gl=us, hl=en
 
-Returns:
-    {
-        "hotels": [
-            {
-                "name": "...",
-                "location": "...",
-                "price_per_night": "...",
-                "rating": "4.5/5",
-                "amenities": [...],
-                "booking_url": "..."
+--- SerpAPI Google Hotels Full Response Schema ---
+{
+    "properties": [
+        {
+            "type": "hotel",
+            "name": "The Ritz-Carlton, Bali",
+            "description": "Zen-like quarters...",
+            "link": "https://www.ritzcarlton.com/...",
+            "logo": "https://www.gstatic.com/travel-hotels/branding/...",
+            "sponsored": true,
+            "eco_certified": true,
+            "gps_coordinates": {"latitude": -8.830..., "longitude": 115.215...},
+            "check_in_time": "3:00 PM",
+            "check_out_time": "12:00 PM",
+            "rate_per_night": {
+                "lowest": "$347",
+                "extracted_lowest": 347,
+                "before_taxes_fees": "$287",
+                "extracted_before_taxes_fees": 287,
             },
-            ...
-        ]
-    }
+            "total_rate": {
+                "lowest": "$1,733",
+                "extracted_lowest": 1733,
+                "before_taxes_fees": "$1,434",
+                "extracted_before_taxes_fees": 1434,
+            },
+            "deal": "27% less than usual",
+            "deal_description": "Great Deal",
+            "prices": [
+                {
+                    "source": "The Ritz-Carlton, Bali",
+                    "logo": "...",
+                    "rate_per_night": {...},
+                }
+            ],
+            "nearby_places": [
+                {
+                    "name": "I Gusti Ngurah Rai International Airport",
+                    "transportations": [
+                        {"type": "Taxi", "duration": "29 min"}
+                    ]
+                }
+            ],
+            "hotel_class": "5-star hotel",       # string, e.g. "5-star hotel"
+            "extracted_hotel_class": 5,           # integer 1-5
+            "images": [
+                {
+                    "thumbnail": "https://lh3.googleusercontent.com/...",
+                    "original_image": "https://d2hyz2bfif3cr8.cloudfront.net/...",
+                }
+            ],
+            "overall_rating": 4.6,               # float
+            "reviews": 3614,                      # int
+            "location_rating": 2.8,              # float
+            "ratings": [                          # star breakdown
+                {"stars": 5, "count": 1613},
+                {"stars": 4, "count": 350},
+                ...
+            ],
+            "reviews_breakdown": [
+                {
+                    "name": "Property",
+                    "description": "Property",
+                    "total_mentioned": 605,
+                    "positive": 534,
+                    "negative": 44,
+                    "neutral": 27,
+                    "category_token": "...",
+                    "serpapi_link": "https://serpapi.com/...",
+                }
+            ],
+            "amenities": ["Free Wi-Fi", "Free parking", "Pools", "Spa", ...],
+            "excluded_amenities": ["No air conditioning", ...],
+            "health_and_safety": {
+                "groups": [
+                    {
+                        "title": "Physical distancing",
+                        "list": [{"title": "Contactless check-in", "available": true}, ...],
+                    }
+                ],
+                "details_link": "https://serpapi.com/...",
+            },
+            "essential_info": ["Entire villa", "Sleeps 4", "9 bedrooms", ...],
+            "property_token": "ChcIyo2FjdjsrkZ8xGgsvZy8xdGYyMTV2aBAB",
+            "serpapi_property_details_link": "https://serpapi.com/search.json?...",
+            "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?...",
+            "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?...",
+        }
+    ],
+    "non_matching_properties": [...],   # same schema as properties
+}
+
+--- Our Normalized Output Schema ---
+{
+    "hotels": [
+        {
+            "name": str,                           # e.g. "The Ritz-Carlton, Bali"
+            "location": str,                        # search destination (set to caller destination)
+            "check_in_time": str | None,           # e.g. "3:00 PM"
+            "check_out_time": str | None,          # e.g. "12:00 PM"
+            "check_in_date": str | None,            # from request param (not in response)
+            "check_out_date": str | None,          # from request param (not in response)
+            "price_per_night_min_hkd": float | None,  # rate_per_night.extracted_lowest in HKD
+            "price_per_night_max_hkd": float | None,  # same (range not available in this schema)
+            "total_price_hkd": float | None,       # total_rate.extracted_lowest in HKD
+            "hotel_class": str | None,            # e.g. "5-star hotel"
+            "hotel_class_int": int | None,        # e.g. 5
+            "rating": float | None,               # overall_rating
+            "reviews": int | None,                 # total review count
+            "location_rating": float | None,      # location_rating
+            "amenities": list[str],                # top amenities
+            "description": str,                   # property description
+            "image_url": str | None,             # first original image URL
+            "thumbnail_url": str | None,          # first thumbnail URL
+            "map_url": str | None,                # Google Maps embed URL from GPS
+            "nearby_places": [                    # nearby landmarks / transport
+                {
+                    "name": str,
+                    "transportations": [
+                        {"type": str, "duration": str},
+                        ...
+                    ]
+                },
+                ...
+            ],
+            "booking_url": str | None,            # property website link
+            "eco_certified": bool | None,         # eco_certified flag
+            "deal": str | None,                 # e.g. "27% less than usual"
+            "deal_description": str | None,     # e.g. "Great Deal"
+        }
+    ]
+}
 """
 
 from __future__ import annotations
@@ -25,6 +144,14 @@ import httpx
 from loguru import logger
 
 from app.core.config import settings
+
+# Approximate HKD conversion rates (should ideally come from a config/external service)
+_HKD_PER_USD: float = 7.78  # ⚠️ Hardcoded — replace with live FX rate in production
+
+
+def _usd_to_hkd(usd: float | None) -> float | None:
+    """Convert USD to HKD. Returns None if input is None."""
+    return round(usd * _HKD_PER_USD, 2) if usd is not None else None
 
 
 async def search_hotels(
@@ -36,19 +163,19 @@ async def search_hotels(
     if not settings.SERPAPI_KEY:
         return {"error": "SERPAPI_KEY not configured", "hotels": []}
 
-    query = f"hotels in {destination}"
-    if check_in:
-        query += f" check-in {check_in}"
-    if check_out:
-        query += f" check-out {check_out}"
-
-    logger.info(f"[hotels] Searching: {query}")
-
     params = {
-        "q": query,
+        "q": destination,
         "api_key": settings.SERPAPI_KEY,
         "engine": "google_hotels",
+        "currency": "USD",
+        "hl": "en",
     }
+    if check_in:
+        params["check_in_date"] = check_in
+    if check_out:
+        params["check_out_date"] = check_out
+
+    logger.info(f"[hotels] Searching hotels in: {destination}")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -62,43 +189,89 @@ async def search_hotels(
             if response.status_code == 404:
                 logger.warning("[hotels] Hotels endpoint not found")
                 return {"error": "SerpAPI hotels endpoint not found", "hotels": []}
+            if response.status_code == 429:
+                logger.warning("[hotels] SerpAPI rate limit exceeded")
+                return {"error": "SerpAPI rate limit exceeded", "hotels": []}
             response.raise_for_status()
             data = response.json()
 
         hotels = []
-        # SerpAPI returns hotels in "hotels" or "results"
-        hotel_list = data.get("hotels", []) or data.get("results", [])
+        # Only use non_matching_properties as fallback when main properties is empty
+        properties = data.get("properties", [])
+        if not properties:
+            properties = data.get("non_matching_properties", [])
+            logger.warning(
+                "[hotels] No matching properties; falling back to non_matching_properties"
+            )
 
-        for h in hotel_list[:10]:
-            # Extract rating
-            rating = None
-            rating_data = h.get("rating")
-            if rating_data:
-                rating = f"{rating_data}/5"
+        for h in properties[:10]:
+            # Price — use rate_per_night.extracted_lowest
+            rate_per_night = h.get("rate_per_night") or {}
+            price_min_hkd = _usd_to_hkd(rate_per_night.get("extracted_lowest"))
 
-            # Extract price
-            price = h.get("price", "N/A")
+            # Total price for the stay
+            total_rate = h.get("total_rate") or {}
+            total_price_hkd = _usd_to_hkd(total_rate.get("extracted_lowest"))
 
-            # Extract amenities
-            amenities = []
-            for ext in h.get("extensions", []):
-                if isinstance(ext, str):
-                    amenities.append(ext)
-                elif isinstance(ext, list):
-                    amenities.extend(ext)
+            # Build map URL from GPS coordinates
+            map_url = None
+            gps = h.get("gps_coordinates") or {}
+            lat = gps.get("latitude")
+            lon = gps.get("longitude")
+            if lat is not None and lon is not None and settings.GOOGLE_MAPS_API_KEY:
+                map_url = (
+                    f"https://www.google.com/maps/embed/v1/place"
+                    f"?key={settings.GOOGLE_MAPS_API_KEY}"
+                    f"&q={lat},{lon}"
+                )
+
+            # First image
+            images = h.get("images") or []
+            first_image = images[0] if images else {}
+            thumbnail_url = first_image.get("thumbnail")
+            image_url = first_image.get("original_image")
+
+            # Nearby places — first 3 for brevity
+            nearby = []
+            for place in (h.get("nearby_places") or [])[:3]:
+                transports = [
+                    {"type": t.get("type"), "duration": t.get("duration")}
+                    for t in (place.get("transportations") or [])
+                ]
+                nearby.append(
+                    {"name": place.get("name"), "transportations": transports}
+                )
 
             hotels.append(
                 {
                     "name": h.get("name", "Unknown Hotel"),
-                    "location": h.get("location", destination),
-                    "price_per_night": price,
-                    "rating": rating,
-                    "amenities": amenities[:5],
-                    "booking_url": h.get("link", ""),
+                    "location": destination,
+                    "check_in_time": h.get("check_in_time"),
+                    "check_out_time": h.get("check_out_time"),
+                    "check_in_date": check_in,
+                    "check_out_date": check_out,
+                    "price_per_night_min_hkd": price_min_hkd,
+                    "price_per_night_max_hkd": price_min_hkd,  # no range in this schema
+                    "total_price_hkd": total_price_hkd,
+                    "hotel_class": h.get("hotel_class"),  # e.g. "5-star hotel"
+                    "hotel_class_int": h.get("extracted_hotel_class"),  # e.g. 5
+                    "rating": h.get("overall_rating"),
+                    "reviews": h.get("reviews"),
+                    "location_rating": h.get("location_rating"),
+                    "amenities": (h.get("amenities") or [])[:6],  # top 6
+                    "description": h.get("description", ""),
+                    "image_url": image_url,
+                    "thumbnail_url": thumbnail_url,
+                    "map_url": map_url,
+                    "nearby_places": nearby,
+                    "booking_url": h.get("link"),
+                    "eco_certified": h.get("eco_certified"),
+                    "deal": h.get("deal"),
+                    "deal_description": h.get("deal_description"),
                 }
             )
 
-        logger.info(f"[hotels] Found {len(hotels)} hotels in {destination}")
+        logger.info(f"[hotels] Found {len(hotels)} hotels for {destination}")
         return {"hotels": hotels}
     except httpx.TimeoutException:
         logger.warning(f"[hotels] Timeout for: {destination}")
