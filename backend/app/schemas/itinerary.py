@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date as Date, datetime as DateTime
 from typing import Annotated
 
 from pydantic import BaseModel, Field, model_validator
@@ -28,7 +28,7 @@ class Activity(BaseModel):
 
 class DayPlan(BaseModel):
     day_number: int = Field(ge=1)
-    date: date = Field(description="ISO 8601 date string, e.g. 2025-06-01")
+    date: Date = Field(description="ISO 8601 date string, e.g. 2025-06-01")
     morning: list[Activity] = Field(default_factory=list)
     afternoon: list[Activity] = Field(default_factory=list)
     evening: list[Activity] = Field(default_factory=list)
@@ -41,8 +41,8 @@ class DayPlan(BaseModel):
 
 class HotelInfo(BaseModel):
     name: str
-    check_in_date: date = Field(description="ISO 8601 date string")
-    check_out_date: date = Field(description="ISO 8601 date string")
+    check_in_date: Date = Field(description="ISO 8601 date string")
+    check_out_date: Date = Field(description="ISO 8601 date string")
     price_per_night_min_hkd: float = Field(ge=0)
     price_per_night_max_hkd: float = Field(ge=0)
 
@@ -63,8 +63,8 @@ class HotelInfo(BaseModel):
 class FlightStop(BaseModel):
     airport_code: str = Field(description="IATA airport code, e.g. NRT")
     airport_name: str
-    arrival_time: datetime | None = Field(default=None, description="ISO 8601 datetime")
-    departure_time: datetime | None = Field(
+    arrival_time: DateTime | None = Field(default=None, description="ISO 8601 datetime")
+    departure_time: DateTime | None = Field(
         default=None, description="ISO 8601 datetime"
     )
 
@@ -83,8 +83,8 @@ class FlightInfo(BaseModel):
     flight_number: str
     departure_airport: str = Field(description="IATA airport code")
     arrival_airport: str = Field(description="IATA airport code")
-    departure_time: datetime = Field(description="ISO 8601 datetime")
-    arrival_time: datetime = Field(description="ISO 8601 datetime")
+    departure_time: DateTime = Field(description="ISO 8601 datetime")
+    arrival_time: DateTime = Field(description="ISO 8601 datetime")
     stops: Annotated[list[FlightStop], Field(default_factory=list, max_length=2)]
     booking_url: str | None = None
 

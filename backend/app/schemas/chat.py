@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date as Date, datetime as DateTime
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -16,8 +16,8 @@ from app.schemas.user import UserPreference
 
 class TripParameters(BaseModel):
     destination: str
-    start_date: date = Field(description="ISO 8601 date string, e.g. 2025-06-01")
-    end_date: date = Field(description="ISO 8601 date string, e.g. 2025-06-10")
+    start_date: Date = Field(description="ISO 8601 date string, e.g. 2025-06-01")
+    end_date: Date = Field(description="ISO 8601 date string, e.g. 2025-06-10")
     group_type: GroupType
     group_size: int = Field(ge=1)
     purpose: TripPurpose
@@ -32,7 +32,7 @@ class TripParameters(BaseModel):
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
-    created_at: datetime = Field(description="ISO 8601 datetime")
+    created_at: DateTime = Field(description="ISO 8601 datetime")
 
 
 # ─────────────────────────────────────────
