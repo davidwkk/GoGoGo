@@ -8,7 +8,7 @@ import { apiClient } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
-import { Calendar, MapPin, MessageSquare, PlusCircle, Settings, Sparkles, Zap } from 'lucide-react';
+import { Calendar, MapPin, MessageSquare, PlusCircle, Sparkles, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -521,21 +521,12 @@ export function ChatPage() {
                 </p>
               </div>
               {!isLoggedIn && (
-                <div className="flex items-center gap-2 mt-1">
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-4 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  >
-                    <Settings className="size-3.5" />
-                    Travel Settings
-                  </button>
-                </div>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
+                >
+                  Sign in
+                </button>
               )}
             </div>
           )}
