@@ -67,7 +67,6 @@ export interface ChatRequest {
     group_type: string;
     group_size: number;
     purpose: string;
-    is_round_trip: boolean;
   };
   user_preferences?: Record<string, unknown>;
 }

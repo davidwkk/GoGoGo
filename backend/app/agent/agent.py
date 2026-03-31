@@ -98,10 +98,26 @@ def _get_current_datetime_str() -> str:
 
 def _build_system_prompt(
     preferences: dict | None = None,
+    trip_parameters: dict | None = None,
     current_datetime: str | None = None,
 ) -> str:
     now_str = current_datetime or _get_current_datetime_str()
     prefs_section = f"User preferences: {preferences}" if preferences else ""
+
+    trip_section = ""
+    if trip_parameters:
+        dest = trip_parameters.get("destination", "not specified")
+        start = trip_parameters.get("start_date", "not specified")
+        end = trip_parameters.get("end_date", "not specified")
+        purpose = trip_parameters.get("purpose", "not specified")
+        group_type = trip_parameters.get("group_type", "not specified")
+        group_size = trip_parameters.get("group_size", "not specified")
+        trip_section = (
+            f"Trip parameters: Destination={dest}, Dates={start} to {end}, "
+            f"Purpose={purpose}, Group={group_type} ({group_size} people). "
+            "This is a ROUND TRIP — search for both outbound AND return flights.\n"
+        )
+
     return (
         "You are a helpful travel planning assistant backed by real-time data. "
         f"CURRENT DATETIME: {now_str} (use this as today's date — do NOT guess or estimate).\n"
@@ -123,6 +139,7 @@ def _build_system_prompt(
         "8. BEFORE calling any tools, verify you have: (1) trip dates, (2) destination. If missing, ask the user first.\n"
         "9. OUTPUT FORMAT should STRICTLY follow the TripItinerary schema.\n"
         "10. If a tool returns no results or errors, explicitly tell the user 'I couldn't find data for X' — do NOT fill in with estimates.\n"
+        f"{trip_section}"
         f"{prefs_section}"
     )
 
@@ -131,6 +148,7 @@ async def run_agent(
     user_message: str,
     conversation_history: list[types.Content] | None = None,
     preferences: dict | None = None,
+    trip_parameters: dict | None = None,
     trace_id: str | None = None,
 ) -> str:
     """
@@ -149,7 +167,9 @@ async def run_agent(
         user_message_preview=user_message[:100],
     ).info("Agent start")
     client = _get_client()
-    system_instruction = _build_system_prompt(preferences, _get_current_datetime_str())
+    system_instruction = _build_system_prompt(
+        preferences, trip_parameters, _get_current_datetime_str()
+    )
 
     messages: list[types.Content] = list(conversation_history or [])
 
@@ -301,6 +321,7 @@ async def run_agent_structured(
     user_message: str,
     conversation_history: list[types.Content] | None = None,
     preferences: dict | None = None,
+    trip_parameters: dict | None = None,
     trace_id: str | None = None,
 ) -> TripItinerary:
     """
@@ -324,7 +345,9 @@ async def run_agent_structured(
     ).info("Agent start")
 
     client = _get_client()
-    system_instruction = _build_system_prompt(preferences, _get_current_datetime_str())
+    system_instruction = _build_system_prompt(
+        preferences, trip_parameters, _get_current_datetime_str()
+    )
 
     messages: list[types.Content] = list(conversation_history or [])
 

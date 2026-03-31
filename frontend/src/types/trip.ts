@@ -162,3 +162,69 @@ export interface TripSummary {
 export interface TripDetail extends TripSummary {
   itinerary: TripItinerary;
 }
+
+// ============================================================
+// Travel Settings (combined preferences + trip parameters)
+// ============================================================
+
+export type TravelStyle = 'adventure' | 'relaxing' | 'cultural' | 'foodie' | 'nature' | 'shopping';
+
+export type DietaryRestriction =
+  | 'none'
+  | 'vegetarian'
+  | 'vegan'
+  | 'halal'
+  | 'kosher'
+  | 'gluten_free';
+
+export type HotelTier = 'budget' | 'mid_range' | 'luxury';
+
+export type GroupType = 'solo' | 'couple' | 'family' | 'friends';
+
+export type TripPurpose =
+  | 'honeymoon'
+  | 'graduation_trip'
+  | 'family_vacation'
+  | 'solo_adventure'
+  | 'business_trip'
+  | 'first_trip'
+  | 'anniversary'
+  | 'friends_getaway';
+
+export interface TravelSettings {
+  // User Preferences
+  travel_style: TravelStyle;
+  dietary_restriction: DietaryRestriction;
+  hotel_tier: HotelTier;
+  budget_min_hkd: number;
+  budget_max_hkd: number;
+  max_flight_stops: number;
+  // Trip Parameters
+  destination: string;
+  start_date: string;
+  end_date: string;
+  group_type: GroupType;
+  group_size: number;
+  purpose: TripPurpose;
+}
+
+export const DEFAULT_TRAVEL_SETTINGS: TravelSettings = {
+  // User Preferences
+  travel_style: 'relaxing',
+  dietary_restriction: 'none',
+  hotel_tier: 'mid_range',
+  budget_min_hkd: 5000,
+  budget_max_hkd: 20000,
+  max_flight_stops: 1,
+  // Trip Parameters
+  destination: '',
+  start_date: '',
+  end_date: '',
+  group_type: 'couple',
+  group_size: 2,
+  purpose: 'first_trip',
+};
+
+export function canGeneratePlan(settings: TravelSettings): boolean {
+  return !!(settings.destination.trim() && settings.start_date && settings.end_date);
+}

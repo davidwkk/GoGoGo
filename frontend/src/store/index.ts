@@ -2,6 +2,7 @@
 
 import { isVoiceSupported } from '@/hooks/useASR';
 import { create } from 'zustand';
+import { DEFAULT_TRAVEL_SETTINGS, TravelSettings } from '@/types/trip';
 
 export interface Message {
   id: string;
@@ -31,6 +32,9 @@ export interface ChatState {
   // Partial thought text being currently streamed (for typewriter effect)
   partialThoughtText: string;
 
+  // Travel Settings
+  travelSettings: TravelSettings;
+
   // Actions
   setSessionId: (id: string | null) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
@@ -41,6 +45,8 @@ export interface ChatState {
   setAbortController: (controller: AbortController | null) => void;
   addThinkingStep: (step: string) => void;
   setPartialThoughtText: (text: string) => void;
+  setTravelSettings: (settings: Partial<TravelSettings>) => void;
+  resetTravelSettings: () => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -52,6 +58,8 @@ export const useChatStore = create<ChatState>(set => ({
   abortController: null,
   thinkingSteps: [],
   partialThoughtText: '',
+
+  travelSettings: DEFAULT_TRAVEL_SETTINGS,
 
   setSessionId: id => set({ sessionId: id }),
 
@@ -82,4 +90,11 @@ export const useChatStore = create<ChatState>(set => ({
     })),
 
   setPartialThoughtText: text => set({ partialThoughtText: text }),
+
+  setTravelSettings: settings =>
+    set(state => ({
+      travelSettings: { ...state.travelSettings, ...settings },
+    })),
+
+  resetTravelSettings: () => set({ travelSettings: DEFAULT_TRAVEL_SETTINGS }),
 }));

@@ -9,7 +9,7 @@ import { VoiceButton } from '@/components/voice/VoiceButton';
 import { useChat } from '@/hooks/useChat';
 import { useASR } from '@/hooks/useASR';
 import { useChatStore } from '@/store';
-import type { TripItinerary } from '@/types/trip';
+import { canGeneratePlan, type TripItinerary } from '@/types/trip';
 
 interface InputBarProps {
   disabled?: boolean;
@@ -35,6 +35,7 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
   const isLoading = useChatStore(s => s.isLoading);
   const addMessage = useChatStore(s => s.addMessage);
   const setThinking = useChatStore(s => s.setThinking);
+  const travelSettings = useChatStore(s => s.travelSettings);
   const { sendMessage } = useChat({ onItinerary });
   const { isListening, startListening, stopListening } = useASR({
     onTranscript: result => {
@@ -59,7 +60,18 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
 
     setText(''); // Clear after adding message
     try {
-      await sendMessage(trimmed, generatePlan);
+      // Build trip parameters from travel settings when generating plan
+      const tripParams = generatePlan
+        ? {
+            destination: travelSettings.destination,
+            start_date: travelSettings.start_date,
+            end_date: travelSettings.end_date,
+            group_type: travelSettings.group_type,
+            group_size: travelSettings.group_size,
+            purpose: travelSettings.purpose,
+          }
+        : undefined;
+      await sendMessage(trimmed, generatePlan, tripParams);
     } catch {
       // Error handled by useChat
     } finally {
@@ -122,7 +134,7 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
           size="lg"
           variant="default"
           onClick={() => handleSend(true)}
-          disabled={!text.trim() || disabled || isLoading}
+          disabled={!text.trim() || disabled || isLoading || !canGeneratePlan(travelSettings)}
           className="gap-1.5"
           aria-label="Generate full trip plan"
         >

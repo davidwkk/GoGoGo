@@ -25,6 +25,7 @@ async def invoke_agent(
     session_id: int | None = None,
     generate_plan: bool = False,
     preferences: dict | None = None,
+    trip_parameters: dict | None = None,
     db: Session | None = None,
     trace_id: str | None = None,
 ) -> ChatResponse:
@@ -49,6 +50,8 @@ async def invoke_agent(
         user_message_preview=user_message[:100],
         has_preferences=preferences is not None,
         preferences_keys=list(preferences.keys()) if preferences else [],
+        has_trip_parameters=trip_parameters is not None,
+        trip_parameters_keys=list(trip_parameters.keys()) if trip_parameters else [],
     ).info("SERVICE: invoke_agent called")
 
     try:
@@ -65,6 +68,7 @@ async def invoke_agent(
                 run_agent_structured(
                     user_message=user_message,
                     preferences=preferences,
+                    trip_parameters=trip_parameters,
                     trace_id=trace_id,
                 ),
                 timeout=TIMEOUT_SECONDS,
@@ -146,6 +150,7 @@ async def invoke_agent(
                 run_agent(
                     user_message=user_message,
                     preferences=preferences,
+                    trip_parameters=trip_parameters,
                     trace_id=trace_id,
                 ),
                 timeout=TIMEOUT_SECONDS,

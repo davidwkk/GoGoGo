@@ -21,7 +21,6 @@ class TripParameters(BaseModel):
     group_type: GroupType
     group_size: int = Field(ge=1)
     purpose: TripPurpose
-    is_round_trip: bool = True
 
 
 # ─────────────────────────────────────────
