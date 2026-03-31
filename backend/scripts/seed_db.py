@@ -60,6 +60,7 @@ DEMO_ITINERARY = {
             "arrival_time": "2026-04-15T13:00:00",
             "stops": [],
             "booking_url": "https://www.jal.co.jp/en/us/",
+            "price_hkd": 4200.0,
         },
         {
             "direction": "return",
@@ -71,6 +72,7 @@ DEMO_ITINERARY = {
             "arrival_time": "2026-04-20T21:30:00",
             "stops": [],
             "booking_url": "https://www.jal.co.jp/en/us/",
+            "price_hkd": 4800.0,
         },
     ],
     "hotels": [
@@ -78,8 +80,7 @@ DEMO_ITINERARY = {
             "name": "Park Hyatt Tokyo",
             "check_in_date": "2026-04-15",
             "check_out_date": "2026-04-20",
-            "price_per_night_min_hkd": 2800,
-            "price_per_night_max_hkd": 4500,
+            "price_per_night_hkd": {"min": 2800, "max": 4500},
         },
     ],
     "days": [
@@ -95,6 +96,7 @@ DEMO_ITINERARY = {
                         "street Nakamise-dori."
                     ),
                     "location": "Asakusa, Tokyo",
+                    "category": "culture",
                     "map_url": "https://maps.google.com/?q=Senso-ji",
                     "estimated_duration_minutes": 120,
                 },
@@ -108,6 +110,7 @@ DEMO_ITINERARY = {
                         "Mount Fuji."
                     ),
                     "location": "Sumida, Tokyo",
+                    "category": "sightseeing",
                     "map_url": "https://maps.google.com/?q=Tokyo+Skytree",
                     "estimated_duration_minutes": 180,
                 },
@@ -121,6 +124,7 @@ DEMO_ITINERARY = {
                         "perfect comfort food after a day of exploring."
                     ),
                     "location": "Shinjuku, Tokyo",
+                    "category": "food",
                     "map_url": None,
                     "estimated_duration_minutes": 60,
                 },
@@ -138,6 +142,7 @@ DEMO_ITINERARY = {
                         "visit is before 10am."
                     ),
                     "location": "Tsukiji, Tokyo",
+                    "category": "food",
                     "map_url": "https://maps.google.com/?q=Tsukiji+Market",
                     "estimated_duration_minutes": 120,
                 },
@@ -151,6 +156,7 @@ DEMO_ITINERARY = {
                         "this is one of Tokyo's most popular attractions."
                     ),
                     "location": "Toyosu, Tokyo",
+                    "category": "culture",
                     "map_url": "https://maps.google.com/?q=teamLab+Planets",
                     "estimated_duration_minutes": 150,
                 },
@@ -164,6 +170,7 @@ DEMO_ITINERARY = {
                         "international cuisine."
                     ),
                     "location": "Odaiba, Tokyo",
+                    "category": "food",
                     "map_url": None,
                     "estimated_duration_minutes": 90,
                 },
@@ -181,6 +188,7 @@ DEMO_ITINERARY = {
                         "and people-watching at Yoyogi Park."
                     ),
                     "location": "Shibuya, Tokyo",
+                    "category": "culture",
                     "map_url": "https://maps.google.com/?q=Meiji+Jingu",
                     "estimated_duration_minutes": 150,
                 },
@@ -194,6 +202,7 @@ DEMO_ITINERARY = {
                         "once. Don't forget the iconic Hachiko statue photo."
                     ),
                     "location": "Shibuya, Tokyo",
+                    "category": "sightseeing",
                     "map_url": "https://maps.google.com/?q=Shibuya+Crossing",
                     "estimated_duration_minutes": 60,
                 },
@@ -207,6 +216,7 @@ DEMO_ITINERARY = {
                         "character. Perfect for craft cocktails or Japanese whisky."
                     ),
                     "location": "Shinjuku, Tokyo",
+                    "category": "food",
                     "map_url": None,
                     "estimated_duration_minutes": 120,
                 },
@@ -224,6 +234,7 @@ DEMO_ITINERARY = {
                         "stunning during cherry blossom season."
                     ),
                     "location": "Fujiyoshida, Yamanashi",
+                    "category": "nature",
                     "map_url": "https://maps.google.com/?q=Chureito+Pagoda",
                     "estimated_duration_minutes": 240,
                 },
@@ -237,6 +248,7 @@ DEMO_ITINERARY = {
                         "as a souvenir."
                     ),
                     "location": "Fujikawaguchiko, Yamanashi",
+                    "category": "nature",
                     "map_url": None,
                     "estimated_duration_minutes": 120,
                 },
@@ -250,6 +262,7 @@ DEMO_ITINERARY = {
                         "evening exploration."
                     ),
                     "location": "Akihabara, Tokyo",
+                    "category": "shopping",
                     "map_url": None,
                     "estimated_duration_minutes": 120,
                 },
@@ -267,6 +280,7 @@ DEMO_ITINERARY = {
                         "blossom season with rivers of pink petals."
                     ),
                     "location": "Ueno, Tokyo",
+                    "category": "culture",
                     "map_url": "https://maps.google.com/?q=Ueno+Park",
                     "estimated_duration_minutes": 150,
                 },
@@ -280,6 +294,7 @@ DEMO_ITINERARY = {
                         "experiencing authentic Tokyo street life."
                     ),
                     "location": "Ueno, Tokyo",
+                    "category": "shopping",
                     "map_url": None,
                     "estimated_duration_minutes": 90,
                 },
@@ -293,6 +308,7 @@ DEMO_ITINERARY = {
                         "seasonal fish — the perfect finale."
                     ),
                     "location": "Ginza, Tokyo",
+                    "category": "food",
                     "map_url": None,
                     "estimated_duration_minutes": 120,
                 },
