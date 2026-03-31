@@ -29,6 +29,33 @@ apiClient.interceptors.request.use(config => {
   return config;
 });
 
+// Handle auth errors gracefully with user-friendly messages
+apiClient.interceptors.response.use(
+  response => response,
+  error => {
+    const status = error.response?.status;
+    const endpoint = error.config?.url;
+
+    // Only handle errors for auth-related endpoints
+    if (endpoint?.includes('/users/me') || endpoint?.includes('/trips')) {
+      if (status === 401 || status === 404) {
+        localStorage.removeItem('access_token');
+        // Redirect to login using window.location for reliability
+        window.location.href = '/login';
+        return Promise.reject({
+          ...error,
+          userMessage:
+            status === 401
+              ? 'Your session has expired. Please logout and login again.'
+              : 'Your account could not be found. Please login again.',
+        });
+      }
+    }
+    // For other errors or other endpoints, pass through
+    return Promise.reject(error);
+  }
+);
+
 export interface ChatRequest {
   message: string;
   session_id?: string;

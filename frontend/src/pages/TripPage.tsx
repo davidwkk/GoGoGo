@@ -7,6 +7,11 @@ import { FlightCard } from '../components/trip/FlightCard';
 import { tripService } from '../services/tripService';
 import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
 
+interface AuthError {
+  userMessage?: string;
+  message?: string;
+}
+
 // Component for Google Maps Embed (Task #24)
 const MapEmbed = ({ url }: { url: string | null }) => {
   if (!url) return null;
@@ -85,8 +90,15 @@ export function TripPage() {
           (err instanceof Error && err.message.includes('cancel'))
         )
           return;
-        setError('Unable to sync trips. Please check your connection.');
-        console.error('Trip fetch error:', err);
+        const authErr = err as AuthError;
+        if (authErr.userMessage) {
+          setError(authErr.userMessage);
+          // Redirect to login immediately
+          navigate('/login');
+        } else {
+          setError('Unable to sync trips. Please check your connection.');
+          console.error('Trip fetch error:', err);
+        }
       })
       .finally(() => setLoading(false));
 
@@ -110,17 +122,33 @@ export function TripPage() {
   if (!isLoggedIn) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center">
-        <Map className="size-16 text-slate-100 mb-4" />
-        <h2 className="text-xl font-black text-slate-900">Sign in to view your trips</h2>
-        <p className="text-sm text-slate-400 mt-2 mb-6">
-          Create an account or sign in to save and manage your trip itineraries.
-        </p>
-        <button
-          onClick={() => navigate('/login')}
-          className="h-12 rounded-2xl bg-black text-white px-10 text-sm font-bold hover:bg-slate-800 transition-all"
-        >
-          Login to Account
-        </button>
+        {error ? (
+          <>
+            <AlertCircle className="size-16 text-red-400 mb-4" />
+            <h2 className="text-xl font-black text-slate-900 mb-2">Session Error</h2>
+            <p className="text-sm text-red-500 mt-2 mb-6">{error}</p>
+            <button
+              onClick={() => navigate('/login')}
+              className="h-12 rounded-2xl bg-black text-white px-10 text-sm font-bold hover:bg-slate-800 transition-all"
+            >
+              Go to Login
+            </button>
+          </>
+        ) : (
+          <>
+            <Map className="size-16 text-slate-100 mb-4" />
+            <h2 className="text-xl font-black text-slate-900">Sign in to view your trips</h2>
+            <p className="text-sm text-slate-400 mt-2 mb-6">
+              Create an account or sign in to save and manage your trip itineraries.
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="h-12 rounded-2xl bg-black text-white px-10 text-sm font-bold hover:bg-slate-800 transition-all"
+            >
+              Login to Account
+            </button>
+          </>
+        )}
       </div>
     );
   }
