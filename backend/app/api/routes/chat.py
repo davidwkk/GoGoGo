@@ -202,12 +202,17 @@ async def chat(
     if body.user_preferences:
         prefs_dict = body.user_preferences.model_dump()
 
+    trip_params_dict = None
+    if body.trip_parameters:
+        trip_params_dict = body.trip_parameters.model_dump()
+
     logger.bind(
         event="router_agent_invocation",
         layer="router",
         trace_id=trace_id,
         generate_plan=body.generate_plan,
         preferences_keys=list(prefs_dict.keys()) if prefs_dict else [],
+        trip_parameters_keys=list(trip_params_dict.keys()) if trip_params_dict else [],
     ).info("ROUTER: Calling invoke_agent")
 
     result = await invoke_agent(
@@ -216,6 +221,7 @@ async def chat(
         session_id=session.id,
         generate_plan=body.generate_plan,
         preferences=prefs_dict,
+        trip_parameters=trip_params_dict,
         db=db,
         trace_id=trace_id,
     )

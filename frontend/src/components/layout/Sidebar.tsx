@@ -1,12 +1,11 @@
 // Sidebar — Left navigation bar with icon links
 
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, MessageSquare, Map, Settings, User } from 'lucide-react';
+import { LogOut, MessageSquare, Map, User } from 'lucide-react';
 
 const navItems = [
   { icon: MessageSquare, label: 'Chat', path: '/chat' },
   { icon: Map, label: 'Trips', path: '/trips' },
-  { icon: Settings, label: 'Preferences', path: '/preferences' },
   { icon: User, label: 'Profile', path: '/profile' },
 ];
 

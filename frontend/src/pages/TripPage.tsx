@@ -121,31 +121,35 @@ export function TripPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-center">
         {error ? (
           <>
-            <AlertCircle className="size-16 text-red-400 mb-4" />
-            <h2 className="text-xl font-black text-slate-900 mb-2">Session Error</h2>
-            <p className="text-sm text-red-500 mt-2 mb-6">{error}</p>
+            <AlertCircle className="size-8 text-red-400" />
+            <div>
+              <p className="text-sm font-medium text-destructive">Session Error</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
+            </div>
             <button
               onClick={() => navigate('/login')}
-              className="h-12 rounded-2xl bg-black text-white px-10 text-sm font-bold hover:bg-slate-800 transition-all"
+              className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
             >
               Go to Login
             </button>
           </>
         ) : (
           <>
-            <Map className="size-16 text-slate-100 mb-4" />
-            <h2 className="text-xl font-black text-slate-900">Sign in to view your trips</h2>
-            <p className="text-sm text-slate-400 mt-2 mb-6">
-              Create an account or sign in to save and manage your trip itineraries.
-            </p>
+            <Map className="size-8 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Sign in to view your trips</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Create an account or sign in to save and manage your trip itineraries.
+              </p>
+            </div>
             <button
               onClick={() => navigate('/login')}
-              className="h-12 rounded-2xl bg-black text-white px-10 text-sm font-bold hover:bg-slate-800 transition-all"
+              className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
             >
-              Login to Account
+              Sign in
             </button>
           </>
         )}

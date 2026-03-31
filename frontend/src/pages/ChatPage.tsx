@@ -3,6 +3,7 @@
 import { InputBar } from '@/components/chat/InputBar';
 import { ActivityCard } from '@/components/trip/ActivityCard';
 import { FlightCard } from '@/components/trip/FlightCard';
+import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
 import { apiClient } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useChatStore } from '@/store';
@@ -528,11 +529,11 @@ export function ChatPage() {
                     Sign in
                   </button>
                   <button
-                    onClick={() => navigate('/preferences')}
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                     className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-4 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   >
                     <Settings className="size-3.5" />
-                    Set preferences
+                    Travel Settings
                   </button>
                 </div>
               )}
@@ -653,6 +654,7 @@ export function ChatPage() {
         </div>
 
         {/* Input bar */}
+        <TravelSettingsBar />
         <InputBar onItinerary={setDemoItinerary} />
       </main>
     </div>

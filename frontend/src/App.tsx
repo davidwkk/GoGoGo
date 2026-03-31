@@ -5,7 +5,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ChatPage } from '@/pages/ChatPage';
 import { LoginPage } from '@/pages/LoginPage';
-import { PreferencesPage } from '@/pages/PreferencesPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { TripPage } from '@/pages/TripPage';
 
@@ -18,7 +17,6 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/trips" element={<TripPage />} />
-          <Route path="/preferences" element={<PreferencesPage />} />
           <Route path="/chat" element={<ChatPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/chat" replace />} />
