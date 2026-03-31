@@ -27,6 +27,7 @@ services:
     restart: unless-stopped
     command: /startup.sh
     environment:
+      TZ: Asia/Hong_Kong
       DATABASE_URL: postgresql://gogogo:gogogo@db:5432/gogogo
       SECRET_KEY: ${SECRET_KEY}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-43200}

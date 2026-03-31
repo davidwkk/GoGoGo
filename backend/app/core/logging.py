@@ -1,3 +1,8 @@
+import os
+
+# Set timezone to Hong Kong BEFORE importing loguru
+os.environ.setdefault("TZ", "Asia/Hong_Kong")
+
 import sys
 from pathlib import Path
 
@@ -9,7 +14,7 @@ from app.core.config import settings
 def setup_logging() -> None:
     logger.remove()
 
-    # Console sink (stdout) - human-readable
+    # Console sink (stdout) - human-readable (HKT timezone via TZ env var)
     logger.add(
         sys.stdout,
         colorize=True,
@@ -20,7 +25,7 @@ def setup_logging() -> None:
     logs_path = Path(__file__).parent.parent / "logs"
     logs_path.mkdir(exist_ok=True)
 
-    # File sink for all logs - human-readable
+    # File sink for all logs - human-readable (HKT timezone via TZ env var)
     logger.add(
         logs_path / "app.log",
         rotation="10 MB",
@@ -29,7 +34,7 @@ def setup_logging() -> None:
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
     )
 
-    # Separate file sink for errors only
+    # Separate file sink for errors only (HKT timezone via TZ env var)
     logger.add(
         logs_path / "error.log",
         rotation="10 MB",

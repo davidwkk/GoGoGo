@@ -26,12 +26,34 @@ from app.agent.tools import (
 
 
 def _make_sync(fn):
-    """Wrap an async function so it appears sync to the Gemini SDK."""
+    """Wrap an async function so it appears sync to the Gemini SDK.
+
+    When called from sync context (Gemini SDK): runs the async function
+    with asyncio.run() and returns the result.
+
+    When called from async context (agent code): returns an awaitable
+    that runs the async function in a thread pool to avoid blocking.
+    """
+
+    async def _async_runner(*args, **kwargs):
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, lambda: asyncio.run(fn(*args, **kwargs))
+        )
 
     @wraps(fn)  # preserves __name__ so SDK sees unique declarations
     def wrapper(*args, **kwargs):
-        return asyncio.run(fn(*args, **kwargs))
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop - safe to use asyncio.run()
+            return asyncio.run(fn(*args, **kwargs))
+        else:
+            # Already in async context - return awaitable
+            return _async_runner(*args, **kwargs)
 
+    # Tag as async so agent knows to await
+    wrapper._is_async = True  # type: ignore[attr-defined]
     return wrapper
 
 

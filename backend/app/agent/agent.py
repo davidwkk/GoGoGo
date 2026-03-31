@@ -69,20 +69,42 @@ def _log_usage(response) -> dict | None:
     """Extract and log token usage from response."""
     try:
         usage = response.usage_metadata
-        if usage:
-            token_usage = {
-                "prompt_tokens": getattr(usage, "prompt_token_count", None),
-                "candidates_tokens": getattr(usage, "candidates_token_count", None),
-                "total_tokens": getattr(usage, "total_token_count", None),
-            }
-            logger.bind(
-                event="token_usage",
-                **token_usage,
-            ).info("Token usage")
-            return token_usage
+        if not usage:
+            return None
+
+        # Handle both attribute access and dict-style access for flexibility
+        def get_val(obj, *keys):
+            for key in keys:
+                val = getattr(obj, key, None)
+                if val is not None:
+                    return val
+                # Try dict-style access
+                if isinstance(obj, dict):
+                    val = obj.get(key)
+                    if val is not None:
+                        return val
+            return None
+
+        prompt_tokens = get_val(usage, "prompt_token_count", "prompt_tokens")
+        candidates_tokens = get_val(
+            usage, "candidates_token_count", "candidates_tokens"
+        )
+        total_tokens = get_val(usage, "total_token_count", "total_tokens")
+
+        token_usage = {
+            "prompt_tokens": prompt_tokens,
+            "candidates_tokens": candidates_tokens,
+            "total_tokens": total_tokens,
+        }
+
+        logger.bind(
+            event="token_usage",
+            **token_usage,
+        ).info("Token usage")
+        return token_usage
     except Exception:
-        pass
-    return None
+        logger.bind(event="token_usage_error").warning("Failed to extract token usage")
+        return None
 
 
 def _get_current_datetime_str() -> str:
