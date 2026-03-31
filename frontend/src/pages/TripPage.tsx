@@ -53,8 +53,8 @@ export function TripPage() {
   };
 
   const nights = getNights(hotel?.check_in_date, hotel?.check_out_date);
-  const minTotal = (hotel?.price_per_night_min_hkd || 0) * nights;
-  const maxTotal = (hotel?.price_per_night_max_hkd || 0) * nights;
+  const minTotal = (hotel?.price_per_night_hkd?.min || 0) * nights;
+  const maxTotal = (hotel?.price_per_night_hkd?.max || 0) * nights;
 
   // Sync auth state whenever localStorage changes (handles logout in other tabs/components)
   useEffect(() => {
@@ -282,8 +282,8 @@ export function TripPage() {
                           Nightly Rate
                         </p>
                         <p className="text-sm font-bold text-blue-400">
-                          HKD {hotel.price_per_night_min_hkd?.toLocaleString()} -{' '}
-                          {hotel.price_per_night_max_hkd?.toLocaleString()}
+                          HKD {hotel.price_per_night_hkd?.min?.toLocaleString()} -{' '}
+                          {hotel.price_per_night_hkd?.max?.toLocaleString()}
                         </p>
                       </div>
                     </div>

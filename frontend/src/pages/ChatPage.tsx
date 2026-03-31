@@ -212,8 +212,8 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
         )
       )
     : 1;
-  const minTotal = (hotel?.price_per_night_min_hkd || 0) * nights;
-  const maxTotal = (hotel?.price_per_night_max_hkd || 0) * nights;
+  const minTotal = (hotel?.price_per_night_hkd?.min || 0) * nights;
+  const maxTotal = (hotel?.price_per_night_hkd?.max || 0) * nights;
 
   return (
     <div className="w-full max-w-3xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
@@ -314,8 +314,8 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
                 <div className="text-right">
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest">Nightly</p>
                   <p className="text-sm font-bold text-blue-400">
-                    HKD {hotel.price_per_night_min_hkd?.toLocaleString()} –{' '}
-                    {hotel.price_per_night_max_hkd?.toLocaleString()}
+                    HKD {hotel.price_per_night_hkd?.min?.toLocaleString()} –{' '}
+                    {hotel.price_per_night_hkd?.max?.toLocaleString()}
                   </p>
                 </div>
               </div>

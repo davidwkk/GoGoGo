@@ -1,13 +1,8 @@
 // frontend/src/services/tripService.ts
 import { apiClient } from './api';
-import type { TripDetail } from '../types/trip';
+import type { TripDetail, TripSummary } from '../types/trip';
 
-export interface TripSummary {
-  id: number;
-  title: string;
-  destination: string;
-  created_at: string;
-}
+export { type TripSummary };
 
 export const tripService = {
   /** List all trips for the current user */

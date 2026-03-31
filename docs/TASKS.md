@@ -390,21 +390,21 @@ async def get_current_user(
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area     | Issue                                                                                                                                                   |
-| --- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 17  | 🟡        | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
-| 21  | 🟡        | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                                    |
-| 24  | 🟡        | Frontend | ⚠️ Partial — `HotelCard.tsx`, `AttractionCard.tsx`, `MapEmbed.tsx` still missing (Xuan); TripPage and FlightCard implemented ✅                           |
-| 26  | 🟡        | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
-| —   | 🟡        | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                 |
-| —   | 🟡        | Frontend | ⚠️ Open — Increase STT duration to at least 30s (Minqi)                                                                                                  |
+| #   | Severity | Area     | Issue                                                                                                                                                    |
+| --- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 17  | 🟡       | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
+| 21  | 🟡       | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                                    |
+| 24  | 🟡       | Frontend | ⚠️ Partial — `HotelCard.tsx`, `AttractionCard.tsx`, `MapEmbed.tsx` still missing (Xuan); TripPage and FlightCard implemented ✅                          |
+| 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
+| —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                  |
+| —   | 🟡       | Frontend | ⚠️ Open — Increase STT duration to at least 30s (Minqi)                                                                                                  |
 
 ---
 
 ## 🔗 Integration Points & Coordination
 
-| When       | Who           | Action                                                                                            |
-| ---------- | ------------- | ------------------------------------------------------------------------------------------------- |
+| When       | Who           | Action                                                                                             |
+| ---------- | ------------- | -------------------------------------------------------------------------------------------------- |
 | Day 1      | David + Xuan  | ✅ Finalize `TripItinerary` Pydantic schema together                                               |
 | Day 1      | David + Minqi | ✅ Session ID creation flow — `chat.py` creates session on first message when `session_id` is null |
 | Day 3      | David → All   | ✅ Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                           |
@@ -425,7 +425,7 @@ async def get_current_user(
 | **4–9**   | Agent loop + `chat_service.py` + callbacks + `POST /chat`                             | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
 | **9–13**  | Preference extraction + auth wiring                                                   | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
 | **13–17** | Wire real auth + DB into chat, import chat_history_service                            | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
-| **18–20** | 🔴 Buffer — integration bugs, demo prep                                                | 🔴 Buffer — integration bugs, demo prep            | 🔴 Buffer — integration bugs, demo prep            |
+| **18–20** | 🔴 Buffer — integration bugs, demo prep                                               | 🔴 Buffer — integration bugs, demo prep           | 🔴 Buffer — integration bugs, demo prep           |
 
 ---
 
