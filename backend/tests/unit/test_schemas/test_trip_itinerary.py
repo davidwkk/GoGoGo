@@ -6,7 +6,7 @@ from datetime import date as Date, datetime as DateTime
 
 import pytest
 
-from app.schemas.enums import FlightDirection
+from app.schemas.enums import ActivityCategory, FlightDirection
 from app.schemas.itinerary import (
     Activity,
     DayPlan,
@@ -61,6 +61,7 @@ class TestTripItineraryValidation:
             location="Central, Hong Kong",
             map_url="https://maps.google.com/...",
             estimated_duration_minutes=120,
+            category=ActivityCategory.SIGHTSEEING,
         )
         assert activity.name == "Victoria Peak"
         assert activity.estimated_duration_minutes == 120
@@ -76,6 +77,7 @@ class TestTripItineraryValidation:
                     description="Iconic ferry crossing Victoria Harbour.",
                     location="Central, Hong Kong",
                     estimated_duration_minutes=30,
+                    category=ActivityCategory.TRANSPORT,
                 ),
             ],
             afternoon=[],
@@ -85,6 +87,7 @@ class TestTripItineraryValidation:
                     description="Famous night market in Yau Ma Tei.",
                     location="Yau Ma Tei, Hong Kong",
                     estimated_duration_minutes=90,
+                    category=ActivityCategory.SHOPPING,
                 ),
             ],
         )
@@ -177,6 +180,7 @@ class TestTripItineraryValidation:
                 description="Test",
                 location="HK",
                 estimated_duration_minutes=-10,  # invalid
+                category=ActivityCategory.OTHER,
             )
 
     def test_model_json_schema_is_dict(self):

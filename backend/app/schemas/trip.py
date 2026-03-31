@@ -9,6 +9,8 @@ class TripSummary(BaseModel):
     id: int
     title: str
     destination: str
+    duration_days: int
+    thumbnail_url: str | None = None
     created_at: DateTime
 
     model_config = ConfigDict(from_attributes=True)

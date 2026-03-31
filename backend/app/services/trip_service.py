@@ -60,10 +60,14 @@ def get_trip(db: Session, trip_id: int, user_id: UUID) -> dict | None:
         # If stored JSON is corrupted, return raw dict
         itinerary = trip.itinerary_json
 
+    itinerary_dict = trip.itinerary_json or {}
+
     return {
         "id": trip.id,
         "title": trip.title,
         "destination": trip.destination,
+        "duration_days": itinerary_dict.get("duration_days", 0),
+        "thumbnail_url": _extract_thumbnail_url(itinerary_dict),
         "itinerary": itinerary,
         "created_at": trip.created_at.isoformat() if trip.created_at else None,
     }
@@ -83,9 +87,27 @@ def _generate_title(destination: str, days: list) -> str:
 
 def _trip_to_response(trip) -> dict:
     """Convert a Trip ORM object to a response dict."""
+    itinerary = trip.itinerary_json or {}
     return {
         "id": trip.id,
         "title": trip.title,
         "destination": trip.destination,
+        "duration_days": itinerary.get("duration_days", 0),
+        "thumbnail_url": _extract_thumbnail_url(itinerary),
         "created_at": trip.created_at.isoformat() if trip.created_at else None,
     }
+
+
+def _extract_thumbnail_url(itinerary: dict) -> str | None:
+    """Extract thumbnail URL from itinerary: first activity image or None."""
+    days = itinerary.get("days", [])
+    for day in days:
+        for period in ("morning", "afternoon", "evening"):
+            activities = day.get(period, [])
+            if activities and len(activities) > 0:
+                first = activities[0]
+                if first.get("thumbnail_url"):
+                    return first["thumbnail_url"]
+                if first.get("image_url"):
+                    return first["image_url"]
+    return None
