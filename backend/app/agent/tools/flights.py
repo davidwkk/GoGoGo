@@ -2,7 +2,7 @@
 
 API: GET https://serpapi.com/search.json
 Params: engine=google_flights, departure_id=PEK, arrival_id=AUS,
-        outbound_date=2026-03-31, return_date=2026-04-06, currency=USD, hl=en
+        outbound_date=2026-03-31, return_date=2026-04-06, currency=HKD, hl=en
 
 NOTE: google_flights engine does NOT support free-text "q" param.
       It requires structured params: departure_id, arrival_id, outbound_date.
@@ -69,7 +69,7 @@ NOTE: google_flights engine does NOT support free-text "q" param.
                 "airport_name": str,           # e.g. "Haneda Airport"
                 "duration_minutes": int,        # e.g. 90
             } | None,
-            "price": int | None,               # itinerary total price in USD (same for all segs)
+            "price": int | None,               # itinerary total price in HKD (same for all segs)
             "booking_url": str,                # Google Flights search URL pre-filled with route + date
         }
     ]
@@ -131,7 +131,7 @@ async def search_flights(
         "departure_id": dep_code,
         "arrival_id": arr_code,
         "outbound_date": outbound_date,
-        "currency": "USD",
+        "currency": "HKD",
         "hl": "en",
     }
 

@@ -100,9 +100,9 @@ async def test_search_hotels_returns_expected_results():
     assert hotel["check_out_date"] == "2026-04-06"
     assert hotel["check_in_time"] == "3:00 PM"
     assert hotel["check_out_time"] == "12:00 PM"
-    # Price: 347 USD × 7.78 = 2699.66 HKD
-    assert hotel["price_per_night_min_hkd"] == pytest.approx(2699.66)
-    assert hotel["total_price_hkd"] == pytest.approx(1733 * 7.78)
+    # Price: already in HKD from SerpAPI
+    assert hotel["price_per_night_min_hkd"] == 347
+    assert hotel["total_price_hkd"] == 1733
     assert hotel["hotel_class"] == "5-star hotel"
     assert hotel["hotel_class_int"] == 5
     assert hotel["rating"] == 4.6
