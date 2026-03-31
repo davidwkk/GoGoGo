@@ -10,9 +10,10 @@ from app.schemas.enums import ActivityCategory, FlightDirection
 from app.schemas.itinerary import (
     Activity,
     DayPlan,
-    FlightInfo,
+    Flight,
     FlightStop,
     HotelInfo,
+    PriceRange,
     TripItinerary,
 )
 from tests.fixtures.MOCK_ITINERARY import MOCK_ITINERARY
@@ -101,15 +102,14 @@ class TestTripItineraryValidation:
             name="Grand Hyatt Hong Kong",
             check_in_date=Date(2025, 7, 1),
             check_out_date=Date(2025, 7, 3),
-            price_per_night_min_hkd=1800.0,
-            price_per_night_max_hkd=2500.0,
+            price_per_night_hkd=PriceRange(min=1800.0, max=2500.0),
         )
         assert hotel.name == "Grand Hyatt Hong Kong"
-        assert hotel.price_per_night_min_hkd == 1800.0
+        assert hotel.price_per_night_hkd.min == 1800.0
 
     def test_flight_info_with_stops(self):
-        """FlightInfo validates with intermediate stops."""
-        flight = FlightInfo(
+        """Flight validates with intermediate stops."""
+        flight = Flight(
             direction=FlightDirection.OUTBOUND,
             airline="Cathay Pacific",
             flight_number="CX883",
@@ -131,8 +131,8 @@ class TestTripItineraryValidation:
         assert flight.stops[0].airport_code == "NRT"
 
     def test_flight_info_with_booking_url(self):
-        """FlightInfo validates with booking_url."""
-        flight = FlightInfo(
+        """Flight validates with booking_url."""
+        flight = Flight(
             direction=FlightDirection.OUTBOUND,
             airline="Cathay Pacific",
             flight_number="CX883",
@@ -146,8 +146,8 @@ class TestTripItineraryValidation:
         assert flight.booking_url == "https://www.google.com/flights/CX883"
 
     def test_flight_info_booking_url_is_optional(self):
-        """FlightInfo booking_url is optional and defaults to None."""
-        flight = FlightInfo(
+        """Flight booking_url is optional and defaults to None."""
+        flight = Flight(
             direction=FlightDirection.OUTBOUND,
             airline="Cathay Pacific",
             flight_number="CX883",

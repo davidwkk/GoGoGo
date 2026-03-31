@@ -77,8 +77,7 @@ class HotelInfo(BaseModel):
     name: str
     check_in_date: Date = Field(description="ISO 8601 date string")
     check_out_date: Date = Field(description="ISO 8601 date string")
-    price_per_night_min_hkd: float = Field(ge=0)
-    price_per_night_max_hkd: float = Field(ge=0)
+    price_per_night_hkd: PriceRange
 
     # --- Enriched via SERP ---
     address: str | None = None
@@ -87,14 +86,6 @@ class HotelInfo(BaseModel):
     booking_url: str | None = None
     image_url: str | None = None
     map_url: str | None = None
-
-    @model_validator(mode="after")
-    def check_price_range(self) -> HotelInfo:
-        if self.price_per_night_min_hkd > self.price_per_night_max_hkd:
-            raise ValueError(
-                "price_per_night_min_hkd must be <= price_per_night_max_hkd"
-            )
-        return self
 
 
 # ─────────────────────────────────────────
@@ -119,7 +110,7 @@ class FlightStop(BaseModel):
         return self
 
 
-class FlightInfo(BaseModel):
+class Flight(BaseModel):
     # --- Core (LLM-generated) ---
     direction: FlightDirection
     airline: str
@@ -156,7 +147,7 @@ class TripItinerary(BaseModel):
     summary: str
     days: list[DayPlan]
     hotels: list[HotelInfo]
-    flights: list[FlightInfo]
+    flights: list[Flight]
 
     # --- Weather-enriched ---
     weather_summary: str | None = None
