@@ -10,6 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { userService, UserProfile } from '@/services/api';
 
+interface AuthError {
+  userMessage?: string;
+  message?: string;
+}
+
 export function ProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -37,11 +42,21 @@ export function ProfilePage() {
       setProfile(data);
       setUsername(data.username);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
+      const authErr = err as AuthError;
+      if (authErr.userMessage) {
+        setError(authErr.userMessage);
+        // Redirect to login after showing the message
+        setTimeout(() => {
+          localStorage.removeItem('access_token');
+          navigate('/login');
+        }, 3000);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to load profile');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     loadProfile();

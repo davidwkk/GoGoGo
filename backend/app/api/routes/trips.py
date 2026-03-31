@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, verify_user_exists
 from app.services.trip_service import get_trip, get_trips
 
 router = APIRouter()
@@ -14,6 +14,7 @@ def list_trips(
 ):
     """List all trips for the current user."""
     user_id = current_user["user_id"]
+    verify_user_exists(user_id, db)
     return get_trips(db, user_id)
 
 
@@ -25,6 +26,7 @@ def get_single_trip(
 ):
     """Get a single trip by ID. Returns 404 if not found or not owned."""
     user_id = current_user["user_id"]
+    verify_user_exists(user_id, db)
     trip = get_trip(db, trip_id, user_id)
     if trip is None:
         raise HTTPException(
@@ -43,6 +45,7 @@ def delete_single_trip(
     from app.repositories.trip_repo import delete_trip
 
     user_id = current_user["user_id"]
+    verify_user_exists(user_id, db)
     deleted = delete_trip(db, trip_id, user_id)
     if not deleted:
         raise HTTPException(
