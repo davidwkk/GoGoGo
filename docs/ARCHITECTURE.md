@@ -210,7 +210,7 @@ User message
     ↓
 POST /chat → chat_service.invoke_agent()
     ↓
-[Loop up to MAX_ITERATIONS=5]
+[Loop up to MAX_ITERATIONS=10]
     ↓
 Gemini 3 Flash generates content + tool calls
     ↓
