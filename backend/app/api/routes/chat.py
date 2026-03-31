@@ -1,10 +1,12 @@
 """Chat router — HTTP concerns only (parse request, call service, return response)."""
 
+import json
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from google.genai import Client, types
+from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_optional, verify_user_exists
@@ -158,14 +160,34 @@ async def chat(
 
     Supports both authenticated users and guest users (no token required).
     """
-
     user_id = current_user["user_id"] if current_user else None
+    trace_id = str(uuid4())
+
+    # ── Router layer: log incoming request ────────────────────────────────
+    logger.bind(
+        event="router_request",
+        layer="router",
+        trace_id=trace_id,
+        user_id=str(user_id) if user_id else None,
+        session_id=str(body.session_id) if body.session_id else None,
+        generate_plan=body.generate_plan,
+        message_preview=body.message[:100],
+        has_preferences=body.user_preferences is not None,
+    ).info("ROUTER: Received chat request")
 
     # Verify user exists in DB (valid token but user deleted → 401)
     verify_user_exists(user_id, db)
 
     # Get or create session
     session = await resolve_session(db, body.session_id, user_id)
+
+    logger.bind(
+        event="router_session",
+        layer="router",
+        trace_id=trace_id,
+        session_id=session.id,
+        is_new_session=body.session_id is None,
+    ).info(f"ROUTER: Session resolved — session_id={session.id}")
 
     # Save user message
     append_message(
@@ -180,7 +202,14 @@ async def chat(
     if body.user_preferences:
         prefs_dict = body.user_preferences.model_dump()
 
-    trace_id = str(uuid4())
+    logger.bind(
+        event="router_agent_invocation",
+        layer="router",
+        trace_id=trace_id,
+        generate_plan=body.generate_plan,
+        preferences_keys=list(prefs_dict.keys()) if prefs_dict else [],
+    ).info("ROUTER: Calling invoke_agent")
+
     result = await invoke_agent(
         user_message=body.message,
         user_id=user_id,
@@ -190,6 +219,53 @@ async def chat(
         db=db,
         trace_id=trace_id,
     )
+
+    # ── Router layer: log full LLM response for debugging ─────────────────
+    if body.generate_plan and result.itinerary:
+        # Detailed itinerary logging for trip planning
+        itinerary_dict = result.itinerary.model_dump(mode="json")
+        logger.bind(
+            event="router_llm_response_full",
+            layer="router",
+            trace_id=trace_id,
+            message_type=result.message_type,
+            # Full itinerary structure for debugging
+            itinerary_destination=result.itinerary.destination,
+            itinerary_duration_days=result.itinerary.duration_days,
+            itinerary_flights_count=len(result.itinerary.flights)
+            if result.itinerary.flights
+            else 0,
+            itinerary_hotels_count=len(result.itinerary.hotels)
+            if result.itinerary.hotels
+            else 0,
+            itinerary_days_count=len(result.itinerary.days)
+            if result.itinerary.days
+            else 0,
+            # Full raw itinerary JSON for deep debugging
+            itinerary_json=json.dumps(itinerary_dict, indent=2, ensure_ascii=False),
+        ).info(
+            f"ROUTER: Full LLM response (trip plan) — "
+            f"destination={result.itinerary.destination}, "
+            f"days={result.itinerary.duration_days}, "
+            f"flights={len(result.itinerary.flights) if result.itinerary.flights else 0}, "
+            f"hotels={len(result.itinerary.hotels) if result.itinerary.hotels else 0}, "
+            f"days_detail={len(result.itinerary.days) if result.itinerary.days else 0}"
+        )
+    else:
+        # Plain chat response logging
+        logger.bind(
+            event="router_llm_response_full",
+            layer="router",
+            trace_id=trace_id,
+            message_type=result.message_type,
+            response_preview=result.text[:500] if result.text else "",
+            response_length=len(result.text) if result.text else 0,
+            has_itinerary=result.itinerary is not None,
+        ).info(
+            f"ROUTER: Full LLM response — "
+            f"type={result.message_type}, "
+            f"length={len(result.text) if result.text else 0}"
+        )
 
     # Save assistant response — store text content only
     # (itinerary is returned in the API response separately, not in chat history)
@@ -209,5 +285,13 @@ async def chat(
         role="assistant",
         content=message_content,
     )
+
+    logger.bind(
+        event="router_response_sent",
+        layer="router",
+        trace_id=trace_id,
+        session_id=session.id,
+        message_type=result.message_type,
+    ).info(f"ROUTER: Response sent — type={result.message_type}")
 
     return result

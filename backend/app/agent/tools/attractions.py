@@ -63,16 +63,35 @@ from app.core.config import settings
 
 async def get_attraction(attraction_name: str) -> dict:
     """Fetch attraction details from Wikipedia REST API."""
+    logger.bind(
+        event="tool_start",
+        layer="tool",
+        tool="get_attraction",
+        attraction_name=attraction_name,
+    ).info(f"TOOL: get_attraction start — attraction={attraction_name}")
+
     title = attraction_name.strip().replace(" ", "_")
     url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
 
-    logger.info(f"[attractions] Fetching: {attraction_name}")
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="get_attraction",
+        attraction_name=attraction_name,
+        url=url,
+    ).debug(f"TOOL: Calling Wikipedia API for {attraction_name}")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(url)
             if response.status_code == 404:
-                logger.warning(f"[attractions] Not found: {attraction_name}")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="get_attraction",
+                    status_code=404,
+                    attraction_name=attraction_name,
+                ).warning(f"TOOL: Attraction not found: {attraction_name}")
                 return {
                     "error": f"Attraction not found: {attraction_name}",
                     "name": attraction_name,
@@ -124,22 +143,45 @@ async def get_attraction(attraction_name: str) -> dict:
                 "page"
             ),
         }
-        logger.info(f"[attractions] Fetched: {result['name']}")
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="get_attraction",
+            attraction_name=attraction_name,
+            result_name=result["name"],
+            has_coordinates=coords is not None,
+            has_thumbnail=thumbnail.get("source") is not None,
+        ).info(f"TOOL: get_attraction done — fetched: {result['name']}")
         return result
     except httpx.TimeoutException:
-        logger.warning(f"[attractions] Timeout: {attraction_name}")
+        logger.bind(
+            event="tool_timeout",
+            layer="tool",
+            tool="get_attraction",
+            attraction_name=attraction_name,
+        ).warning(f"TOOL: Timeout fetching attraction: {attraction_name}")
         return {
             "error": f"Timeout fetching attraction: {attraction_name}",
             "name": attraction_name,
         }
     except httpx.HTTPStatusError as e:
-        logger.warning(f"[attractions] HTTP error: {e}")
+        logger.bind(
+            event="tool_http_error",
+            layer="tool",
+            tool="get_attraction",
+            status_code=e.response.status_code,
+        ).warning(f"TOOL: HTTP error fetching attraction: {e}")
         return {
             "error": f"HTTP error fetching attraction: {e}",
             "name": attraction_name,
         }
     except Exception as e:
-        logger.warning(f"[attractions] Failed: {e}")
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="get_attraction",
+            error=str(e),
+        ).warning(f"TOOL: Failed to fetch attraction: {e}")
         return {"error": f"Failed to fetch attraction: {e}", "name": attraction_name}
 
 

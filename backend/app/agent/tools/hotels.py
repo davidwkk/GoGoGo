@@ -152,7 +152,21 @@ async def search_hotels(
     check_out: str | None = None,
 ) -> dict:
     """Search for hotels using SerpAPI Google Hotels."""
+    logger.bind(
+        event="tool_start",
+        layer="tool",
+        tool="search_hotels",
+        destination=destination,
+        check_in=check_in,
+        check_out=check_out,
+    ).info(f"TOOL: search_hotels start — destination={destination}")
+
     if not settings.SERPAPI_KEY:
+        logger.bind(
+            event="tool_no_api_key",
+            layer="tool",
+            tool="search_hotels",
+        ).warning("TOOL: SERPAPI_KEY not configured")
         return {"error": "SERPAPI_KEY not configured", "hotels": []}
 
     params = {
@@ -167,7 +181,12 @@ async def search_hotels(
     if check_out:
         params["check_out_date"] = check_out
 
-    logger.info(f"[hotels] Searching hotels in: {destination}")
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="search_hotels",
+        destination=destination,
+    ).info(f"TOOL: Calling SerpAPI for hotels in {destination}")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -176,13 +195,28 @@ async def search_hotels(
                 params=params,
             )
             if response.status_code == 401:
-                logger.warning("[hotels] Invalid SerpAPI key")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_hotels",
+                    status_code=401,
+                ).warning("TOOL: Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "hotels": []}
             if response.status_code == 404:
-                logger.warning("[hotels] Hotels endpoint not found")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_hotels",
+                    status_code=404,
+                ).warning("TOOL: Hotels endpoint not found")
                 return {"error": "SerpAPI hotels endpoint not found", "hotels": []}
             if response.status_code == 429:
-                logger.warning("[hotels] SerpAPI rate limit exceeded")
+                logger.bind(
+                    event="tool_rate_limit",
+                    layer="tool",
+                    tool="search_hotels",
+                    status_code=429,
+                ).warning("TOOL: SerpAPI rate limit exceeded")
                 return {"error": "SerpAPI rate limit exceeded", "hotels": []}
             response.raise_for_status()
             data = response.json()
@@ -192,8 +226,12 @@ async def search_hotels(
         properties = data.get("properties", [])
         if not properties:
             properties = data.get("non_matching_properties", [])
-            logger.warning(
-                "[hotels] No matching properties; falling back to non_matching_properties"
+            logger.bind(
+                event="tool_fallback",
+                layer="tool",
+                tool="search_hotels",
+            ).warning(
+                "TOOL: No matching properties; falling back to non_matching_properties"
             )
 
         for h in properties[:10]:
@@ -263,14 +301,37 @@ async def search_hotels(
                 }
             )
 
-        logger.info(f"[hotels] Found {len(hotels)} hotels for {destination}")
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_hotels",
+            destination=destination,
+            hotel_count=len(hotels),
+        ).info(
+            f"TOOL: search_hotels done — found {len(hotels)} hotels for {destination}"
+        )
         return {"hotels": hotels}
     except httpx.TimeoutException:
-        logger.warning(f"[hotels] Timeout for: {destination}")
+        logger.bind(
+            event="tool_timeout",
+            layer="tool",
+            tool="search_hotels",
+            destination=destination,
+        ).warning(f"TOOL: Timeout searching hotels for: {destination}")
         return {"error": f"Timeout searching hotels for: {destination}", "hotels": []}
     except httpx.HTTPStatusError as e:
-        logger.warning(f"[hotels] HTTP error: {e}")
+        logger.bind(
+            event="tool_http_error",
+            layer="tool",
+            tool="search_hotels",
+            status_code=e.response.status_code,
+        ).warning(f"TOOL: HTTP error searching hotels: {e}")
         return {"error": f"HTTP error searching hotels: {e}", "hotels": []}
     except Exception as e:
-        logger.warning(f"[hotels] Failed: {e}")
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="search_hotels",
+            error=str(e),
+        ).warning(f"TOOL: Hotel search failed: {e}")
         return {"error": f"Hotel search failed: {e}", "hotels": []}
