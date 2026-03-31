@@ -2,7 +2,7 @@
 
 API: GET https://serpapi.com/search.json
 Params: engine=google_hotels, q=Bali, check_in_date=2026-03-31,
-        check_out_date=2026-04-01, adults=2, currency=USD, gl=us, hl=en
+        check_out_date=2026-04-01, adults=2, currency=HKD, gl=us, hl=en
 
 --- SerpAPI Google Hotels Full Response Schema ---
 {
@@ -106,9 +106,9 @@ Params: engine=google_hotels, q=Bali, check_in_date=2026-03-31,
             "check_out_time": str | None,          # e.g. "12:00 PM"
             "check_in_date": str | None,            # from request param (not in response)
             "check_out_date": str | None,          # from request param (not in response)
-            "price_per_night_min_hkd": float | None,  # rate_per_night.extracted_lowest in HKD
+            "price_per_night_min_hkd": float | None,  # rate_per_night.extracted_lowest
             "price_per_night_max_hkd": float | None,  # same (range not available in this schema)
-            "total_price_hkd": float | None,       # total_rate.extracted_lowest in HKD
+            "total_price_hkd": float | None,       # total_rate.extracted_lowest
             "hotel_class": str | None,            # e.g. "5-star hotel"
             "hotel_class_int": int | None,        # e.g. 5
             "rating": float | None,               # overall_rating
@@ -145,14 +145,6 @@ from loguru import logger
 
 from app.core.config import settings
 
-# Approximate HKD conversion rates (should ideally come from a config/external service)
-_HKD_PER_USD: float = 7.78  # ⚠️ Hardcoded — replace with live FX rate in production
-
-
-def _usd_to_hkd(usd: float | None) -> float | None:
-    """Convert USD to HKD. Returns None if input is None."""
-    return round(usd * _HKD_PER_USD, 2) if usd is not None else None
-
 
 async def search_hotels(
     destination: str,
@@ -167,7 +159,7 @@ async def search_hotels(
         "q": destination,
         "api_key": settings.SERPAPI_KEY,
         "engine": "google_hotels",
-        "currency": "USD",
+        "currency": "HKD",
         "hl": "en",
     }
     if check_in:
@@ -205,13 +197,13 @@ async def search_hotels(
             )
 
         for h in properties[:10]:
-            # Price — use rate_per_night.extracted_lowest
+            # Price — use rate_per_night.extracted_lowest (already in HKD)
             rate_per_night = h.get("rate_per_night") or {}
-            price_min_hkd = _usd_to_hkd(rate_per_night.get("extracted_lowest"))
+            price_min_hkd = rate_per_night.get("extracted_lowest")
 
-            # Total price for the stay
+            # Total price for the stay (already in HKD)
             total_rate = h.get("total_rate") or {}
-            total_price_hkd = _usd_to_hkd(total_rate.get("extracted_lowest"))
+            total_price_hkd = total_rate.get("extracted_lowest")
 
             # Build map URL from GPS coordinates
             map_url = None
