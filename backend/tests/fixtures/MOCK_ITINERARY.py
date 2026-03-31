@@ -12,8 +12,9 @@ from app.schemas.enums import ActivityCategory, FlightDirection
 from app.schemas.itinerary import (
     Activity,
     DayPlan,
-    FlightInfo,
+    Flight,
     HotelInfo,
+    PriceRange,
     TripItinerary,
 )
 
@@ -178,12 +179,11 @@ MOCK_ITINERARY = TripItinerary(
             name="Park Hyatt Tokyo",
             check_in_date=Date(2025, 6, 1),
             check_out_date=Date(2025, 6, 6),
-            price_per_night_min_hkd=3500.0,
-            price_per_night_max_hkd=5000.0,
+            price_per_night_hkd=PriceRange(min=3500.0, max=5000.0),
         ),
     ],
     flights=[
-        FlightInfo(
+        Flight(
             direction=FlightDirection.OUTBOUND,
             airline="ANA",
             flight_number="NH847",
@@ -194,7 +194,7 @@ MOCK_ITINERARY = TripItinerary(
             stops=[],
             booking_url="https://www.google.com/flights/NH847",
         ),
-        FlightInfo(
+        Flight(
             direction=FlightDirection.RETURN,
             airline="ANA",
             flight_number="NH846",

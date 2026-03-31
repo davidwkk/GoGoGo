@@ -20,10 +20,12 @@ from app.schemas.enums import (
 )
 from app.schemas.itinerary import (
     Activity,
+    BudgetBreakdown,
     DayPlan,
-    FlightInfo,
+    Flight,
     FlightStop,
     HotelInfo,
+    PriceRange,
     TripItinerary,
 )
 from app.schemas.user import UserCreate, UserPreference, UserResponse, UserUpdate
@@ -48,10 +50,12 @@ __all__ = [
     "UserUpdate",
     # Itinerary
     "Activity",
+    "BudgetBreakdown",
     "DayPlan",
-    "FlightInfo",
+    "Flight",
     "FlightStop",
     "HotelInfo",
+    "PriceRange",
     "TripItinerary",
     # Chat
     "ChatMessage",
