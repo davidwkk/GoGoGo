@@ -89,15 +89,19 @@ def log_tool_response(
 ) -> None:
     """Called after a tool returns a response."""
     if "error" in result:
+        # Extract error details - error dict may contain context beyond the message
+        error_msg = result["error"]
+        error_details = {k: v for k, v in result.items() if k != "error"}
         logger.bind(
             event="tool_response",
             service=service,
             trace_id=trace_id,
             model=model,
             tool=tool_name,
-            tool_error=result["error"],
+            tool_error=error_msg,
+            tool_error_details=error_details if error_details else None,
             tool_duration_ms=duration_ms,
-        ).warning("Agent tool error")
+        ).warning(f"Agent tool error: {error_msg}")
     else:
         # Extract meaningful summary from result
         summary = _summarize_tool_result(tool_name, result)
