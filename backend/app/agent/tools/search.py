@@ -124,27 +124,57 @@ from app.core.config import settings
 
 async def search_web(query: str) -> dict:
     """Search the web using Tavily with SerpAPI fallback."""
-    logger.info(f"[search] Query: {query}")
+    logger.bind(
+        event="tool_start",
+        layer="tool",
+        tool="search_web",
+        query=query,
+    ).info("TOOL: search_web start")
 
     if settings.TAVILY_API_KEY:
         result = await _search_tavily(query)
         if "error" not in result:
-            logger.info(
-                f"[search] Tavily returned {len(result.get('results', []))} results"
-            )
+            result_count = len(result.get("results", []))
+            logger.bind(
+                event="tool_done",
+                layer="tool",
+                tool="search_web",
+                provider="tavily",
+                result_count=result_count,
+            ).info(f"TOOL: search_web done — Tavily returned {result_count} results")
             return result
 
     # Fallback to SerpAPI
     result = await _search_serpapi(query)
     if "error" not in result:
-        logger.info(
-            f"[search] SerpAPI returned {len(result.get('results', []))} results"
-        )
+        result_count = len(result.get("results", []))
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_web",
+            provider="serpapi",
+            result_count=result_count,
+        ).info(f"TOOL: search_web done — SerpAPI returned {result_count} results")
+    else:
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="search_web",
+            error=result.get("error"),
+        ).warning(f"TOOL: search_web failed — {result.get('error')}")
     return result
 
 
 async def _search_tavily(query: str) -> dict:
     """Primary search via Tavily AI."""
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="search_web",
+        provider="tavily",
+        query=query,
+    ).debug("TOOL: Calling Tavily API")
+
     payload = {
         "query": query,
         "search_depth": "basic",
@@ -163,7 +193,13 @@ async def _search_tavily(query: str) -> dict:
                 headers=headers,
             )
             if response.status_code == 401:
-                logger.warning("[search] Invalid Tavily API key")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_web",
+                    provider="tavily",
+                    status_code=401,
+                ).warning("TOOL: Invalid Tavily API key")
                 return {"error": "Invalid Tavily API key", "results": []}
             response.raise_for_status()
             data = response.json()
@@ -182,20 +218,51 @@ async def _search_tavily(query: str) -> dict:
                 ]
             }
     except httpx.TimeoutException:
-        logger.warning(f"[search] Tavily timeout for: {query}")
+        logger.bind(
+            event="tool_timeout",
+            layer="tool",
+            tool="search_web",
+            provider="tavily",
+            query=query,
+        ).warning(f"TOOL: Tavily timeout for query: {query}")
         return {"error": f"Timeout during Tavily search for: {query}", "results": []}
     except httpx.HTTPStatusError as e:
-        logger.warning(f"[search] Tavily HTTP error: {e}")
+        logger.bind(
+            event="tool_http_error",
+            layer="tool",
+            tool="search_web",
+            provider="tavily",
+            status_code=e.response.status_code,
+        ).warning(f"TOOL: Tavily HTTP error: {e}")
         return {"error": f"Tavily HTTP error: {e}", "results": []}
     except Exception as e:
-        logger.warning(f"[search] Tavily failed: {e}")
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="search_web",
+            provider="tavily",
+            error=str(e),
+        ).warning(f"TOOL: Tavily failed: {e}")
         return {"error": f"Tavily search failed: {e}", "results": []}
 
 
 async def _search_serpapi(query: str) -> dict:
     """Fallback search via SerpAPI."""
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="search_web",
+        provider="serpapi",
+        query=query,
+    ).debug("TOOL: Calling SerpAPI")
+
     if not settings.SERPAPI_KEY:
-        logger.warning("[search] No search API key configured")
+        logger.bind(
+            event="tool_no_api_key",
+            layer="tool",
+            tool="search_web",
+            provider="serpapi",
+        ).warning("TOOL: No search API key configured (Tavily or SerpAPI)")
         return {
             "error": "No search API key configured (Tavily or SerpAPI)",
             "results": [],
@@ -214,7 +281,13 @@ async def _search_serpapi(query: str) -> dict:
                 params=params,
             )
             if response.status_code == 401:
-                logger.warning("[search] Invalid SerpAPI key")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_web",
+                    provider="serpapi",
+                    status_code=401,
+                ).warning("TOOL: Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "results": []}
             response.raise_for_status()
             data = response.json()
@@ -231,11 +304,29 @@ async def _search_serpapi(query: str) -> dict:
 
             return {"results": results}
     except httpx.TimeoutException:
-        logger.warning(f"[search] SerpAPI timeout for: {query}")
+        logger.bind(
+            event="tool_timeout",
+            layer="tool",
+            tool="search_web",
+            provider="serpapi",
+            query=query,
+        ).warning(f"TOOL: SerpAPI timeout for query: {query}")
         return {"error": f"Timeout during SerpAPI search for: {query}", "results": []}
     except httpx.HTTPStatusError as e:
-        logger.warning(f"[search] SerpAPI HTTP error: {e}")
+        logger.bind(
+            event="tool_http_error",
+            layer="tool",
+            tool="search_web",
+            provider="serpapi",
+            status_code=e.response.status_code,
+        ).warning(f"TOOL: SerpAPI HTTP error: {e}")
         return {"error": f"SerpAPI HTTP error: {e}", "results": []}
     except Exception as e:
-        logger.warning(f"[search] SerpAPI failed: {e}")
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="search_web",
+            provider="serpapi",
+            error=str(e),
+        ).warning(f"TOOL: SerpAPI failed: {e}")
         return {"error": f"SerpAPI search failed: {e}", "results": []}

@@ -17,7 +17,6 @@ ENV VIRTUAL_ENV="/venv"
 ENV PATH="/venv/bin:$PATH"
 
 COPY . .
-RUN mkdir -p logs
 
 # Copy startup script
 COPY startup.sh /startup.sh

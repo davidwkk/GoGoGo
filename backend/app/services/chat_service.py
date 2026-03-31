@@ -40,17 +40,27 @@ async def invoke_agent(
     trace_id = trace_id or str(uuid4())
 
     logger.bind(
-        event="invoke_start",
-        service="chat",
+        event="service_invoke_start",
+        layer="service",
         trace_id=trace_id,
         user_id=str(user_id) if user_id else None,
         session_id=session_id_str,
         generate_plan=generate_plan,
         user_message_preview=user_message[:100],
-    ).info("invoke_agent called")
+        has_preferences=preferences is not None,
+        preferences_keys=list(preferences.keys()) if preferences else [],
+    ).info("SERVICE: invoke_agent called")
 
     try:
         if generate_plan:
+            # ── Phase 1: Run agent with full tool loop ────────────────────────
+            logger.bind(
+                event="service_agent_loop_start",
+                layer="service",
+                trace_id=trace_id,
+                generate_plan=generate_plan,
+            ).info("SERVICE: Starting run_agent_structured (trip planning)")
+
             itinerary = await asyncio.wait_for(
                 run_agent_structured(
                     user_message=user_message,
@@ -77,31 +87,45 @@ async def invoke_agent(
                 }
 
             logger.bind(
-                event="invoke_done",
-                service="chat",
+                event="service_agent_loop_done",
+                layer="service",
                 trace_id=trace_id,
                 latency_ms=latency_ms,
                 message_type="itinerary",
                 destination=itinerary.destination if itinerary else None,
                 tool_summary=tool_summary,
-            ).info("invoke_agent done — itinerary")
+            ).info(
+                f"SERVICE: invoke_agent done (trip plan) — "
+                f"destination={itinerary.destination if itinerary else None}, "
+                f"latency={latency_ms}ms"
+            )
 
             # Save trip to DB if db session provided and user is authenticated
             if db is not None and itinerary is not None and user_id is not None:
                 from app.services import trip_service
+
+                logger.bind(
+                    event="service_save_trip_start",
+                    layer="service",
+                    trace_id=trace_id,
+                    user_id=str(user_id),
+                    session_id=session_id_str,
+                ).info("SERVICE: Saving trip to database")
 
                 trip_service.save_trip(
                     db=db,
                     user_id=user_id,
                     session_id=session_id,
                     itinerary=itinerary,
-                )
-                logger.bind(
-                    event="trip_saved",
-                    service="chat",
                     trace_id=trace_id,
-                    session_id=session_id_str,
-                ).info("Trip saved to DB")
+                )
+
+                logger.bind(
+                    event="service_save_trip_done",
+                    layer="service",
+                    trace_id=trace_id,
+                    user_id=str(user_id),
+                ).info("SERVICE: Trip saved to DB")
 
             return ChatResponse(
                 session_id=session_id_str,
@@ -110,6 +134,14 @@ async def invoke_agent(
                 message_type="itinerary",
             )
         else:
+            # ── Phase 2: Simple chat mode ─────────────────────────────────────
+            logger.bind(
+                event="service_agent_loop_start",
+                layer="service",
+                trace_id=trace_id,
+                generate_plan=generate_plan,
+            ).info("SERVICE: Starting run_agent (simple chat)")
+
             text = await asyncio.wait_for(
                 run_agent(
                     user_message=user_message,
@@ -119,15 +151,20 @@ async def invoke_agent(
                 timeout=TIMEOUT_SECONDS,
             )
             latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
+
             logger.bind(
-                event="invoke_done",
-                service="chat",
+                event="service_agent_loop_done",
+                layer="service",
                 trace_id=trace_id,
                 latency_ms=latency_ms,
                 message_type="chat",
                 response_length=len(text),
                 response_preview=text[:200],
-            ).info("invoke_agent done — chat")
+            ).info(
+                f"SERVICE: invoke_agent done (chat) — "
+                f"length={len(text)}, latency={latency_ms}ms"
+            )
+
             return ChatResponse(
                 session_id=session_id_str,
                 text=text,
@@ -137,12 +174,13 @@ async def invoke_agent(
     except asyncio.TimeoutError:
         latency_ms = round(time.perf_counter() * 1000 - start_ms, 1)
         logger.bind(
-            event="invoke_error",
-            service="chat",
+            event="service_invoke_error",
+            layer="service",
             trace_id=trace_id,
             latency_ms=latency_ms,
             error_type="TimeoutError",
-        ).error("Request timed out")
+            generate_plan=generate_plan,
+        ).error("SERVICE: Request timed out")
         return ChatResponse(
             session_id=session_id_str,
             text="Request timed out. Please try again.",
@@ -182,8 +220,8 @@ async def invoke_agent(
         error_details = getattr(e, "details", None)
 
         logger.bind(
-            event="invoke_error",
-            service="chat",
+            event="service_invoke_error",
+            layer="service",
             trace_id=trace_id,
             latency_ms=latency_ms,
             user_id=str(user_id) if user_id else None,
@@ -197,7 +235,7 @@ async def invoke_agent(
             error_message=str(e),
             error_traceback=traceback.format_exc(),
         ).error(
-            f"invoke_agent exception | type={type(e).__name__} | "
+            f"SERVICE: invoke_agent exception | type={type(e).__name__} | "
             f"code={error_code} | status={error_status} | "
             f"msg={str(e)[:500]}"
         )

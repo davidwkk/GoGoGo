@@ -43,9 +43,24 @@ async def get_transport(
     mode: preferred transport type (e.g. "MTR", "bus", "taxi", "train")
           If None, returns all available options.
     """
+    logger.bind(
+        event="tool_start",
+        layer="tool",
+        tool="get_transport",
+        from_location=from_location,
+        to_location=to_location,
+        mode=mode,
+    ).info(f"TOOL: get_transport start — {from_location} → {to_location}")
+
     cache_key = (from_location.strip().lower(), to_location.strip().lower())
     if cache_key in _cache:
-        logger.info(f"[transport] Cache hit: {from_location} → {to_location}")
+        logger.bind(
+            event="tool_cache_hit",
+            layer="tool",
+            tool="get_transport",
+            from_location=from_location,
+            to_location=to_location,
+        ).info(f"TOOL: Cache hit for transport: {from_location} → {to_location}")
         result = _cache[cache_key]
         if mode:
             result = {
@@ -58,10 +73,22 @@ async def get_transport(
         return result
 
     if not settings.SERPAPI_KEY:
+        logger.bind(
+            event="tool_no_api_key",
+            layer="tool",
+            tool="get_transport",
+        ).warning("TOOL: SERPAPI_KEY not configured")
         return {"error": "SERPAPI_KEY not configured", "options": []}
 
     query = f"transport from {from_location} to {to_location}"
-    logger.info(f"[transport] Searching: {query}")
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="get_transport",
+        from_location=from_location,
+        to_location=to_location,
+        query=query,
+    ).info(f"TOOL: Searching transport options: {query}")
 
     params = {
         "q": query,
@@ -76,7 +103,12 @@ async def get_transport(
                 params=params,
             )
             if response.status_code == 401:
-                logger.warning("[transport] Invalid SerpAPI key")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="get_transport",
+                    status_code=401,
+                ).warning("TOOL: Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "options": []}
             response.raise_for_status()
             data = response.json()
@@ -104,8 +136,15 @@ async def get_transport(
         result = {"options": options}
         _cache[cache_key] = result
 
-        logger.info(
-            f"[transport] Found {len(options)} options: {from_location} → {to_location}"
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="get_transport",
+            from_location=from_location,
+            to_location=to_location,
+            option_count=len(options),
+        ).info(
+            f"TOOL: get_transport done — found {len(options)} options: {from_location} → {to_location}"
         )
 
         if mode:
@@ -117,14 +156,30 @@ async def get_transport(
         return result
 
     except httpx.TimeoutException:
-        logger.warning(f"[transport] Timeout: {from_location} → {to_location}")
+        logger.bind(
+            event="tool_timeout",
+            layer="tool",
+            tool="get_transport",
+            from_location=from_location,
+            to_location=to_location,
+        ).warning(f"TOOL: Timeout fetching transport: {from_location} → {to_location}")
         return {
             "error": f"Timeout fetching transport: {from_location} → {to_location}",
             "options": [],
         }
     except httpx.HTTPStatusError as e:
-        logger.warning(f"[transport] HTTP error: {e}")
+        logger.bind(
+            event="tool_http_error",
+            layer="tool",
+            tool="get_transport",
+            status_code=e.response.status_code,
+        ).warning(f"TOOL: HTTP error fetching transport: {e}")
         return {"error": f"HTTP error fetching transport: {e}", "options": []}
     except Exception as e:
-        logger.warning(f"[transport] Failed: {e}")
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="get_transport",
+            error=str(e),
+        ).warning(f"TOOL: Transport search failed: {e}")
         return {"error": f"Transport search failed: {e}", "options": []}

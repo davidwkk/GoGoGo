@@ -101,14 +101,34 @@ async def search_flights(
     departure / arrival must be valid IATA airport codes (3-4 uppercase letters).
     SerpAPI google_flights engine does not support free-text queries.
     """
+    logger.bind(
+        event="tool_start",
+        layer="tool",
+        tool="search_flights",
+        departure=departure,
+        arrival=arrival,
+        date=date,
+    ).info("TOOL: search_flights start")
+
     if not settings.SERPAPI_KEY:
+        logger.bind(
+            event="tool_no_api_key",
+            layer="tool",
+            tool="search_flights",
+        ).warning("TOOL: SERPAPI_KEY not configured")
         return {"error": "SERPAPI_KEY not configured", "flights": []}
 
     # Strict IATA validation — must be 3-4 uppercase ASCII letters
     dep_code = departure.strip().upper() if departure else ""
     arr_code = arrival.strip().upper() if arrival else ""
     if not (_IATA_RE.match(dep_code) and _IATA_RE.match(arr_code)):
-        logger.warning(f"[flights] Invalid airport codes: {departure!r} → {arrival!r}")
+        logger.bind(
+            event="tool_invalid_params",
+            layer="tool",
+            tool="search_flights",
+            departure=departure,
+            arrival=arrival,
+        ).warning(f"TOOL: Invalid airport codes: {departure!r} → {arrival!r}")
         return {
             "error": (
                 "departure and arrival must be valid IATA airport codes (3-4 uppercase letters). "
@@ -119,6 +139,12 @@ async def search_flights(
 
     # outbound_date is required — default to today if not supplied
     if date and not _DATE_RE.match(date):
+        logger.bind(
+            event="tool_invalid_params",
+            layer="tool",
+            tool="search_flights",
+            date=date,
+        ).warning(f"TOOL: Invalid date format: {date!r}")
         return {
             "error": f"date must be YYYY-MM-DD format, got: {date!r}",
             "flights": [],
@@ -142,7 +168,14 @@ async def search_flights(
         f"https://www.google.com/travel/flights/search?q={dep_code}+to+{arr_code}&hl=en"
     )
 
-    logger.info(f"[flights] Searching: {dep_code} → {arr_code} on {outbound_date}")
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="search_flights",
+        dep_code=dep_code,
+        arr_code=arr_code,
+        date=outbound_date,
+    ).info(f"TOOL: Searching flights: {dep_code} → {arr_code} on {outbound_date}")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -151,16 +184,36 @@ async def search_flights(
                 params=params,
             )
             if response.status_code == 401:
-                logger.warning("[flights] Invalid SerpAPI key")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_flights",
+                    status_code=401,
+                ).warning("TOOL: Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "flights": []}
             if response.status_code == 404:
-                logger.warning("[flights] Flights endpoint not found")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_flights",
+                    status_code=404,
+                ).warning("TOOL: Flights endpoint not found")
                 return {"error": "SerpAPI flights endpoint not found", "flights": []}
             if response.status_code == 429:
-                logger.warning("[flights] SerpAPI rate limit exceeded")
+                logger.bind(
+                    event="tool_rate_limit",
+                    layer="tool",
+                    tool="search_flights",
+                    status_code=429,
+                ).warning("TOOL: SerpAPI rate limit exceeded")
                 return {"error": "SerpAPI rate limit exceeded", "flights": []}
             if response.status_code == 422:
-                logger.warning(f"[flights] Invalid SerpAPI params: {response.text}")
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_flights",
+                    status_code=422,
+                ).warning(f"TOOL: Invalid SerpAPI params: {response.text}")
                 return {
                     "error": f"Invalid SerpAPI params: {response.text}",
                     "flights": [],
@@ -212,22 +265,46 @@ async def search_flights(
                     }
                 )
 
-        logger.info(
-            f"[flights] Found {len(flights)} segments "
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            dep_code=dep_code,
+            arr_code=arr_code,
+            flight_count=len(flights),
+            itinerary_count=len(raw_itineraries),
+        ).info(
+            f"TOOL: search_flights done — found {len(flights)} segments "
             f"({len(raw_itineraries)} itineraries) for {dep_code} → {arr_code}"
         )
         return {"flights": flights}
     except httpx.TimeoutException:
-        logger.warning(f"[flights] Timeout: {dep_code} → {arr_code}")
+        logger.bind(
+            event="tool_timeout",
+            layer="tool",
+            tool="search_flights",
+            dep_code=dep_code,
+            arr_code=arr_code,
+        ).warning(f"TOOL: Timeout searching flights: {dep_code} → {arr_code}")
         return {
             "error": f"Timeout searching flights: {dep_code} → {arr_code}",
             "flights": [],
         }
     except httpx.HTTPStatusError as e:
-        logger.warning(f"[flights] HTTP error: {e}")
+        logger.bind(
+            event="tool_http_error",
+            layer="tool",
+            tool="search_flights",
+            status_code=e.response.status_code,
+        ).warning(f"TOOL: HTTP error searching flights: {e}")
         return {"error": f"HTTP error searching flights: {e}", "flights": []}
     except Exception as e:
-        logger.warning(f"[flights] Failed: {e}")
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="search_flights",
+            error=str(e),
+        ).warning(f"TOOL: Flight search failed: {e}")
         return {"error": f"Flight search failed: {e}", "flights": []}
 
 
@@ -238,5 +315,10 @@ def _parse_iso_datetime(value: str) -> str:
     try:
         return datetime.strptime(value, "%Y-%m-%d %H:%M").isoformat()
     except ValueError:
-        logger.warning(f"[flights] Unexpected datetime format: {value!r}")
+        logger.bind(
+            event="tool_parse_error",
+            layer="tool",
+            tool="search_flights",
+            value=value,
+        ).warning(f"TOOL: Unexpected datetime format: {value!r}")
         return value
