@@ -50,3 +50,20 @@ class DietaryRestriction(str, Enum):
     HALAL = "halal"
     KOSHER = "kosher"
     GLUTEN_FREE = "gluten_free"
+
+
+class ActivityCategory(str, Enum):
+    SIGHTSEEING = "sightseeing"
+    FOOD = "food"
+    ADVENTURE = "adventure"
+    CULTURE = "culture"
+    SHOPPING = "shopping"
+    TRANSPORT = "transport"
+    OTHER = "other"
+
+
+class CabinClass(str, Enum):
+    ECONOMY = "economy"
+    PREMIUM_ECONOMY = "premium_economy"
+    BUSINESS = "business"
+    FIRST = "first"

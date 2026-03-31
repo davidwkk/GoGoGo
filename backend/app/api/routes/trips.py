@@ -71,10 +71,28 @@ def get_demo_trip(db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Demo trip not found. Please run `docker compose exec backend python /app/scripts/seed_db.py` first.",
         )
+    itinerary = trip.itinerary_json or {}
     return {
         "id": trip.id,
         "title": trip.title,
         "destination": trip.destination,
+        "duration_days": itinerary.get("duration_days", 0),
+        "thumbnail_url": _extract_thumbnail_url(itinerary),
         "created_at": trip.created_at.isoformat() if trip.created_at else None,
         "itinerary": trip.itinerary_json,
     }
+
+
+def _extract_thumbnail_url(itinerary: dict) -> str | None:
+    """Extract thumbnail URL from itinerary: first activity image or None."""
+    days = itinerary.get("days", [])
+    for day in days:
+        for period in ("morning", "afternoon", "evening"):
+            activities = day.get(period, [])
+            if activities and len(activities) > 0:
+                first = activities[0]
+                if first.get("thumbnail_url"):
+                    return first["thumbnail_url"]
+                if first.get("image_url"):
+                    return first["image_url"]
+    return None

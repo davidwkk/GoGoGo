@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date as Date, datetime as DateTime
 
-from app.schemas.enums import FlightDirection
+from app.schemas.enums import ActivityCategory, FlightDirection
 from app.schemas.itinerary import (
     Activity,
     DayPlan,
@@ -34,6 +34,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Tokyo's oldest temple in Asakusa. Arrive early to avoid crowds.",
                     location="Asakusa, Tokyo",
                     estimated_duration_minutes=120,
+                    category=ActivityCategory.CULTURE,
                 ),
             ],
             afternoon=[
@@ -42,6 +43,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Iconic observation tower with panoramic city views.",
                     location="Sumida, Tokyo",
                     estimated_duration_minutes=90,
+                    category=ActivityCategory.SIGHTSEEING,
                 ),
             ],
             evening=[
@@ -50,6 +52,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Explore anime districts and grab late-night ramen.",
                     location="Akihabara, Tokyo",
                     estimated_duration_minutes=60,
+                    category=ActivityCategory.FOOD,
                 ),
             ],
         ),
@@ -62,6 +65,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Serene Shinto shrine surrounded by a forest in Shibuya.",
                     location="Shibuya, Tokyo",
                     estimated_duration_minutes=90,
+                    category=ActivityCategory.CULTURE,
                 ),
             ],
             afternoon=[
@@ -70,6 +74,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Experience the world's busiest intersection and trendy Harajuku fashion.",
                     location="Shibuya, Tokyo",
                     estimated_duration_minutes=120,
+                    category=ActivityCategory.SHOPPING,
                 ),
             ],
             evening=[
@@ -78,6 +83,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Cozy tiny bars with local food in Shinjuku.",
                     location="Shinjuku, Tokyo",
                     estimated_duration_minutes=90,
+                    category=ActivityCategory.FOOD,
                 ),
             ],
         ),
@@ -90,6 +96,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Fresh sushi breakfast and exploring local Japanese street food.",
                     location="Tsukiji, Tokyo",
                     estimated_duration_minutes=90,
+                    category=ActivityCategory.FOOD,
                 ),
             ],
             afternoon=[
@@ -98,6 +105,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Immersive digital art museum in Odaiba.",
                     location="Odaiba, Tokyo",
                     estimated_duration_minutes=180,
+                    category=ActivityCategory.CULTURE,
                 ),
             ],
             evening=[
@@ -106,6 +114,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Seafood restaurant with Tokyo Bay views.",
                     location="Odaiba, Tokyo",
                     estimated_duration_minutes=90,
+                    category=ActivityCategory.FOOD,
                 ),
             ],
         ),
@@ -118,6 +127,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="UNESCO World Heritage shrines and bridges in the mountains.",
                     location="Nikko, Tochigi",
                     estimated_duration_minutes=240,
+                    category=ActivityCategory.CULTURE,
                 ),
             ],
             afternoon=[],
@@ -127,6 +137,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Shinkansen back to Tokyo, evening at leisure.",
                     location="Tokyo",
                     estimated_duration_minutes=120,
+                    category=ActivityCategory.TRANSPORT,
                 ),
             ],
         ),
@@ -139,6 +150,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Traditional market with local produce and crafts.",
                     location="Kyoto",
                     estimated_duration_minutes=120,
+                    category=ActivityCategory.SHOPPING,
                 ),
             ],
             afternoon=[
@@ -147,6 +159,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Thousands of vermilion torii gates winding up the mountain.",
                     location="Kyoto",
                     estimated_duration_minutes=180,
+                    category=ActivityCategory.CULTURE,
                 ),
             ],
             evening=[
@@ -155,6 +168,7 @@ MOCK_ITINERARY = TripItinerary(
                     description="Traditional matcha tea ceremony in a historic tea house.",
                     location="Kyoto",
                     estimated_duration_minutes=60,
+                    category=ActivityCategory.CULTURE,
                 ),
             ],
         ),
