@@ -1,7 +1,7 @@
 """Gemini 3 Flash agent — tool-calling loop + structured output.
 
 Key implementation notes:
-- MAX_ITERATIONS = 5 to prevent infinite loops
+- MAX_ITERATIONS = 10 to prevent infinite loops
 - Iterate ALL function_calls: response.function_calls may have multiple entries
 - Append response.candidates[0].content as-is to messages (preserves thought_signature)
 - response_schema ONLY on final generate_content call (not mid-loop)
@@ -11,7 +11,11 @@ Key implementation notes:
 
 from __future__ import annotations
 
+import os
 import time
+import zoneinfo
+from datetime import datetime
+
 from google.genai import Client, types
 from loguru import logger
 
@@ -40,7 +44,7 @@ _TOOL_MAP = {
     "build_embed_url": build_embed_url,
 }
 
-MAX_ITERATIONS = 5
+MAX_ITERATIONS = 10
 
 # Demo-grade client — single instance reused
 _client: Client | None = None
@@ -81,10 +85,26 @@ def _log_usage(response) -> dict | None:
     return None
 
 
-def _build_system_prompt(preferences: dict | None = None) -> str:
+def _get_current_datetime_str() -> str:
+    """Return current datetime in ISO 8601 format."""
+    tz_str = os.environ.get("TZ", "Asia/Hong_Kong")
+    try:
+        tz = zoneinfo.ZoneInfo(tz_str)
+    except Exception:
+        tz = None
+    now = datetime.now(tz)
+    return now.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _build_system_prompt(
+    preferences: dict | None = None,
+    current_datetime: str | None = None,
+) -> str:
+    now_str = current_datetime or _get_current_datetime_str()
     prefs_section = f"User preferences: {preferences}" if preferences else ""
     return (
         "You are a helpful travel planning assistant backed by real-time data. "
+        f"CURRENT DATETIME: {now_str} (use this as today's date — do NOT guess or estimate).\n"
         "IMPORTANT RULES:\n"
         "1. EVERY itinerary item (flight, hotel, attraction, transport, weather) MUST be "
         "fetched via a tool call — never invent prices, times, or names.\n"
@@ -94,9 +114,15 @@ def _build_system_prompt(preferences: dict | None = None) -> str:
         "   - Hotels (search_hotels)\n"
         "   - Attractions (get_attraction)\n"
         "   - Weather (get_weather)\n"
-        "   - Transport between locations (get_transport)\n"
+        "   - Transport between locations (get_transport)"
+        "Tool call order: (1) get_weather → (2) search_flights → (3) search_hotels → (4) get_attraction → (5) get_transport\n"
         "4. Always use HKD for prices when the destination is in Asia.\n"
         "5. Dates should be ISO 8601 format (YYYY-MM-DD).\n"
+        "6. USER LOCATION: The user is in Hong Kong by default. If they mention a different location, use that instead.\n"
+        "7. TRIP DATES: If the user does NOT mention when the trip is, you MUST ask them for the trip dates before proceeding with planning. Do NOT assume dates.\n"
+        "8. BEFORE calling any tools, verify you have: (1) trip dates, (2) destination. If missing, ask the user first.\n"
+        "9. OUTPUT FORMAT should STRICTLY follow the TripItinerary schema.\n"
+        "10. If a tool returns no results or errors, explicitly tell the user 'I couldn't find data for X' — do NOT fill in with estimates.\n"
         f"{prefs_section}"
     )
 
@@ -123,7 +149,7 @@ async def run_agent(
         user_message_preview=user_message[:100],
     ).info("Agent start")
     client = _get_client()
-    system_instruction = _build_system_prompt(preferences)
+    system_instruction = _build_system_prompt(preferences, _get_current_datetime_str())
 
     messages: list[types.Content] = list(conversation_history or [])
 
@@ -298,7 +324,7 @@ async def run_agent_structured(
     ).info("Agent start")
 
     client = _get_client()
-    system_instruction = _build_system_prompt(preferences)
+    system_instruction = _build_system_prompt(preferences, _get_current_datetime_str())
 
     messages: list[types.Content] = list(conversation_history or [])
 

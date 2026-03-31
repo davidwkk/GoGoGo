@@ -165,7 +165,7 @@ frontend/src/
 
 #### Phase 1C — Agent Loop + Structured Output (Days 4–9)
 
-> **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 5` in `agent.py` to prevent infinite loops if the LLM cycles.
+> **⚠️ Loop Bound**: Set `MAX_ITERATIONS = 10` in `agent.py` to prevent infinite loops if the LLM cycles.
 > **⚠️ Function call iteration**: Iterate ALL parts — `function_calls = [p.function_call for p in response.candidates[0].content.parts if p.function_call]`. Do NOT assume `parts[0]` is the only function call — Gemini 3 Flash supports parallel calls in one turn.
 > **⚠️ Loop termination**: If `function_calls` is non-empty, execute tools and continue; if empty (plain text), the loop is done.
 > **⚠️ Preserve thought_signature**: Append `response.candidates[0].content` as-is to the messages list — do NOT reconstruct `types.Content(role="model", parts=[...])` manually. This strips the `thought_signature` and breaks multi-turn context. The SDK preserves it when you append the raw content object.
