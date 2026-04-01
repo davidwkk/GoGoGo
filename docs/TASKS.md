@@ -378,13 +378,12 @@ async def get_current_user(
 #### Phase 3 — Trip UI
 
 - [x] **Implement frontend display in My Trip Page and display of Trip Itinerary** ✅
+- [x] **Fix frontend display for trips and other components** — Audit and fix any display issues in TripPage, HotelCard, AttractionCard, and other trip-related components
+- [x] `HotelCard.tsx` — name, price, rating, booking link button
+- [x] `AttractionCard.tsx` — name, category badge, photo, rating
+- [x] `MapEmbed.tsx` — render Google Maps Embed iframe from `map_embed_url` (inline in TripPage instead)
 
 ### 🔲 Remaining Tasks
-
-- [ ] **Fix frontend display for trips and other components** — Audit and fix any display issues in TripPage, HotelCard, AttractionCard, and other trip-related components
-- [ ] `HotelCard.tsx` — name, price, rating, booking link button
-- [ ] `AttractionCard.tsx` — name, category badge, photo, rating
-- [ ] `MapEmbed.tsx` — render Google Maps Embed iframe from `map_embed_url` (inline in TripPage instead)
 
 ---
 
