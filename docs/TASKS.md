@@ -346,7 +346,7 @@ backend/tests/integration/
 #### Phase 3 — Auth + Chat UI
 
 - [x] Verify STT working properly
-- [ ] Increase STT duration to at least 30s
+- [x] Increase STT duration to at least 30s (now supports up to 60s, auto-stops after 20s silence, and supports manual stop)
 - [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
 - [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
 - [ ] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
@@ -357,7 +357,7 @@ backend/tests/integration/
 
 > Implement TTS module in 2 phases, with a possible third phase:
 
-- [ ] **Phase 1 — Browser native TTS** ✅ (already implemented in `useTTS.ts` using `window.speechSynthesis`)
+- [x] **Phase 1 — Browser native TTS** ✅ (implemented with per-assistant-message Play/Stop button using `window.speechSynthesis`)
 - [ ] **Phase 2 — Google's TTS API** — Upgrade `useTTS.ts` to use Google's TTS API (e.g., `gemini-3-flash` TTS or Cloud TTS); preserve browser fallback if API unavailable
 - [ ] **Phase 3 (last possible) — Gemini Live API** — Single multimodal session replacing ASR + agent + TTS hooks entirely
 
@@ -405,7 +405,7 @@ backend/tests/integration/
 | 17  | 🟡       | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
 | 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
 | —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                  |
-| —   | 🟡       | Frontend | ⚠️ Open — Increase STT duration to at least 30s (Minqi)                                                                                                  |
+| —   | 🟡       | Frontend | ✅ Done — Increase STT duration to at least 30s (now supports up to 60s + silence auto-stop) (Minqi)                                                     |
 
 ---
 
