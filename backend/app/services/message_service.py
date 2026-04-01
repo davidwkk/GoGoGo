@@ -3,7 +3,7 @@
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.chat_session import ChatSession
@@ -73,11 +73,34 @@ def get_session_messages(
 
 def create_session(
     db: Session,
-    user_id: int | None = None,
+    user_id: UUID | None = None,
     title: str = "New Chat",
     guest_id: UUID | None = None,
 ) -> ChatSession:
     """Create a new chat session."""
+    if title == "New Chat":
+        # Number sessions per owner so sidebar shows New Chat 1, New Chat 2, ...
+        if user_id is not None:
+            n = (
+                db.execute(
+                    select(func.count(ChatSession.id)).where(
+                        ChatSession.user_id == user_id
+                    )
+                ).scalar_one()
+                or 0
+            )
+            title = f"New Chat {n + 1}"
+        elif guest_id is not None:
+            n = (
+                db.execute(
+                    select(func.count(ChatSession.id)).where(
+                        ChatSession.guest_id == guest_id
+                    )
+                ).scalar_one()
+                or 0
+            )
+            title = f"New Chat {n + 1}"
+
     session = ChatSession(
         user_id=user_id,
         title=title,
@@ -102,6 +125,52 @@ def get_session(
     return result.scalar_one_or_none()
 
 
+def list_sessions_for_user(db: Session, user_id: UUID) -> list[ChatSession]:
+    result = db.execute(
+        select(ChatSession)
+        .where(ChatSession.user_id == user_id)
+        .order_by(ChatSession.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+def update_session_title(
+    db: Session, session_id: int, title: str
+) -> ChatSession | None:
+    result = db.execute(select(ChatSession).where(ChatSession.id == session_id))
+    session = result.scalar_one_or_none()
+    if session is None:
+        return None
+    session.title = title
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def delete_session(db: Session, session_id: int) -> bool:
+    """
+    Delete a session and all its messages.
+
+    We explicitly delete messages first to avoid relying on DB cascade settings.
+    """
+    session = db.execute(
+        select(ChatSession).where(ChatSession.id == session_id)
+    ).scalar_one_or_none()
+    if session is None:
+        return False
+
+    messages = (
+        db.execute(select(Message).where(Message.session_id == session_id))
+        .scalars()
+        .all()
+    )
+    for m in messages:
+        db.delete(m)
+    db.delete(session)
+    db.commit()
+    return True
+
+
 def get_latest_session_for_guest(
     db: Session,
     guest_id: UUID,
@@ -110,6 +179,22 @@ def get_latest_session_for_guest(
     result = db.execute(
         select(ChatSession)
         .where(ChatSession.guest_id == guest_id)
+        .order_by(ChatSession.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+def get_active_session_by_user(db: Session, user_id: UUID) -> ChatSession | None:
+    """
+    Get the most recent chat session for a user (used for page refresh/session resume).
+
+    Note: we don't have an explicit ended/status field yet, so "active" means
+    "latest by created_at".
+    """
+    result = db.execute(
+        select(ChatSession)
+        .where(ChatSession.user_id == user_id)
         .order_by(ChatSession.created_at.desc())
         .limit(1)
     )
@@ -131,7 +216,8 @@ def end_session(
 async def resolve_session(
     db: Session,
     session_id: str | None,
-    user_id: int | None,
+    user_id: UUID | None,
+    force_new_session: bool = False,
 ) -> ChatSession:
     """
     Resolve a session from a session_id string (integer PK or guest UUID).
@@ -144,7 +230,8 @@ async def resolve_session(
       - Only guests may use it; creates a new session if none exists
 
     For no session_id:
-      - Creates a new session for authenticated users or guests
+      - For authenticated users: resumes latest session unless force_new_session=True
+      - For guests: creates a new guest + session (frontend stores guest_uid)
     """
     if session_id:
         # Try parsing as integer PK first (authenticated user session)
@@ -170,7 +257,12 @@ async def resolve_session(
     else:
         # No session_id provided - create new session
         if user_id is not None:
-            return create_session(db, user_id=user_id)
+            if force_new_session:
+                return create_session(db, user_id=user_id)
+            session = get_active_session_by_user(db, user_id)
+            if session is None:
+                session = create_session(db, user_id=user_id)
+            return session
         else:
             guest_uid = str(uuid4())
             guest = get_or_create_guest(db, guest_uid)
