@@ -1,6 +1,6 @@
 # 👥 `gogogo` — Task Assignment Document
 
-> Deadline: Apr 16, 2026 (~20 days) | Team: 3 members | Infra: ✅ Already set up (owned by David)
+> Deadline: Apr 16, 2026 (~20 days) | Team: 3 members
 
 ---
 
@@ -295,11 +295,12 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 
 ### 🔲 Remaining Tasks
 
-- [ ] **Verify the return schema from tools** - Confirm the return schemas and write API testcases to test the tools.
-- [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds)
-- [ ] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning
-- [ ] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations
-- [ ] **Agent decides when to generate trip plan** — Remove the explicit "Generate Trip Plan" button; instead, let the agent autonomously decide when to produce a structured `TripItinerary` based on conversation context (e.g., user expresses intent to travel, provides destinations/dates). The agent should detect trip-planning intent and invoke `generate_content` with `response_json_schema` accordingly. Frontend no longer sends a `generate_plan` flag — the agent loop handles this internally.
+> Ordered from most fundamental (blocked by nothing) to most dependent (blocked by above tasks).
+
+- [ ] **Verify the return schema from tools** — Confirm the return schemas and write API testcases to test the tools.
+- [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds).
+- [ ] **Agent decides when to generate trip plan** — Remove the explicit "Generate Trip Plan" button; let the agent autonomously decide when to produce a structured `TripItinerary` based on conversation context (e.g., user expresses intent to travel, provides destinations/dates). The agent should detect trip-planning intent and invoke `generate_content` with `response_json_schema` accordingly. Frontend no longer sends a `generate_plan` flag — the agent loop handles this internally.
+- [ ] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning. Depends on: "Agent decides when to generate" (the streaming refactor builds on the unified agent loop).
 - [x] **Add 3x auto-retry on SSE disconnect** ✅ — Up to 3 retries with exponential backoff (500ms base) on SSE disconnect or fetch error; yields reconnecting status to UI on retry attempts
 
 ### 🧪 Tests to Write
@@ -336,21 +337,6 @@ backend/tests/integration/
 └── test_chat_endpoint.py # POST /chat returns TripItinerary shape
 ```
 
-### ⚠️ Mocking Strategy (Unblock yourself)
-
-```python
-# deps.py — temporary mock, swap when Minqi's JWT middleware is ready
-DEV_USER_ID = 1  # use named constant, NOT inline magic number
-
-async def get_current_user(
-    token: str = Depends(oauth2Scheme),  # real version uses JWT Bearer token
-):
-    return User(id=DEV_USER_ID, username="dev", email="dev@test.com")
-# ⚠️ Swap the body only — keep the function signature identical when removing mock.
-# Minqi: your real get_current_user MUST return User(id, username, email) shape.
-# Do NOT change the return type or field names or David's routes break silently.
-```
-
 ---
 
 ## 🙋 Minqi
@@ -363,10 +349,9 @@ async def get_current_user(
 - [ ] Increase STT duration to at least 30s
 - [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
 - [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
-- [ ] Protected route wrapper — redirect to login if unauthenticated
-- [ ] Display fake loading steps ("Searching flights...", "Checking weather...") during POST /chat request
+- [ ] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
+- [ ] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations. Backend: implement `get_active_session_by_user(user_id)` in `message_service`; wire into `chat.py` on session resume. Frontend: load previous messages when user opens an existing session.
 - [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
-- [ ] Display chat history on session load
 
 #### Phase 4 — TTS Upgrades (Minqi)
 
