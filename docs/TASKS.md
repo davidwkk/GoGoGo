@@ -11,7 +11,7 @@
 | Infra — Docker, FastAPI skeleton, setup   | **David**                                                          |
 | Agent Core, Tools, Structured Output      | **David**                                                          |
 | Preference Extraction (Flash-Lite)        | **David**                                                          |
-| Voice — ASR + TTS                         | **David**                                                          |
+| Voice — ASR + TTS                         | **David** (ASR); **Minqi** (TTS upgrades)                          |
 | Auth — Register/Login, JWT, Login UI      | **David**                                                          |
 | Chat — Session, Message History, Chat UI  | **David**                                                          |
 | Trip — CRUD, Itinerary Display, Map Embed | **David**                                                          |
@@ -300,8 +300,6 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [ ] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning
 - [ ] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations
 - [x] **Add 3x auto-retry on SSE disconnect** ✅ — Up to 3 retries with exponential backoff (500ms base) on SSE disconnect or fetch error; yields reconnecting status to UI on retry attempts
-- [ ] **Upgrade `useTTS.ts` from `window.speechSynthesis` → Gemini TTS**
-- [ ] **Gemini Live API** — single multimodal session replacing ASR + agent + TTS hooks entirely
 
 ### 🧪 Tests to Write
 
@@ -369,6 +367,14 @@ async def get_current_user(
 - [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
 - [ ] Display chat history on session load
 
+#### Phase 4 — TTS Upgrades (Minqi)
+
+> Implement TTS module in 2 phases, with a possible third phase:
+
+- [ ] **Phase 1 — Browser native TTS** ✅ (already implemented in `useTTS.ts` using `window.speechSynthesis`)
+- [ ] **Phase 2 — Google's TTS API** — Upgrade `useTTS.ts` to use Google's TTS API (e.g., `gemini-3-flash` TTS or Cloud TTS); preserve browser fallback if API unavailable
+- [ ] **Phase 3 (last possible) — Gemini Live API** — Single multimodal session replacing ASR + agent + TTS hooks entirely
+
 ---
 
 ## 🙋 Xuan
@@ -385,6 +391,25 @@ async def get_current_user(
 
 ### 🔲 Remaining Tasks
 
+- [ ] **Image popup dialog** — Make images in trip cards clickable; show full-size image in a popup dialog when clicked (e.g., lightbox modal)
+
+#### Frontend E2E Tests
+
+> ⚠️ **Label backend dependencies as TODO** — if a test requires a backend API that doesn't exist yet, add a `# TODO: needs backend <feature>` comment so it can be implemented later without blocking
+
+- [ ] **Login flow** — `LoginPage.tsx` → register → redirect to chat
+- [ ] **Guest mode flow** — Continue as Guest → redirect to chat
+- [ ] **Chat → generate plan → view trip** — Send message → click "Generate Trip Plan" → wait for itinerary → navigate to TripPage → verify itinerary renders
+- [ ] **Trip detail view** — Click a saved trip → verify all sections (flights, hotels, attractions) render with images
+- [ ] **Voice input toggle** — Verify mic button appears, toggles recording state (if browser supports Web Speech API)
+
+#### Frontend Polishing & Robustness
+
+- [ ] **Skeleton/loading states** — Add skeleton loaders for trip cards, chat messages, and itinerary sections while data loads
+- [ ] **Error handling UI** — Timeout displays for failed API calls, retry buttons where applicable
+- [ ] **API error envelope standardization** — Standardize `APIError { detail: string; code?: string }` in `api.ts`
+- [ ] **Mobile responsive layout audit** — Verify all pages (Login, Chat, Trip) render correctly on narrow viewports; fix any overflow or truncation issues
+
 ---
 
 ## 🚨 Open Issues
@@ -392,68 +417,17 @@ async def get_current_user(
 | #   | Severity | Area     | Issue                                                                                                                                                    |
 | --- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 17  | 🟡       | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
-| 21  | 🟡       | Frontend | ⚠️ Open — `AttractionCard.tsx` not yet created (Xuan)                                                                                                    |
-| 24  | 🟡       | Frontend | ⚠️ Partial — `HotelCard.tsx`, `AttractionCard.tsx`, `MapEmbed.tsx` still missing (Xuan); TripPage and FlightCard implemented ✅                          |
 | 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
 | —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                  |
 | —   | 🟡       | Frontend | ⚠️ Open — Increase STT duration to at least 30s (Minqi)                                                                                                  |
 
 ---
 
-## 🔗 Integration Points & Coordination
-
-| When       | Who           | Action                                                                                             |
-| ---------- | ------------- | -------------------------------------------------------------------------------------------------- |
-| Day 1      | David + Xuan  | ✅ Finalize `TripItinerary` Pydantic schema together                                               |
-| Day 1      | David + Minqi | ✅ Session ID creation flow — `chat.py` creates session on first message when `session_id` is null |
-| Day 3      | David → All   | ✅ Commit `MOCK_ITINERARY` fixture — unblocks Minqi and Xuan immediately                           |
-| Days 4–6   | Minqi → David | ✅ `deps.py` uses real JWT decode with `user_id` in token payload                                  |
-| Days 4–9   | David         | ✅ `trip_service` + `trip_repo` created; wired into `chat_service.py`                              |
-| Days 4–9   | Minqi → David | ✅ `message_service` wired into `chat.py` for message persistence                                  |
-| Day 4      | David → Minqi | ✅ Voice hooks (useASR, useTTS, VoiceButton) integrated into ChatPage/InputBar                     |
-| Days 13–20 | All           | 🔄 Integration week — full flow testing, bug fixes, demo polish                                    |
-
----
-
-## 📅 Revised Timeline (20 Days)
-
-| Days      | David                                                                                 | Minqi                                             | Xuan                                              |
-| --------- | ------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
-| **1–4**   | **Voice UI first** (useASR, useTTS, VoiceButton, TTSPlayer, text fallback)            | Auth backend (models, JWT, endpoints)             | Trip backend (model, repo, service, CRUD API)     |
-| **1–6**   | **Live tools first** (transport, attractions, maps, flights, hotels, weather, search) | —                                                 | —                                                 |
-| **4–9**   | Agent loop + `chat_service.py` + callbacks + `POST /chat`                             | Chat persistence (session + message models/repos) | Align schema with David, start trip UI components |
-| **9–13**  | Preference extraction + auth wiring                                                   | Auth + Chat UI (LoginPage, ChatPage scaffold)     | Trip UI (ItineraryCard, MapEmbed, TripPage)       |
-| **13–17** | Wire real auth + DB into chat, import chat_history_service                            | Wire message saving + polish Chat UI              | Polish trip UI + wire into routing                |
-| **18–20** | 🔴 Buffer — integration bugs, demo prep                                               | 🔴 Buffer — integration bugs, demo prep           | 🔴 Buffer — integration bugs, demo prep           |
-
----
-
 ## 🚦 Definition of Done
 
-| Member    | Done When                                                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------- |
-| **David** | Agent returns valid `TripItinerary` from real tools; voice input/output works; preferences saved after session |
-| **Minqi** | Register/login works; JWT protected routes; chat history persists and loads                                    |
-| **Xuan**  | Trips saved and listed; full itinerary renders with map; booking links work                                    |
-| **All**   | `docker-compose up` → full flow works: login → chat → get itinerary → view trip                                |
-
----
-
-## 🔮 Future Considerations (Post-Deadline / v2)
-
-> These features are **descoped** from the Apr 16 deadline. Revisit only if all core features are done before Day 15.
-
-### SSE Streaming
-
-> **⚠️ SSE + DB Session Risk**: Do not hold a DB transaction open during streaming. Save user message before stream starts, collect response in memory, and save assistant message via background task after stream finishes using a separate DB session.
-
-- [x] Upgrade `POST /chat` → `GET /chat/stream` SSE endpoint ✅ (`POST /chat/stream` in `chat.py`)
-- [x] Stream agent tool calls to frontend (casual setting) ✅ — Thinking bubbles show intermediate steps in UI
-- [ ] **Trip planning NOT yet migrated to streaming** — Travel planning agent still uses full output waiting; needs refactor to SSE streaming
-- [ ] Update `useChat.ts` for trip planning — consume SSE, show intermediate steps in UI during trip generation
-- [x] Add 3x auto-retry on SSE disconnect (up to 3 retries with exponential backoff on SSE disconnect or fetch error) ✅
-
-### Voice Upgrade
-
-- [ ] Upgrade `useTTS.ts` from `window.speechSynthesis` → Gemini TTS
-- [ ] **Gemini Live API** — single multimodal session replacing ASR + agent + TTS hooks entirely
+| Member    | Done When                                                                            |
+| --------- | ------------------------------------------------------------------------------------ |
+| **David** | Agent returns valid `TripItinerary` from real tools; preferences saved after session |
+| **Minqi** | Voice input/output works; chat history persists and loads                            |
+| **Xuan**  | Trips saved and listed; full itinerary renders with map; booking links work          |
+| **All**   | `docker-compose up` → full flow works: login → chat → get itinerary → view trip      |
