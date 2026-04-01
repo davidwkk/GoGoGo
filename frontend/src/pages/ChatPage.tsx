@@ -5,7 +5,7 @@ import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
 import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
-import { apiClient } from '@/services/api';
+import { apiClient, chatSessionsService } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
@@ -13,13 +13,17 @@ import {
   Calendar,
   MapPin,
   MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
   PlusCircle,
   Sparkles,
   Square,
+  Trash2,
   Volume2,
   Zap,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -428,8 +432,18 @@ export function ChatPage() {
   const partialThoughtText = useChatStore(s => s.partialThoughtText);
   const isLoggedIn = !!localStorage.getItem('access_token');
   const clearMessages = useChatStore(s => s.clearMessages);
+  const sessionId = useChatStore(s => s.sessionId);
   const setSessionId = useChatStore(s => s.setSessionId);
+  const setMessages = useChatStore(s => s.setMessages);
+  const setForceNewSessionNextMessage = useChatStore(s => s.setForceNewSessionNextMessage);
   const abortController = useChatStore(s => s.abortController);
+
+  const [sessions, setSessions] = useState<
+    Array<{ id: number; title: string; created_at: string | null }>
+  >([]);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [editingTitleSessionId, setEditingTitleSessionId] = useState<number | null>(null);
+  const [titleDraft, setTitleDraft] = useState('');
 
   const [demoItinerary, setDemoItinerary] = useState<TripItinerary | null>(null);
   const [showDemoLoading, setShowDemoLoading] = useState(false);
@@ -452,16 +466,136 @@ export function ChatPage() {
 
   const dynamicThinkingMessage = useDynamicThinking(isLoading, messages.length > 0);
 
-  const startNewChat = () => {
+  const currentSessionPk = useMemo(() => {
+    const n = Number(sessionId);
+    return Number.isFinite(n) ? n : null;
+  }, [sessionId]);
+
+  const currentSession = useMemo(
+    () => (currentSessionPk ? sessions.find(s => s.id === currentSessionPk) : undefined),
+    [currentSessionPk, sessions]
+  );
+
+  useEffect(() => {
+    // Load chat sessions list + most recent session messages on page load (auth only).
+    (async () => {
+      try {
+        if (!isLoggedIn) return;
+        const listRes = await chatSessionsService.list();
+        setSessions(listRes.sessions);
+        const first = listRes.sessions[0];
+        if (!first) return;
+        const msgRes = await chatSessionsService.getMessages(first.id);
+        setSessionId(String(first.id));
+        setMessages(
+          msgRes.messages.map(m => ({
+            id: String(m.id),
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+          }))
+        );
+      } catch {
+        // Best-effort — don't block chat UI if history load fails.
+      }
+    })();
+  }, [isLoggedIn, setMessages, setSessionId]);
+
+  const startNewChat = async () => {
     // Cancel any in-progress stream first
     if (abortController) {
       abortController.abort();
     }
     clearMessages();
-    setSessionId(null);
     setDemoItinerary(null);
     setTypewriterDone(false);
-    localStorage.removeItem('guest_uid');
+    if (isLoggedIn) {
+      try {
+        const created = await chatSessionsService.create();
+        setSessions(prev => [
+          { id: created.session_id, title: created.title, created_at: created.created_at },
+          ...prev,
+        ]);
+        setSessionId(String(created.session_id));
+      } catch {
+        // Fallback: create on first message if create endpoint fails
+        setSessionId(null);
+        setForceNewSessionNextMessage(true);
+      }
+    } else {
+      // Guest history UI not implemented yet; keep existing behavior.
+      setSessionId(null);
+      localStorage.removeItem('guest_uid');
+    }
+  };
+
+  const loadSession = async (id: number) => {
+    if (!isLoggedIn) return;
+    const res = await chatSessionsService.getMessages(id);
+    setSessionId(String(id));
+    setMessages(
+      res.messages.map(m => ({
+        id: String(m.id),
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+      }))
+    );
+    setDemoItinerary(null);
+    setTypewriterDone(true);
+  };
+
+  const beginRename = (id: number, current: string) => {
+    setEditingTitleSessionId(id);
+    setTitleDraft(current);
+  };
+
+  const commitRename = async (id: number) => {
+    const next = titleDraft.trim();
+    if (!next) {
+      setEditingTitleSessionId(null);
+      return;
+    }
+    const updated = await chatSessionsService.rename(id, next);
+    setSessions(prev => prev.map(s => (s.id === id ? { ...s, title: updated.title } : s)));
+    setEditingTitleSessionId(null);
+  };
+
+  const deleteSession = async (id: number) => {
+    if (!isLoggedIn) return;
+    const ok = window.confirm('Delete this chat? This cannot be undone.');
+    if (!ok) return;
+
+    try {
+      await chatSessionsService.delete(id);
+    } catch (e) {
+      const err = e as any;
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      console.error('Failed to delete session:', { status, detail, err });
+      alert(
+        `Failed to delete this chat. ${
+          status ? `HTTP ${status}. ` : ''
+        }${typeof detail === 'string' ? detail : 'Please try again.'}`
+      );
+      return;
+    }
+
+    // Compute next session from the *updated* list to avoid stale state bugs.
+    let nextId: number | null = null;
+    setSessions(prev => {
+      const nextList = prev.filter(s => s.id !== id);
+      nextId = nextList[0]?.id ?? null;
+      return nextList;
+    });
+
+    if (currentSessionPk === id) {
+      clearMessages();
+      setSessionId(null);
+      if (nextId !== null) {
+        await loadSession(nextId);
+      }
+    }
   };
 
   const testLLM = async () => {
@@ -533,6 +667,112 @@ export function ChatPage() {
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Left sidebar: Chat History (auth only) */}
+      {isLoggedIn && (
+        <aside
+          className={`${historyCollapsed ? 'w-12' : 'w-72'} border-r bg-background flex flex-col transition-[width] duration-200`}
+        >
+          <div className={`${historyCollapsed ? 'px-2' : 'px-4'} py-4 border-b`}>
+            <div
+              className={`flex items-center ${historyCollapsed ? 'justify-center' : 'justify-between'} gap-2`}
+            >
+              {!historyCollapsed && (
+                <div>
+                  <div className="text-sm font-semibold">Chat History</div>
+                  <div className="text-xs text-muted-foreground">Your sessions</div>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setHistoryCollapsed(v => !v)}
+                className="flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                aria-label={historyCollapsed ? 'Expand chat history' : 'Collapse chat history'}
+                title={historyCollapsed ? 'Expand' : 'Collapse'}
+              >
+                {historyCollapsed ? (
+                  <PanelLeftOpen className="size-4" />
+                ) : (
+                  <PanelLeftClose className="size-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {!historyCollapsed && (
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {sessions.map(s => {
+                const active = currentSessionPk === s.id;
+                const isEditing = editingTitleSessionId === s.id;
+                return (
+                  <div
+                    key={s.id}
+                    className={`group rounded-xl border px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? 'bg-muted border-border'
+                        : 'bg-background hover:bg-muted/40 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isEditing ? (
+                        <input
+                          className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                          value={titleDraft}
+                          onChange={e => setTitleDraft(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') commitRename(s.id);
+                            if (e.key === 'Escape') setEditingTitleSessionId(null);
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          className="flex-1 text-left truncate"
+                          onClick={() => loadSession(s.id)}
+                          title={s.title}
+                        >
+                          {s.title}
+                        </button>
+                      )}
+
+                      {!isEditing && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => beginRename(s.id, s.title)}
+                            aria-label="Rename chat"
+                            type="button"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => deleteSession(s.id)}
+                            aria-label="Delete chat"
+                            type="button"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {s.created_at && (
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {new Date(s.created_at).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {sessions.length === 0 && (
+                <div className="p-3 text-xs text-muted-foreground">
+                  No sessions yet. Click “New Chat” in the top bar to start.
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
+      )}
+
       {/* Main chat area */}
       <main className="flex flex-col flex-1">
         {/* Header */}
@@ -540,20 +780,59 @@ export function ChatPage() {
           <div className="flex items-center justify-center rounded-xl bg-black text-white size-8">
             <MessageSquare className="size-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-sm font-semibold">GoGoGo</h1>
-            <p className="text-xs text-muted-foreground">AI Travel Agent</p>
+            <div className="flex items-center gap-2">
+              {isLoggedIn && currentSessionPk && currentSession ? (
+                editingTitleSessionId === currentSessionPk ? (
+                  <input
+                    className="h-7 w-56 max-w-full rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                    value={titleDraft}
+                    onChange={e => setTitleDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') commitRename(currentSessionPk);
+                      if (e.key === 'Escape') setEditingTitleSessionId(null);
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground truncate max-w-[220px]">
+                      {currentSession.title}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => beginRename(currentSessionPk, currentSession.title)}
+                      aria-label="Rename current chat"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteSession(currentSessionPk)}
+                      aria-label="Delete current chat"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </>
+                )
+              ) : (
+                <p className="text-xs text-muted-foreground">AI Travel Agent</p>
+              )}
+            </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {messages.length > 0 && (
-              <button
-                onClick={startNewChat}
-                className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              >
-                <PlusCircle className="size-3" />
-                New Chat
-              </button>
-            )}
+            <button
+              onClick={startNewChat}
+              className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+              disabled={!isLoggedIn}
+              title={!isLoggedIn ? 'Sign in to use chat history' : undefined}
+            >
+              <PlusCircle className="size-3" />
+              New Chat
+            </button>
             <button
               onClick={generateDemoTrip}
               disabled={isLoading || showDemoLoading}

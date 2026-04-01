@@ -45,6 +45,10 @@ class ChatRequest(BaseModel):
         default=None,
         description="None on first message; UUID anonymous token or logged-in session",
     )
+    force_new_session: bool = Field(
+        default=False,
+        description="If true, backend will create a new session even when an active one exists",
+    )
     generate_plan: bool = Field(
         default=False,
         description="Gate for expensive agent loop — if False, simple generate_content (no tools)",

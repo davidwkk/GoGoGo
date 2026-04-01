@@ -15,6 +15,7 @@ export interface ChatState {
   // Session
   sessionId: string | null;
   messages: Message[];
+  forceNewSessionNextMessage: boolean;
 
   // Voice
   voiceAvailable: boolean;
@@ -37,6 +38,8 @@ export interface ChatState {
 
   // Actions
   setSessionId: (id: string | null) => void;
+  setMessages: (messages: Message[]) => void;
+  setForceNewSessionNextMessage: (force: boolean) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
   updateStreamingMessage: (id: string, content: string) => void;
   clearMessages: () => void;
@@ -52,6 +55,7 @@ export interface ChatState {
 export const useChatStore = create<ChatState>(set => ({
   sessionId: null,
   messages: [],
+  forceNewSessionNextMessage: false,
   voiceAvailable: isVoiceSupported(),
   isLoading: false,
   isThinking: false,
@@ -62,6 +66,8 @@ export const useChatStore = create<ChatState>(set => ({
   travelSettings: DEFAULT_TRAVEL_SETTINGS,
 
   setSessionId: id => set({ sessionId: id }),
+  setMessages: messages => set({ messages }),
+  setForceNewSessionNextMessage: force => set({ forceNewSessionNextMessage: force }),
 
   addMessage: msg => {
     const id = crypto.randomUUID();

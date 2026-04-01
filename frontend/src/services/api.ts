@@ -59,6 +59,7 @@ apiClient.interceptors.response.use(
 export interface ChatRequest {
   message: string;
   session_id?: string;
+  force_new_session?: boolean;
   generate_plan: boolean;
   trip_parameters?: {
     destination: string;
@@ -77,6 +78,11 @@ export interface ChatResponse {
   itinerary: unknown | null;
   message_type: 'chat' | 'itinerary' | 'error';
   history?: Array<{ role: string; content: string; created_at: string }>;
+}
+
+export interface ChatSessionMessagesResponse {
+  session_id: string | null;
+  messages: Array<{ id: number; role: string; content: string; created_at: string | null }>;
 }
 
 export const chatService = {
@@ -234,6 +240,47 @@ export const chatService = {
       error('[streamMessage] All retries exhausted');
       yield `__ERROR__:${exhaustedError}`;
     }
+  },
+};
+
+export const chatSessionsService = {
+  async getActive(guest_uid?: string): Promise<ChatSessionMessagesResponse> {
+    const { data } = await apiClient.get<ChatSessionMessagesResponse>('/chat/sessions/active', {
+      params: guest_uid ? { guest_uid } : undefined,
+    });
+    return data;
+  },
+
+  async list(): Promise<{
+    sessions: Array<{ id: number; title: string; created_at: string | null }>;
+  }> {
+    const { data } = await apiClient.get('/chat/sessions');
+    return data;
+  },
+
+  async create(): Promise<{ session_id: number; title: string; created_at: string | null }> {
+    const { data } = await apiClient.post('/chat/sessions');
+    return data;
+  },
+
+  async rename(
+    sessionId: number,
+    title: string
+  ): Promise<{ id: number; title: string; created_at: string | null }> {
+    const { data } = await apiClient.patch(`/chat/sessions/${sessionId}`, { title });
+    return data;
+  },
+
+  async delete(sessionId: number): Promise<{ status: string; session_id: number }> {
+    const { data } = await apiClient.delete(`/chat/sessions/${sessionId}`);
+    return data;
+  },
+
+  async getMessages(sessionId: number): Promise<ChatSessionMessagesResponse> {
+    const { data } = await apiClient.get<ChatSessionMessagesResponse>(
+      `/chat/sessions/${sessionId}/messages`
+    );
+    return data;
   },
 };
 
