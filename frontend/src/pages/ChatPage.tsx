@@ -598,6 +598,25 @@ export function ChatPage() {
     }
   };
 
+  const saveAndFinishTrip = async () => {
+    if (!isLoggedIn || currentSessionPk === null) return;
+    try {
+      await chatSessionsService.end(currentSessionPk);
+      alert('Saved. This chat is finished.');
+      await startNewChat();
+    } catch (e) {
+      const err = e as any;
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      console.error('Failed to end session:', { status, detail, err });
+      alert(
+        `Failed to finish this chat. ${status ? `HTTP ${status}. ` : ''}${
+          typeof detail === 'string' ? detail : 'Please try again.'
+        }`
+      );
+    }
+  };
+
   const testLLM = async () => {
     try {
       const res = await apiClient.get('/chat/test-llm');
@@ -824,6 +843,16 @@ export function ChatPage() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {isLoggedIn && currentSessionPk !== null && (
+              <button
+                onClick={saveAndFinishTrip}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                title="Save this chat and finish the session"
+              >
+                Save & Finish Trip
+              </button>
+            )}
             <button
               onClick={startNewChat}
               className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"

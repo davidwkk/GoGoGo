@@ -10,6 +10,7 @@ import {
   Plane,
   Bed,
   Ticket,
+  Trash2,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -36,6 +37,7 @@ export function TripPage() {
   const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchingDetail, setFetchingDetail] = useState(false);
+  const [deletingTripId, setDeletingTripId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Track auth state as React state so effects respond to changes correctly
@@ -110,6 +112,24 @@ export function TripPage() {
     }
   };
 
+  const handleDeleteTrip = async (tripId: number) => {
+    const ok = window.confirm('Delete this trip plan? This cannot be undone.');
+    if (!ok) return;
+    setDeletingTripId(tripId);
+    try {
+      await tripService.deleteTrip(tripId);
+      setTrips(prev => prev.filter(t => t.id !== tripId));
+      if (selectedTrip?.id === tripId) {
+        setSelectedTrip(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete trip', err);
+      alert('Failed to delete this trip. Please try again.');
+    } finally {
+      setDeletingTripId(null);
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-center">
@@ -172,28 +192,54 @@ export function TripPage() {
             </div>
           ) : (
             trips.map(trip => (
-              <button
+              <div
                 key={trip.id}
-                onClick={() => handleSelectTrip(trip.id)}
-                className={`w-full text-left p-4 rounded-2xl transition-all border ${
+                className={`w-full p-4 rounded-2xl transition-all border ${
                   selectedTrip?.id === trip.id
                     ? 'bg-black text-white border-black shadow-xl scale-[1.02]'
                     : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600 shadow-sm'
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <p className="font-bold text-sm truncate pr-2">{trip.title}</p>
-                  <ChevronRight
-                    className={`size-3 mt-1 ${selectedTrip?.id === trip.id ? 'opacity-100' : 'opacity-10'}`}
-                  />
+                <div className="flex items-start gap-2">
+                  <button
+                    onClick={() => handleSelectTrip(trip.id)}
+                    className="flex-1 min-w-0 text-left"
+                  >
+                    <div className="flex justify-between items-start">
+                      <p className="font-bold text-sm truncate pr-2">{trip.title}</p>
+                      <ChevronRight
+                        className={`size-3 mt-1 ${
+                          selectedTrip?.id === trip.id ? 'opacity-100' : 'opacity-10'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-2 opacity-50">
+                      <MapPin className="size-3" />
+                      <span className="text-[10px] font-black uppercase tracking-tight truncate">
+                        {trip.destination}
+                      </span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`mt-0.5 shrink-0 rounded-lg p-2 transition-colors ${
+                      selectedTrip?.id === trip.id
+                        ? 'text-white/70 hover:text-white hover:bg-white/10'
+                        : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                    } disabled:opacity-50`}
+                    aria-label="Delete trip"
+                    title="Delete"
+                    disabled={deletingTripId === trip.id}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleDeleteTrip(trip.id);
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </div>
-                <div className="flex items-center gap-1.5 mt-2 opacity-50">
-                  <MapPin className="size-3" />
-                  <span className="text-[10px] font-black uppercase tracking-tight">
-                    {trip.destination}
-                  </span>
-                </div>
-              </button>
+              </div>
             ))
           )}
         </div>

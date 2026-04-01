@@ -351,7 +351,7 @@ backend/tests/integration/
 - [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
 - [ ] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
 - [x] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations. Backend: implement `get_active_session_by_user(user_id)` in `message_service`; wire into `chat.py` on session resume. Frontend: load previous messages when user opens an existing session.
-- [ ] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
+- [x] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
 
 #### Phase 4 — TTS Upgrades (Minqi)
 

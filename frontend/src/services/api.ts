@@ -276,6 +276,11 @@ export const chatSessionsService = {
     return data;
   },
 
+  async end(sessionId: number): Promise<{ status: string; session_id: number }> {
+    const { data } = await apiClient.post(`/chat/sessions/${sessionId}/end`);
+    return data;
+  },
+
   async getMessages(sessionId: number): Promise<ChatSessionMessagesResponse> {
     const { data } = await apiClient.get<ChatSessionMessagesResponse>(
       `/chat/sessions/${sessionId}/messages`
