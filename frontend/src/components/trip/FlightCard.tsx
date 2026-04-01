@@ -2,9 +2,9 @@ import { Plane, ArrowRight, ExternalLink } from 'lucide-react';
 import { Flight } from '../../types/trip';
 
 export const FlightCard = ({ flight }: { flight: Flight }) => {
-  // Flight type doesn't have stops or price_hkd, always show Direct
-  const stopCount = 0;
-  const stopLabel = 'Direct';
+  // Dynamically calculate stops from the array
+  const stopCount = flight.stops?.length || 0;
+  const stopLabel = stopCount === 0 ? 'Direct' : `${stopCount} Stop${stopCount > 1 ? 's' : ''}`;
 
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all group">
@@ -75,7 +75,10 @@ export const FlightCard = ({ flight }: { flight: Flight }) => {
             <p className="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">
               Total
             </p>
-            <p className="text-sm font-black text-green-600">HKD ---</p>
+            {/* Dynamically render the price if it exists */}
+            <p className="text-sm font-black text-green-600">
+              {flight.price_hkd ? `HKD ${flight.price_hkd.toLocaleString()}` : 'HKD ---'}
+            </p>
           </div>
 
           {/* Conditional Booking Button */}

@@ -1,5 +1,16 @@
 // frontend/src/pages/TripPage.tsx
-import { AlertCircle, Calendar, ChevronRight, Loader2, Map, MapPin } from 'lucide-react';
+import {
+  AlertCircle,
+  Calendar,
+  ChevronRight,
+  Loader2,
+  Map,
+  MapPin,
+  Banknote,
+  Plane,
+  Bed,
+  Ticket,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AttractionCard } from '../components/trip/AttractionCard';
@@ -33,6 +44,13 @@ export function TripPage() {
 
   // --- DATA EXTRACTION HELPERS ---
   const hotel = selectedTrip?.itinerary?.hotels?.[0];
+  const budget = selectedTrip?.itinerary?.estimated_total_budget_hkd;
+
+  const formatRange = (range?: { min: number; max: number }) => {
+    if (!range) return 'N/A';
+    if (range.min === range.max) return `HKD ${range.min.toLocaleString()}`;
+    return `HKD ${range.min.toLocaleString()} - ${range.max.toLocaleString()}`;
+  };
 
   // Sync auth state whenever localStorage changes (handles logout in other tabs/components)
   useEffect(() => {
@@ -217,6 +235,80 @@ export function TripPage() {
                 </section>
               )}
 
+              {/* 1.5 OVERALL BUDGET SUMMARY */}
+              {budget && (
+                <section>
+                  <div className="flex items-center gap-4 mb-6">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Estimated Budget
+                    </h3>
+                    <div className="h-px flex-1 bg-slate-100" />
+                  </div>
+
+                  <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
+                    {/* Total */}
+                    <div className="flex items-center justify-between gap-6 mb-8 border-b border-slate-50 pb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
+                          <Banknote className="size-6" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-slate-400">
+                            Total Trip Estimate
+                          </p>
+                          <p className="text-3xl font-black text-slate-900 tracking-tighter">
+                            {formatRange(budget.total_hkd)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Breakdown Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                          <Plane className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Flights
+                          </p>
+                          <p className="font-bold text-slate-700">
+                            {formatRange(budget.flights_hkd)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+                          <Bed className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Hotels
+                          </p>
+                          <p className="font-bold text-slate-700">
+                            {formatRange(budget.hotels_hkd)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
+                          <Ticket className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Activities
+                          </p>
+                          <p className="font-bold text-slate-700">
+                            {formatRange(budget.activities_hkd)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* 2. FLIGHTS SECTION */}
               {selectedTrip.itinerary.flights && (
                 <section>
@@ -258,17 +350,34 @@ export function TripPage() {
                 <div className="space-y-12">
                   {selectedTrip.itinerary.days?.map((day: DayPlan) => (
                     <div key={day.day_number}>
-                      <div className="flex items-center gap-4 mb-8">
-                        <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-lg shadow-xl">
-                          {day.day_number}
+                      {/* --- UPDATED DAY HEADER --- */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                        <div className="flex items-center gap-4">
+                          <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-lg shadow-xl shrink-0">
+                            {day.day_number}
+                          </div>
+                          <div>
+                            <h4 className="font-black text-xl text-slate-900 leading-none">
+                              Day {day.day_number}
+                              {day.theme ? `: ${day.theme}` : ''}
+                            </h4>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1.5">
+                              {day.date}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-black text-xl text-slate-900">Day {day.day_number}</p>
-                          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
-                            {day.date}
-                          </p>
-                        </div>
+
+                        {/* Daily Budget Badge */}
+                        {day.estimated_daily_budget_hkd && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-xl border border-emerald-100 shrink-0 self-start sm:self-auto">
+                            <Banknote className="size-4 text-emerald-600" />
+                            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                              {formatRange(day.estimated_daily_budget_hkd)}
+                            </span>
+                          </div>
+                        )}
                       </div>
+                      {/* --- END UPDATED DAY HEADER --- */}
 
                       <div className="ml-2 border-l-2 border-slate-50 pl-2">
                         <AttractionCard activity={day.morning?.[0]} label="Morning" />
