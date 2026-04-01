@@ -4,11 +4,21 @@ import { InputBar } from '@/components/chat/InputBar';
 import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
+import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
 import { apiClient } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
-import { Calendar, MapPin, MessageSquare, PlusCircle, Sparkles, Zap } from 'lucide-react';
+import {
+  Calendar,
+  MapPin,
+  MessageSquare,
+  PlusCircle,
+  Sparkles,
+  Square,
+  Volume2,
+  Zap,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -425,6 +435,12 @@ export function ChatPage() {
   const [showDemoLoading, setShowDemoLoading] = useState(false);
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const ttsAvailable = isTTSAvailable();
+  const { isSpeaking, speak, stop } = useTTS({
+    onEnd: () => setSpeakingMsgId(null),
+    onError: () => setSpeakingMsgId(null),
+  });
   // Set of user message IDs whose thinking bubble is expanded
   const [expandedBubbles, setExpandedBubbles] = useState<Set<string>>(new Set());
   // Per-exchange thinking tracking: userMsgId -> { startStep, endStep }
@@ -624,8 +640,45 @@ export function ChatPage() {
                         onComplete={() => setTypewriterDone(true)}
                       />
                     ) : msg.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      <div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                        </div>
+                        {ttsAvailable && msg.content.trim() && (
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isStreaming}
+                              aria-label={
+                                speakingMsgId === msg.id && isSpeaking
+                                  ? 'Stop speaking'
+                                  : 'Play text-to-speech'
+                              }
+                              onClick={() => {
+                                if (speakingMsgId === msg.id && isSpeaking) {
+                                  stop();
+                                  setSpeakingMsgId(null);
+                                  return;
+                                }
+                                setSpeakingMsgId(msg.id);
+                                speak(msg.content);
+                              }}
+                            >
+                              {speakingMsgId === msg.id && isSpeaking ? (
+                                <>
+                                  <Square className="size-3" />
+                                  Stop
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="size-3" />
+                                  Play
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       msg.content

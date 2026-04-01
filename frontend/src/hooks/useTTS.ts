@@ -2,7 +2,7 @@
 // Phase 1: Browser TTS (no API key required)
 // Future: swap to Gemini TTS API if browser TTS quality is insufficient
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 export function isTTSAvailable(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -16,6 +16,7 @@ interface UseTTSOptions {
 
 export function useTTS({ onStart, onEnd, onError }: UseTTSOptions = {}) {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const utteranceIdRef = useRef(0);
 
   const speak = useCallback(
     (text: string, lang = 'en-US') => {
@@ -24,6 +25,7 @@ export function useTTS({ onStart, onEnd, onError }: UseTTSOptions = {}) {
         return;
       }
 
+      const utteranceId = ++utteranceIdRef.current;
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
 
@@ -33,16 +35,20 @@ export function useTTS({ onStart, onEnd, onError }: UseTTSOptions = {}) {
       utterance.pitch = 1.0;
 
       utterance.onstart = () => {
+        // Ignore callbacks from a cancelled/old utterance
+        if (utteranceId !== utteranceIdRef.current) return;
         setIsSpeaking(true);
         onStart?.();
       };
 
       utterance.onend = () => {
+        if (utteranceId !== utteranceIdRef.current) return;
         setIsSpeaking(false);
         onEnd?.();
       };
 
       utterance.onerror = event => {
+        if (utteranceId !== utteranceIdRef.current) return;
         setIsSpeaking(false);
         onError?.(`TTS error: ${event.error}`);
       };
@@ -53,6 +59,7 @@ export function useTTS({ onStart, onEnd, onError }: UseTTSOptions = {}) {
   );
 
   const stop = useCallback(() => {
+    utteranceIdRef.current++;
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
   }, []);
