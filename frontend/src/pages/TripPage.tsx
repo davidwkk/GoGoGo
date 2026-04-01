@@ -2,34 +2,17 @@
 import { AlertCircle, Calendar, ChevronRight, Loader2, Map, MapPin } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ActivityCard } from '../components/trip/ActivityCard';
+import { AttractionCard } from '../components/trip/AttractionCard';
 import { FlightCard } from '../components/trip/FlightCard';
 import { tripService } from '../services/tripService';
 import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
+import { HotelCard } from '../components/trip/HotelCard';
+import { MapEmbed } from '../components/trip/MapEmbed';
 
 interface AuthError {
   userMessage?: string;
   message?: string;
 }
-
-// Component for Google Maps Embed (Task #24)
-const MapEmbed = ({ url }: { url: string | null }) => {
-  if (!url) return null;
-  return (
-    <section>
-      <div className="w-full h-[300px] rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-inner">
-        <iframe
-          title="Trip Map"
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          src={url}
-          allowFullScreen
-        ></iframe>
-      </div>
-    </section>
-  );
-};
 
 function getStoredToken(): string | null {
   return localStorage.getItem('access_token');
@@ -50,16 +33,6 @@ export function TripPage() {
 
   // --- DATA EXTRACTION HELPERS ---
   const hotel = selectedTrip?.itinerary?.hotels?.[0];
-
-  const getNights = (inDate?: string, outDate?: string) => {
-    if (!inDate || !outDate) return 1;
-    const diff = new Date(outDate).getTime() - new Date(inDate).getTime();
-    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
-
-  const nights = getNights(hotel?.check_in_date, hotel?.check_out_date);
-  const minTotal = (hotel?.price_per_night_hkd?.min || 0) * nights;
-  const maxTotal = (hotel?.price_per_night_hkd?.max || 0) * nights;
 
   // Sync auth state whenever localStorage changes (handles logout in other tabs/components)
   useEffect(() => {
@@ -261,9 +234,17 @@ export function TripPage() {
                 </section>
               )}
 
-              {/* 3. MAP EMBED (Task #24 Placeholder) */}
-              {selectedTrip.itinerary.map_embed_url && (
-                <MapEmbed url={selectedTrip.itinerary.map_embed_url} />
+              {/* 3. MAP EMBED */}
+              {(selectedTrip.itinerary.map_embed_url || selectedTrip.itinerary.destination) && (
+                <MapEmbed
+                  url={
+                    selectedTrip.itinerary.map_embed_url ||
+                    // Fallback to a basic place map if the backend returns null
+                    `https://maps.google.com/maps?q=${encodeURIComponent(
+                      selectedTrip.itinerary.destination
+                    )}&output=embed`
+                  }
+                />
               )}
 
               {/* 4. ITINERARY DAYS */}
@@ -290,9 +271,9 @@ export function TripPage() {
                       </div>
 
                       <div className="ml-2 border-l-2 border-slate-50 pl-2">
-                        <ActivityCard activity={day.morning?.[0]} label="Morning" />
-                        <ActivityCard activity={day.afternoon?.[0]} label="Afternoon" />
-                        <ActivityCard activity={day.evening?.[0]} label="Evening" />
+                        <AttractionCard activity={day.morning?.[0]} label="Morning" />
+                        <AttractionCard activity={day.afternoon?.[0]} label="Afternoon" />
+                        <AttractionCard activity={day.evening?.[0]} label="Evening" />
                       </div>
                     </div>
                   ))}
@@ -300,71 +281,7 @@ export function TripPage() {
               </section>
 
               {/* 5. HOTEL SECTION */}
-              {hotel && (
-                <section className="bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden group mb-10">
-                  <div className="absolute -right-10 -top-10 size-40 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-colors" />
-
-                  <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-8">
-                      <span className="px-4 py-1 bg-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                        Stay Details
-                      </span>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                          Nightly Rate
-                        </p>
-                        <p className="text-sm font-bold text-blue-400">
-                          HKD {hotel.price_per_night_hkd?.min?.toLocaleString()} -{' '}
-                          {hotel.price_per_night_hkd?.max?.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    <h4 className="text-4xl font-black mb-3 tracking-tight">{hotel.name}</h4>
-
-                    <div className="flex flex-wrap gap-8 mb-10">
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                          Check-in
-                        </p>
-                        <p className="text-sm font-medium text-slate-200">{hotel.check_in_date}</p>
-                      </div>
-                      <div className="h-8 w-px bg-white/10 self-center" />
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                          Check-out
-                        </p>
-                        <p className="text-sm font-medium text-slate-200">{hotel.check_out_date}</p>
-                      </div>
-                      <div className="h-8 w-px bg-white/10 self-center" />
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                          Stay Duration
-                        </p>
-                        <p className="text-sm font-medium text-slate-200">
-                          {nights} {nights > 1 ? 'Nights' : 'Night'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-end border-t border-white/10 pt-10">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-blue-300">
-                          Total Stay Estimate
-                        </p>
-                        <p className="text-3xl font-black text-white tracking-tighter">
-                          HKD {minTotal.toLocaleString()}{' '}
-                          <span className="text-lg text-slate-500 font-medium lowercase">to</span>{' '}
-                          {maxTotal.toLocaleString()}
-                        </p>
-                      </div>
-                      <button className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-xl active:scale-95 uppercase tracking-widest">
-                        Book Stay
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              )}
+              {hotel && <HotelCard hotel={hotel} />}
             </div>
           </div>
         ) : (

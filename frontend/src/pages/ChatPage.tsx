@@ -1,7 +1,7 @@
 // ChatPage — Main chat UI with AI travel agent
 
 import { InputBar } from '@/components/chat/InputBar';
-import { ActivityCard } from '@/components/trip/ActivityCard';
+import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
 import { apiClient } from '@/services/api';
@@ -294,9 +294,9 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
                   </div>
                 </div>
                 <div className="ml-2 border-l-2 border-slate-100 pl-4 space-y-3">
-                  <ActivityCard activity={day.morning?.[0]} label="Morning" />
-                  <ActivityCard activity={day.afternoon?.[0]} label="Afternoon" />
-                  <ActivityCard activity={day.evening?.[0]} label="Evening" />
+                  <AttractionCard activity={day.morning?.[0]} label="Morning" />
+                  <AttractionCard activity={day.afternoon?.[0]} label="Afternoon" />
+                  <AttractionCard activity={day.evening?.[0]} label="Evening" />
                 </div>
               </div>
             ))}
