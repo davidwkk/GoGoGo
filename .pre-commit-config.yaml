@@ -3,23 +3,17 @@
 # Install: uv run pre-commit install
 # Run manually: uv run pre-commit run --all-files
 
+default_language_version:
+  python: python3
+
 repos:
   # Python: pyright type check and ruff check/format
   - repo: local
     hooks:
-      - id: pyright
-        name: pyright (type check)
-        entry: bash -c 'cd backend && uv run pyright'
-        language: system
-        types_or: [python]
-        pass_filenames: true
-        always_run: false
-        description: 'Run pyright type check on Python files'
-
       - id: ruff-check
         name: ruff (check)
         entry: uv run ruff check
-        description: 'Run ruff check on Python files'
+        description: Run ruff check on Python files
         language: system
         types_or: [python]
         pass_filenames: true
@@ -28,11 +22,20 @@ repos:
       - id: ruff-format
         name: ruff (format)
         entry: uv run ruff format
-        description: 'Run ruff format on Python files'
+        description: Run ruff format on Python files
         language: system
         types_or: [python]
         pass_filenames: false
         require_serial: true
+        always_run: false
+
+      - id: pyright
+        name: pyright (type check)
+        entry: bash -c 'cd backend && uv run pyright'
+        description: Run pyright type check on Python files
+        language: system
+        types_or: [python]
+        pass_filenames: false
         always_run: false
 
   # Frontend: ESLint + Prettier (TypeScript/JavaScript)
@@ -41,7 +44,7 @@ repos:
       - id: frontend-lint
         name: frontend lint
         entry: bash -c 'cd frontend && npm run lint'
-        description: 'Run ESLint on frontend TypeScript files'
+        description: Run ESLint on frontend TypeScript files
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
@@ -51,7 +54,7 @@ repos:
       - id: frontend-typecheck
         name: frontend typecheck
         entry: bash -c 'cd frontend && npx tsc --noEmit'
-        description: 'Run TypeScript type check on frontend files'
+        description: Run TypeScript type check on frontend files
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
@@ -61,7 +64,7 @@ repos:
       - id: frontend-format
         name: frontend format
         entry: npx prettier --write
-        description: 'Format frontend files with Prettier'
+        description: Format frontend files with Prettier
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
@@ -74,7 +77,7 @@ repos:
       - id: prettier-format
         name: prettier format
         entry: npx prettier --write --ignore-unknown
-        description: 'Format non-Python files with Prettier'
+        description: Format non-Python files with Prettier
         language: system
         pass_filenames: false
         require_serial: true
