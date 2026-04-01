@@ -81,6 +81,10 @@ DEMO_ITINERARY = {
             "check_in_date": "2026-04-15",
             "check_out_date": "2026-04-20",
             "price_per_night_hkd": {"min": 2800, "max": 4500},
+            "star_rating": 5,
+            "guest_rating": 9.2,
+            "booking_url": "https://www.booking.com/hotel/jp/park-hyatt-tokyo.html",
+            "address": "3-7-1-2 Nishi Shinjuku, Shinjuku City, Tokyo 163-1055",
         },
     ],
     "days": [

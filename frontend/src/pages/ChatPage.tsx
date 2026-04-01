@@ -310,7 +310,7 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
             <div className="relative">
               <div className="flex justify-between items-start mb-4">
                 <span className="px-3 py-1 bg-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                  Stay
+                  Stay Details
                 </span>
                 <div className="text-right">
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest">Nightly</p>
@@ -320,13 +320,52 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
                   </p>
                 </div>
               </div>
-              <h4 className="text-3xl font-black tracking-tight mb-3">{hotel.name}</h4>
-              <div className="flex flex-wrap gap-6 text-sm text-slate-300">
-                <span>Check-in: {hotel.check_in_date}</span>
-                <span>Check-out: {hotel.check_out_date}</span>
-                <span>{nights} nights</span>
+
+              {/* Ratings Row */}
+              <div className="flex flex-wrap items-center gap-4 mb-3">
+                {hotel.star_rating && (
+                  <div className="flex items-center gap-1 text-yellow-400">
+                    <svg className="size-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    <span className="text-sm font-bold">{hotel.star_rating}</span>
+                  </div>
+                )}
+                {hotel.guest_rating && (
+                  <div className="flex items-center gap-1 text-emerald-400">
+                    <span className="text-sm font-bold">{hotel.guest_rating}</span>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest">
+                      Guest Score
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="mt-6 pt-5 border-t border-white/10 flex justify-between items-end">
+
+              <h4 className="text-3xl font-black tracking-tight mb-3">{hotel.name}</h4>
+              {hotel.address && <p className="text-xs text-slate-400 mb-6">{hotel.address}</p>}
+              <div className="flex flex-wrap gap-8 mb-8">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                    Check-in
+                  </p>
+                  <p className="text-sm font-medium text-slate-200">{hotel.check_in_date}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                    Check-out
+                  </p>
+                  <p className="text-sm font-medium text-slate-200">{hotel.check_out_date}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                    Stay Duration
+                  </p>
+                  <p className="text-sm font-medium text-slate-200">
+                    {nights} {nights > 1 ? 'Nights' : 'Night'}
+                  </p>
+                </div>
+              </div>
+              <div className="pt-5 border-t border-white/10 flex justify-between items-end">
                 <div>
                   <p className="text-[10px] text-blue-300 uppercase tracking-widest mb-1">
                     Total Estimate
@@ -335,6 +374,16 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
                     HKD {minTotal.toLocaleString()} – {maxTotal.toLocaleString()}
                   </p>
                 </div>
+                {hotel.booking_url && (
+                  <a
+                    href={hotel.booking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-xs hover:bg-blue-50 transition-all shadow-xl active:scale-95 uppercase tracking-widest text-center"
+                  >
+                    Book Stay
+                  </a>
+                )}
               </div>
             </div>
           </div>
