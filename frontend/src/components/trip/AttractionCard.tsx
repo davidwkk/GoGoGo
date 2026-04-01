@@ -29,25 +29,30 @@ const ActivityImage = ({
 
     const fetchWikiImage = async () => {
       try {
+        // Switch to the Action API. It returns 200 OK even if the page is missing!
+        // origin=* is required to prevent CORS errors
         const res = await fetch(
-          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`
+          `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&titles=${encodeURIComponent(name)}&pithumbsize=800&format=json&origin=*`
         );
 
-        if (!res.ok) throw new Error('Wiki page not found');
-
         const data = await res.json();
+        const pages = data.query?.pages;
 
         if (isMounted) {
-          // FIX: Look for the high-resolution original image first!
-          if (data.originalimage?.source) {
-            setBgUrl(data.originalimage.source);
-          } else if (data.thumbnail?.source) {
-            setBgUrl(data.thumbnail.source); // Fallback to thumbnail if original is missing
-          } else {
-            setBgUrl(fallbackUrl); // Page exists but no image at all
+          if (pages) {
+            const pageId = Object.keys(pages)[0];
+            // If pageId is '-1', the page doesn't exist.
+            // If it exists but has no image, thumbnail will be undefined.
+            if (pageId !== '-1' && pages[pageId].thumbnail?.source) {
+              setBgUrl(pages[pageId].thumbnail.source);
+              return; // Success!
+            }
           }
+          // If we reach here, no image was found, but NO 404 was thrown!
+          setBgUrl(fallbackUrl);
         }
       } catch (e) {
+        // Only actual network failures (like being offline) will trigger this now
         if (isMounted) setBgUrl(fallbackUrl);
       } finally {
         if (isMounted) setLoading(false);
