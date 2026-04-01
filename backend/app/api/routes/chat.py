@@ -113,7 +113,9 @@ async def chat_stream(
     verify_user_exists(user_id, db)
 
     # Get or create session
-    session = await resolve_session(db, body.session_id, user_id)
+    session = await resolve_session(
+        db, body.session_id, user_id, force_new_session=body.force_new_session
+    )
 
     # Save user message
     append_message(
@@ -179,7 +181,9 @@ async def chat(
     verify_user_exists(user_id, db)
 
     # Get or create session
-    session = await resolve_session(db, body.session_id, user_id)
+    session = await resolve_session(
+        db, body.session_id, user_id, force_new_session=body.force_new_session
+    )
 
     logger.bind(
         event="router_session",

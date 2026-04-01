@@ -45,6 +45,8 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
     sessionId,
     addMessage,
     setSessionId,
+    forceNewSessionNextMessage,
+    setForceNewSessionNextMessage,
     setLoading,
     setAbortController,
     setThinking,
@@ -81,10 +83,12 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
         const req: ChatRequest = {
           message,
           session_id: effectiveSessionId,
+          force_new_session: forceNewSessionNextMessage || undefined,
           generate_plan: generatePlan,
           trip_parameters: tripParams,
           user_preferences: prefs as unknown as Record<string, unknown>,
         };
+        if (forceNewSessionNextMessage) setForceNewSessionNextMessage(false);
 
         // Use streaming for casual chat (generatePlan=false)
         if (!generatePlan) {
@@ -294,6 +298,8 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
       sessionId,
       addMessage,
       setSessionId,
+      forceNewSessionNextMessage,
+      setForceNewSessionNextMessage,
       setLoading,
       setAbortController,
       setThinking,
