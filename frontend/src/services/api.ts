@@ -26,7 +26,7 @@ export interface APIError {
 export const apiClient = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 180000, // 180-second global timeout for all requests
+  timeout: 60000, // 60-second global timeout for all requests
 });
 
 // Attach JWT token if present
@@ -129,7 +129,11 @@ export interface ChatSessionMessagesResponse {
 
 export const chatService = {
   async sendMessage(req: ChatRequest): Promise<ChatResponse> {
-    const { data } = await apiClient.post<ChatResponse>('/chat', req);
+    const { data } = await apiClient.post<ChatResponse>('/chat', req, {
+      // Keep the 180s override here because the AI can definitely
+      // take longer than a minute to plan a full 7-day trip!
+      timeout: 180000,
+    });
     return data;
   },
 
