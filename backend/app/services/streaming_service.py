@@ -375,11 +375,16 @@ async def stream_agent_response(
 
                 # ── Step 1: Drain the full stream first ──────────────────────────
                 try:
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model,
-                        contents=messages,
-                        config=config,
-                    )
+                    # Use sync client wrapped in asyncio.to_thread to avoid blocking the event loop
+                    # (async streaming via client.aio doesn't work with SOCKS5 proxy in some regions)
+                    def sync_stream():
+                        return client.models.generate_content_stream(
+                            model=model,
+                            contents=messages,
+                            config=config,
+                        )
+
+                    stream = await asyncio.to_thread(sync_stream)
                 except Exception as call_err:
                     logger.bind(
                         event="generate_content_stream_error",
@@ -398,7 +403,7 @@ async def stream_agent_response(
                 round_func_parts: list[types.Part] = []
                 chunks: list = []
 
-                async for chunk in stream:
+                for chunk in stream:
                     chunks.append(chunk)
                     if chunk.text:
                         round_text_parts.append(types.Part.from_text(text=chunk.text))
