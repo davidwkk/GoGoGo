@@ -250,7 +250,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "- Do NOT call finalize_trip_plan with incomplete or invented parameters.\n"
         "- Never invent dates, destinations, or prices.\n"
         "- Always use HKD for prices when the destination is in Asia.\n"
-        "- Dates should be ISO 8601 format (YYYY-MM-DD).\n"
+        "- Dates will be provided as month-day (e.g., May 4). Convert to YYYY-MM-DD for finalize_trip_plan.\n"
         "- Format your responses using Markdown (headers, bold, lists, code blocks).\n"
         "- Be helpful and conversational — guide the user through the planning process.\n"
         f"{prefs_section}"
@@ -481,6 +481,12 @@ async def stream_agent_response(
                 )
 
                 if finalize_fc:
+                    logger.bind(
+                        event="finalize_trip_plan_called",
+                        service="chat",
+                        trace_id=trace_id,
+                        tool_round=tool_round,
+                    ).info("🎯 finalize_trip_plan called — generating trip itinerary")
                     fc_call = finalize_fc.function_call
                     if fc_call is None:
                         tool_round += 1
@@ -519,6 +525,19 @@ async def stream_agent_response(
                     )
                     yield SSE(
                         {"message_type": "itinerary", "itinerary": result["itinerary"]}
+                    )
+                    itinerary_data = result["itinerary"]
+                    logger.bind(
+                        event="itinerary_generated",
+                        service="chat",
+                        trace_id=trace_id,
+                        destination=itinerary_data.get("destination"),
+                        start_date=itinerary_data.get("start_date"),
+                        end_date=itinerary_data.get("end_date"),
+                        days_count=len(itinerary_data.get("daily_itinerary", [])),
+                    ).info(
+                        f"🎉 Itinerary generated: {itinerary_data.get('destination')} "
+                        f"({itinerary_data.get('start_date')} to {itinerary_data.get('end_date')})"
                     )
 
                     # Store itinerary in DB — JSON wrapper + message_type column
