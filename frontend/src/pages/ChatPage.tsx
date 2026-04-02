@@ -424,6 +424,27 @@ function DemoLoadingSkeleton() {
   );
 }
 
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="max-w-[72%] rounded-2xl px-5 py-4 bg-muted rounded-bl-md flex items-center gap-1.5 shadow-sm border border-border/50">
+        <span
+          className="size-2 bg-slate-400 rounded-full animate-bounce"
+          style={{ animationDelay: '0ms' }}
+        />
+        <span
+          className="size-2 bg-slate-400 rounded-full animate-bounce"
+          style={{ animationDelay: '150ms' }}
+        />
+        <span
+          className="size-2 bg-slate-400 rounded-full animate-bounce"
+          style={{ animationDelay: '300ms' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ChatPage() {
   const navigate = useNavigate();
   const messages = useChatStore(s => s.messages);
@@ -1043,6 +1064,11 @@ export function ChatPage() {
               </>
             );
           })}
+
+          {/* Show bouncing dots if waiting on LLM text response */}
+          {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+            <TypingIndicator />
+          )}
 
           {/* Demo trip result — shown inline after generation */}
           {showDemoLoading && <DemoLoadingSkeleton />}
