@@ -1,9 +1,65 @@
-// frontend/src/pages/TripPage.tsx
+// frontend/src/pages/TripPage.tsx (Add to top of file)
+
+function SidebarTripSkeleton() {
+  return (
+    <div className="w-full p-4 rounded-2xl border bg-white border-slate-100 mb-2">
+      <div className="flex justify-between items-start">
+        <div className="h-4 bg-slate-200 rounded w-2/3 animate-pulse" />
+        <div className="size-4 bg-slate-100 rounded animate-pulse" />
+      </div>
+      <div className="flex items-center gap-1.5 mt-4">
+        <div className="size-3 bg-slate-200 rounded-full animate-pulse" />
+        <div className="h-2.5 bg-slate-200 rounded w-1/3 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+function TripDetailSkeleton() {
+  return (
+    <div className="max-w-3xl mx-auto p-12 w-full animate-in fade-in duration-300">
+      {/* Header Skeleton */}
+      <div className="h-3 w-32 bg-blue-100 rounded mb-6 animate-pulse" />
+      <div className="h-14 w-3/4 bg-slate-200 rounded-lg mb-8 animate-pulse" />
+      <div className="h-24 w-full bg-slate-50 rounded-[2rem] mb-12 animate-pulse border border-slate-100" />
+
+      <div className="space-y-16">
+        {/* Budget Skeleton */}
+        <div className="h-40 w-full bg-slate-50 rounded-[2rem] animate-pulse border border-slate-100" />
+
+        {/* Flights Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-32 w-full bg-slate-50 rounded-[2rem] animate-pulse border border-slate-100" />
+          <div className="h-32 w-full bg-slate-50 rounded-[2rem] animate-pulse border border-slate-100" />
+        </div>
+
+        {/* Map Skeleton */}
+        <div className="h-64 w-full bg-slate-100 rounded-3xl animate-pulse" />
+
+        {/* Days Skeleton */}
+        <div className="space-y-10">
+          {[1, 2].map(i => (
+            <div key={i}>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="size-12 rounded-2xl bg-slate-200 animate-pulse shrink-0" />
+                <div className="h-6 w-32 bg-slate-100 rounded animate-pulse" />
+              </div>
+              <div className="ml-6 border-l-2 border-slate-50 pl-6 space-y-4">
+                <div className="h-24 w-full bg-slate-50 rounded-2xl animate-pulse" />
+                <div className="h-24 w-full bg-slate-50 rounded-2xl animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 import {
   AlertCircle,
   Calendar,
   ChevronRight,
-  Loader2,
   Map,
   MapPin,
   Banknote,
@@ -187,9 +243,11 @@ export function TripPage() {
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loading && trips.length === 0 ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="animate-spin text-slate-200" />
-            </div>
+            <>
+              <SidebarTripSkeleton />
+              <SidebarTripSkeleton />
+              <SidebarTripSkeleton />
+            </>
           ) : (
             trips.map(trip => (
               <div
@@ -248,9 +306,7 @@ export function TripPage() {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 overflow-y-auto bg-white">
         {fetchingDetail ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="animate-spin text-slate-200 size-12" />
-          </div>
+          <TripDetailSkeleton />
         ) : selectedTrip ? (
           <div className="max-w-3xl mx-auto p-12">
             <header className="mb-12">
