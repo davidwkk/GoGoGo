@@ -209,32 +209,48 @@ async def finalize_trip_plan(
 
 
 def _build_system_instruction(preferences: dict | None = None) -> str:
+    from datetime import date
+
+    today = date.today().isoformat()
     prefs_section = f"User preferences: {preferences}" if preferences else ""
     return (
-        "You are a travel planning assistant. Your goal is to help users plan trips.\n\n"
-        "During the conversation:\n"
-        "- Use get_weather, search_flights, search_hotels, get_attraction, get_transport, search_web\n"
-        "  to answer specific questions or gather trip information.\n"
-        "- If any required trip information is missing (destination, dates, purpose,\n"
-        "  group details), ask the user for it before proceeding.\n\n"
-        "**Before calling finalize_trip_plan, ensure you have called ALL of:**\n"
-        "  1. search_flights (at least once)\n"
-        "  2. search_hotels (at least once)\n"
-        "  3. get_weather (at least once)\n"
-        "  4. get_attraction (at least once)\n\n"
-        "**If any of these have not been called, call them first, then call finalize_trip_plan.**\n"
-        "**Do NOT summarize the trip in text. Always use finalize_trip_plan to produce the final plan.**\n\n"
-        "TRIGGER finalize_trip_plan when:\n"
+        f"You are a travel planning assistant. Today is {today}.\n\n"
+        "## Your Goal\n"
+        "Help users plan trips by gathering requirements, searching for relevant information,\n"
+        "and generating a complete travel itinerary.\n\n"
+        "## Required Information\n"
+        "To generate a trip plan, you MUST ask the user for ALL of the following:\n"
+        "  1. **Destination** — What city are they traveling to?\n"
+        "  2. **Start date** — When does the trip begin? (YYYY-MM-DD)\n"
+        "  3. **End date** — When does the trip end? (YYYY-MM-DD)\n"
+        "  4. **Purpose** — What is the purpose? (e.g., vacation, business, honeymoon, family visit)\n"
+        "  5. **Group type** — Who is traveling? (solo, couple, family, friends, business)\n"
+        "  6. **Group size** — How many people?\n\n"
+        "Do NOT call finalize_trip_plan until you have collected all of the above from the user.\n"
+        "Ask for missing information naturally in the conversation. Do not ask for everything at once.\n\n"
+        "## Available Tools\n"
+        "Use these tools to gather trip details and answer questions:\n"
+        "- get_weather, search_flights, search_hotels, get_attraction, get_transport, search_web\n\n"
+        "## Before Calling finalize_trip_plan\n"
+        "You MUST call ALL of the following tools at least once EACH:\n"
+        "  1. search_flights\n"
+        "  2. search_hotels\n"
+        "  3. get_weather\n"
+        "  4. get_attraction\n\n"
+        "Call these tools AFTER you have collected the required information from the user.\n\n"
+        "## When to Generate the Plan\n"
+        "TRIGGER finalize_trip_plan ONLY when:\n"
         '- User says "generate the plan", "create the itinerary", "plan my trip", etc.\n'
         '- OR you asked "shall I generate the plan now?" and user confirmed "yes"\n\n'
         'Do NOT trigger on "save to my trips" — that is a separate UI action.\n\n'
-        "IMPORTANT:\n"
+        "## Important Rules\n"
         "- finalize_trip_plan does NOT call external APIs — it formats data already gathered.\n"
         "- Do NOT call finalize_trip_plan with incomplete or invented parameters.\n"
         "- Never invent dates, destinations, or prices.\n"
         "- Always use HKD for prices when the destination is in Asia.\n"
         "- Dates should be ISO 8601 format (YYYY-MM-DD).\n"
         "- Format your responses using Markdown (headers, bold, lists, code blocks).\n"
+        "- Be helpful and conversational — guide the user through the planning process.\n"
         f"{prefs_section}"
     )
 
@@ -366,7 +382,7 @@ async def stream_agent_response(
                     system_instruction=system_instruction,
                     tools=[*ALL_TOOLS, finalize_trip_plan_decl],
                     thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel.MEDIUM,
+                        thinking_level=types.ThinkingLevel.MINIMAL,
                     ),
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(
                         disable=True
@@ -411,10 +427,22 @@ async def stream_agent_response(
                         yield SSE({"chunk": chunk.text})
 
                 # ── Extract consolidated function calls from drained chunks ────────
+                # NOTE: We must use chunk.candidates[0].content.parts to get full Part
+                # objects (which include thought_signature), NOT chunk.function_calls
+                # which only extracts the FunctionCall objects and loses the signature.
                 for chunk in chunks:
-                    if chunk.function_calls:
-                        for fc in chunk.function_calls:
-                            round_func_parts.append(types.Part(function_call=fc))
+                    if (
+                        chunk.candidates
+                        and chunk.candidates[0].content
+                        and chunk.candidates[0].content.parts
+                    ):
+                        for part in chunk.candidates[0].content.parts:
+                            if part.function_call:
+                                # Preserve the full Part with thought_signature
+                                round_func_parts.append(part)
+                            elif part.text:
+                                # Text parts are already handled above via chunk.text
+                                pass
 
                 # ── DB write: once per round ─────────────────────────────────────
                 _flush_text()
