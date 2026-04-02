@@ -1,9 +1,9 @@
 // ChatPage — Main chat UI with AI travel agent
 
 import { InputBar } from '@/components/chat/InputBar';
+import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
 import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
-import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
 import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
 import { apiClient, chatSessionsService } from '@/services/api';
 import { tripService } from '@/services/tripService';
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useNavigate } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
 
 // Dynamic thinking placeholder that cycles based on elapsed time
@@ -84,7 +85,6 @@ function useDynamicThinking(isLoading: boolean, hasMessages: boolean): string {
 
   return message;
 }
-import { useNavigate } from 'react-router-dom';
 
 /** Renders partial thought text with a blinking cursor typewriter effect */
 function StreamingThought({ text, done }: { text: string; done: boolean }) {
@@ -626,6 +626,7 @@ export function ChatPage() {
     try {
       await chatSessionsService.end(currentSessionPk);
       alert('Saved. This chat is finished.');
+      // alert should use custom toast component instead of default alert
       await startNewChat();
     } catch (e) {
       const err = e as any;

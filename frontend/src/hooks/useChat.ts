@@ -63,7 +63,12 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
       setLoading(true);
       try {
         // Use guest_uid from localStorage for unauthenticated users
-        const guestUid = localStorage.getItem('guest_uid');
+        // Create one if it doesn't exist (persists across page reloads)
+        let guestUid = localStorage.getItem('guest_uid');
+        if (!guestUid) {
+          guestUid = crypto.randomUUID();
+          localStorage.setItem('guest_uid', guestUid);
+        }
         const effectiveSessionId = sessionId ?? guestUid ?? undefined;
         console.log(
           '[useChat] sessionId:',
