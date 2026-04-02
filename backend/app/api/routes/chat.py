@@ -76,23 +76,36 @@ async def simple_chat_stream(
 
     async def generate():
         try:
-            stream = await client.aio.models.generate_content_stream(
-                model=settings.GEMINI_LITE_MODEL,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                ),
-            )
+            # Use sync client like test-llm does, wrapped in asyncio.to_thread
+            # to avoid blocking the event loop
+            import asyncio
 
-            accumulated = ""
-            async for chunk in stream:
-                if chunk.text:
-                    accumulated += chunk.text
-                    yield SSE({"chunk": chunk.text})
+            def call_llm():
+                return client.models.generate_content(
+                    model=settings.GEMINI_LITE_MODEL,
+                    contents=contents,
+                    config={
+                        "system_instruction": SYSTEM_PROMPT,
+                        "temperature": 0.7,
+                    },
+                )
 
-            # Update assistant message in DB
-            assistant_msg.content = accumulated
-            db.commit()
+            response = await asyncio.to_thread(call_llm)
+
+            # Stream the response text
+            if response.text:
+                accumulated = response.text
+                # Stream in chunks of ~20 chars for visual effect
+                import re
+
+                chunks = re.findall(r".{1,20}(?:\s+|$)", accumulated)
+                for chunk in chunks:
+                    yield SSE({"chunk": chunk})
+                    await asyncio.sleep(0.02)
+
+                # Update assistant message in DB
+                assistant_msg.content = accumulated
+                db.commit()
 
         except Exception as e:
             tb_str = tb.format_exc()
