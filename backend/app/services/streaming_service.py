@@ -278,6 +278,13 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "- Search for AT LEAST 1 attraction PER TRAVEL DAY (e.g., 3-day trip = at least 3 attractions).\n"
         "- Call get_attraction multiple times with different queries to gather enough attractions.\n"
         "- Only reduce this if the user explicitly says they want fewer attractions.\n\n"
+        "## Tool Call Rules — AVOID UNNECESSARY DUPLICATE CALLS\n"
+        '- Do NOT call any tool just to "gather information" or "preview" results.\n'
+        "- Only call tools in these situations:\n"
+        '  1. User explicitly confirms "generate the plan" or "create itinerary" — THEN call all required tools.\n'
+        "  2. User explicitly asks a question that requires real-time data (e.g., weather, specific flight prices, hotel availability).\n"
+        "- Do NOT call search_flights, search_hotels, get_attraction, or get_weather before the user confirms to generate a plan.\n"
+        "- If a tool was already called for this trip, do NOT call it again for the same purpose.\n\n"
         "## Before Calling finalize_trip_plan\n"
         "You MUST call ALL of the following tools at least once EACH:\n"
         "  1. search_flights\n"
