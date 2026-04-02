@@ -82,7 +82,13 @@ async def get_attraction(attraction_name: str) -> dict:
     ).debug(f"TOOL: Calling Wikipedia API for {attraction_name}")
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(
+            timeout=15.0,
+            headers={
+                "User-Agent": "GoGoGo-Travel-Agent/1.0 (travel planning app; contact@example.com)",
+                "Accept": "application/json",
+            },
+        ) as client:
             response = await client.get(url)
             if response.status_code == 404:
                 logger.bind(
