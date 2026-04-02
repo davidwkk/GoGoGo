@@ -63,7 +63,7 @@ async def get_weather(city: str) -> dict:
                     layer="tool",
                     tool="get_weather",
                     status_code=401,
-                ).warning("TOOL: Invalid OpenWeatherMap API key")
+                ).error("TOOL: Invalid OpenWeatherMap API key")
                 return {"error": "Invalid OpenWeatherMap API key", "city": city}
             if response.status_code == 404:
                 logger.bind(
@@ -72,7 +72,7 @@ async def get_weather(city: str) -> dict:
                     tool="get_weather",
                     status_code=404,
                     city=city,
-                ).warning(f"TOOL: City not found: {city}")
+                ).error(f"TOOL: City not found: {city}")
                 return {"error": f"City not found: {city}", "city": city}
             response.raise_for_status()
             data = response.json()
@@ -105,7 +105,7 @@ async def get_weather(city: str) -> dict:
             layer="tool",
             tool="get_weather",
             city=city,
-        ).warning(f"TOOL: Timeout fetching weather for: {city}")
+        ).error(f"TOOL: Timeout fetching weather for: {city}")
         return {"error": f"Timeout fetching weather for: {city}", "city": city}
     except httpx.HTTPStatusError as e:
         logger.bind(
@@ -113,7 +113,7 @@ async def get_weather(city: str) -> dict:
             layer="tool",
             tool="get_weather",
             status_code=e.response.status_code,
-        ).warning(f"TOOL: HTTP error fetching weather: {e}")
+        ).error(f"TOOL: HTTP error fetching weather: {e}")
         return {"error": f"HTTP error fetching weather: {e}", "city": city}
     except Exception as e:
         logger.bind(
@@ -121,5 +121,5 @@ async def get_weather(city: str) -> dict:
             layer="tool",
             tool="get_weather",
             error=str(e),
-        ).warning(f"TOOL: Failed to fetch weather: {e}")
+        ).error(f"TOOL: Failed to fetch weather: {e}")
         return {"error": f"Failed to fetch weather: {e}", "city": city}

@@ -161,7 +161,7 @@ async def search_web(query: str) -> dict:
             layer="tool",
             tool="search_web",
             error=result.get("error"),
-        ).warning(f"TOOL: search_web failed — {result.get('error')}")
+        ).error(f"TOOL: search_web failed — {result.get('error')}")
     return result
 
 
@@ -199,7 +199,7 @@ async def _search_tavily(query: str) -> dict:
                     tool="search_web",
                     provider="tavily",
                     status_code=401,
-                ).warning("TOOL: Invalid Tavily API key")
+                ).error("TOOL: Invalid Tavily API key")
                 return {"error": "Invalid Tavily API key", "results": []}
             response.raise_for_status()
             data = response.json()
@@ -224,7 +224,7 @@ async def _search_tavily(query: str) -> dict:
             tool="search_web",
             provider="tavily",
             query=query,
-        ).warning(f"TOOL: Tavily timeout for query: {query}")
+        ).error(f"TOOL: Tavily timeout for query: {query}")
         return {"error": f"Timeout during Tavily search for: {query}", "results": []}
     except httpx.HTTPStatusError as e:
         logger.bind(
@@ -233,7 +233,7 @@ async def _search_tavily(query: str) -> dict:
             tool="search_web",
             provider="tavily",
             status_code=e.response.status_code,
-        ).warning(f"TOOL: Tavily HTTP error: {e}")
+        ).error(f"TOOL: Tavily HTTP error: {e}")
         return {"error": f"Tavily HTTP error: {e}", "results": []}
     except Exception as e:
         logger.bind(
@@ -242,7 +242,7 @@ async def _search_tavily(query: str) -> dict:
             tool="search_web",
             provider="tavily",
             error=str(e),
-        ).warning(f"TOOL: Tavily failed: {e}")
+        ).error(f"TOOL: Tavily failed: {e}")
         return {"error": f"Tavily search failed: {e}", "results": []}
 
 
@@ -262,7 +262,7 @@ async def _search_serpapi(query: str) -> dict:
             layer="tool",
             tool="search_web",
             provider="serpapi",
-        ).warning("TOOL: No search API key configured (Tavily or SerpAPI)")
+        ).error("TOOL: No search API key configured (Tavily or SerpAPI)")
         return {
             "error": "No search API key configured (Tavily or SerpAPI)",
             "results": [],
@@ -287,7 +287,7 @@ async def _search_serpapi(query: str) -> dict:
                     tool="search_web",
                     provider="serpapi",
                     status_code=401,
-                ).warning("TOOL: Invalid SerpAPI key")
+                ).error("TOOL: Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "results": []}
             response.raise_for_status()
             data = response.json()
@@ -310,7 +310,7 @@ async def _search_serpapi(query: str) -> dict:
             tool="search_web",
             provider="serpapi",
             query=query,
-        ).warning(f"TOOL: SerpAPI timeout for query: {query}")
+        ).error(f"TOOL: SerpAPI timeout for query: {query}")
         return {"error": f"Timeout during SerpAPI search for: {query}", "results": []}
     except httpx.HTTPStatusError as e:
         logger.bind(
@@ -319,7 +319,7 @@ async def _search_serpapi(query: str) -> dict:
             tool="search_web",
             provider="serpapi",
             status_code=e.response.status_code,
-        ).warning(f"TOOL: SerpAPI HTTP error: {e}")
+        ).error(f"TOOL: SerpAPI HTTP error: {e}")
         return {"error": f"SerpAPI HTTP error: {e}", "results": []}
     except Exception as e:
         logger.bind(
@@ -328,5 +328,5 @@ async def _search_serpapi(query: str) -> dict:
             tool="search_web",
             provider="serpapi",
             error=str(e),
-        ).warning(f"TOOL: SerpAPI failed: {e}")
+        ).error(f"TOOL: SerpAPI failed: {e}")
         return {"error": f"SerpAPI search failed: {e}", "results": []}

@@ -200,7 +200,7 @@ async def search_hotels(
                     layer="tool",
                     tool="search_hotels",
                     status_code=401,
-                ).warning("TOOL: Invalid SerpAPI key")
+                ).error("TOOL: Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "hotels": []}
             if response.status_code == 404:
                 logger.bind(
@@ -208,7 +208,7 @@ async def search_hotels(
                     layer="tool",
                     tool="search_hotels",
                     status_code=404,
-                ).warning("TOOL: Hotels endpoint not found")
+                ).error("TOOL: Hotels endpoint not found")
                 return {"error": "SerpAPI hotels endpoint not found", "hotels": []}
             if response.status_code == 429:
                 logger.bind(
@@ -216,7 +216,7 @@ async def search_hotels(
                     layer="tool",
                     tool="search_hotels",
                     status_code=429,
-                ).warning("TOOL: SerpAPI rate limit exceeded")
+                ).error("TOOL: SerpAPI rate limit exceeded")
                 return {"error": "SerpAPI rate limit exceeded", "hotels": []}
             response.raise_for_status()
             data = response.json()
@@ -317,7 +317,7 @@ async def search_hotels(
             layer="tool",
             tool="search_hotels",
             destination=destination,
-        ).warning(f"TOOL: Timeout searching hotels for: {destination}")
+        ).error(f"TOOL: Timeout searching hotels for: {destination}")
         return {"error": f"Timeout searching hotels for: {destination}", "hotels": []}
     except httpx.HTTPStatusError as e:
         logger.bind(
@@ -325,7 +325,7 @@ async def search_hotels(
             layer="tool",
             tool="search_hotels",
             status_code=e.response.status_code,
-        ).warning(f"TOOL: HTTP error searching hotels: {e}")
+        ).error(f"TOOL: HTTP error searching hotels: {e}")
         return {"error": f"HTTP error searching hotels: {e}", "hotels": []}
     except Exception as e:
         logger.bind(
@@ -333,5 +333,5 @@ async def search_hotels(
             layer="tool",
             tool="search_hotels",
             error=str(e),
-        ).warning(f"TOOL: Hotel search failed: {e}")
+        ).error(f"TOOL: Hotel search failed: {e}")
         return {"error": f"Hotel search failed: {e}", "hotels": []}
