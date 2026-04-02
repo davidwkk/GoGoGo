@@ -271,6 +271,13 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "## Available Tools\n"
         "Use these tools to gather trip details and answer questions:\n"
         "- get_weather, search_flights, search_hotels, get_attraction, get_transport, search_web\n\n"
+        "## Flight Search Defaults\n"
+        "- By default, search for ROUND-TRIP flights (include return_date).\n"
+        '- Only search ONE-WAY flights if the user explicitly specifies "one-way".\n\n'
+        "## Attraction Search Defaults\n"
+        "- Search for AT LEAST 1 attraction PER TRAVEL DAY (e.g., 3-day trip = at least 3 attractions).\n"
+        "- Call get_attraction multiple times with different queries to gather enough attractions.\n"
+        "- Only reduce this if the user explicitly says they want fewer attractions.\n\n"
         "## Before Calling finalize_trip_plan\n"
         "You MUST call ALL of the following tools at least once EACH:\n"
         "  1. search_flights\n"
@@ -330,8 +337,18 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
     )
 
 
+SSE_KEEPALIVE = ": keepalive\n\n"
+
+
 def SSE(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
+
+
+async def _keepalive_pusher(queue: asyncio.Queue[str]) -> None:
+    """Background task: put SSE keepalive comment in queue every 20s."""
+    while True:
+        await asyncio.sleep(20)
+        await queue.put(SSE_KEEPALIVE)
 
 
 async def stream_agent_response(
@@ -442,6 +459,11 @@ async def stream_agent_response(
 
     tool_round = 0
 
+    # ── Keepalive task — prevents proxy/connection idle timeouts ─────────────────
+    # Background task puts SSE comments in queue; main loop drains them between rounds.
+    keepalive_queue: asyncio.Queue[str] = asyncio.Queue()
+    keepalive_task = asyncio.create_task(_keepalive_pusher(keepalive_queue))
+
     try:
         async with asyncio.timeout(TIMEOUT_SECONDS):
             while tool_round < MAX_TOOL_ROUNDS:
@@ -452,6 +474,10 @@ async def stream_agent_response(
                     tool_round=tool_round + 1,
                     max_tool_rounds=MAX_TOOL_ROUNDS,
                 ).info(f"Tool round {tool_round + 1}")
+
+                # ── Drain any pending keepalive comments ───────────────────────────
+                while not keepalive_queue.empty():
+                    yield keepalive_queue.get_nowait()
 
                 config = types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -741,3 +767,10 @@ async def stream_agent_response(
         )
         yield SSE({"message_type": "error", "error": error_msg})
         yield SSE({"done": True})
+    finally:
+        # Cancel the keepalive background task when the stream ends
+        keepalive_task.cancel()
+        try:
+            await keepalive_task
+        except asyncio.CancelledError:
+            pass
