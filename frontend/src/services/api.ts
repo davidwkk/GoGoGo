@@ -351,10 +351,16 @@ export const chatSessionsService = {
     return data;
   },
 
-  async updateThinkingSteps(messageId: number, thinkingSteps: string[]): Promise<{ ok: boolean }> {
+  async updateThinkingSteps(
+    messageId: number,
+    thinkingSteps: string[],
+    guestUid?: string
+  ): Promise<{ ok: boolean }> {
+    const params = guestUid ? { guest_uid: guestUid } : undefined;
     const { data } = await apiClient.patch<{ ok: boolean }>(
       `/chat/messages/${messageId}/thinking-steps`,
-      { thinking_steps: thinkingSteps }
+      { thinking_steps: thinkingSteps },
+      { params }
     );
     return data;
   },
