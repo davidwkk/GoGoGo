@@ -1,7 +1,5 @@
 """Chat router — HTTP concerns only (parse request, call service, return response)."""
 
-import json
-import traceback as tb
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends
@@ -14,136 +12,12 @@ from app.api.deps import get_current_user_optional, verify_user_exists
 from app.core.config import settings
 from app.db.session import get_db
 from app.schemas.chat import ChatRequest
-from app.services.message_service import (
-    append_message,
-    resolve_session,
-    get_session_messages,
-)
+from app.services.message_service import append_message, resolve_session
+from app.services.streaming_service import stream_agent_response
 
 router = APIRouter()
 
 
-SYSTEM_PROMPT = """You are a helpful travel planning assistant. Respond directly to user questions about travel, destinations, flights, hotels, attractions, and trip planning. Be concise and helpful."""
-
-
-def SSE(data: dict) -> str:
-    return f"data: {json.dumps(data)}\n\n"
-
-
-async def simple_chat_stream(
-    message: str,
-    session_id: int,
-    db: Session,
-) -> StreamingResponse:
-    """
-    Simple streaming chat — just sends user message directly to LLM without tools.
-    """
-    trace_id = str(uuid4())
-    call_id = str(uuid4())[:8]
-
-    http_opts = (
-        types.HttpOptionsDict(client_args={"proxy": settings.SOCKS5_PROXY_URL})
-        if settings.LLM_PROXY_ENABLED
-        else None
-    )
-    client = Client(api_key=settings.GEMINI_API_KEY, http_options=http_opts)
-
-    # Build conversation history
-    history = get_session_messages(db, session_id)
-    contents: list[types.Content] = []
-
-    # Add history as context
-    for msg in history:
-        if msg.role in ("user", "assistant"):
-            contents.append(
-                types.Content(
-                    role=msg.role, parts=[types.Part.from_text(text=msg.content)]
-                )
-            )
-
-    # Add current user message
-    contents.append(
-        types.Content(role="user", parts=[types.Part.from_text(text=message)])
-    )
-
-    # Save user message
-    append_message(db, session_id=session_id, role="user", content=message)
-
-    # Create assistant message placeholder
-    assistant_msg = append_message(
-        db, session_id=session_id, role="assistant", content=""
-    )
-
-    async def generate():
-        try:
-            # Use sync client like test-llm does, wrapped in asyncio.to_thread
-            # to avoid blocking the event loop
-            import asyncio
-
-            def call_llm():
-                return client.models.generate_content(
-                    model=settings.GEMINI_LITE_MODEL,
-                    contents=contents,
-                    config={
-                        "system_instruction": SYSTEM_PROMPT,
-                        "temperature": 0.7,
-                    },
-                )
-
-            response = await asyncio.to_thread(call_llm)
-
-            # Stream the response text
-            if response.text:
-                accumulated = response.text
-                # Stream in chunks of ~20 chars for visual effect
-                import re
-
-                chunks = re.findall(r".{1,20}(?:\s+|$)", accumulated)
-                for chunk in chunks:
-                    yield SSE({"chunk": chunk})
-                    await asyncio.sleep(0.02)
-
-                # Update assistant message in DB
-                assistant_msg.content = accumulated
-                db.commit()
-
-        except Exception as e:
-            tb_str = tb.format_exc()
-            logger.bind(
-                event="chat_stream_error",
-                call_id=call_id,
-                trace_id=trace_id,
-                error_type=type(e).__name__,
-                error_message=str(e),
-                model=settings.GEMINI_LITE_MODEL,
-                proxy_enabled=settings.LLM_PROXY_ENABLED,
-                contents_count=len(contents),
-                contents_roles=[c.role for c in contents],
-                system_instruction_len=len(SYSTEM_PROMPT),
-                traceback=tb_str,
-            ).error(f"[{call_id}] Chat stream error: {e}")
-            error_msg = f"[{type(e).__name__}] {e}"
-            from app.services.message_service import update_message_content
-
-            update_message_content(
-                db, assistant_msg.id, error_msg, message_type="error"
-            )
-            yield SSE({"message_type": "error", "error": error_msg})
-
-        yield SSE({"done": True})
-
-    return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@router.get("/test-llm")
 async def test_llm() -> dict:
     """
     Simple test endpoint that calls Gemini 3.1 flash lite preview directly.
@@ -224,6 +98,8 @@ async def chat_stream(
     """
 
     user_id = current_user["user_id"] if current_user else None
+    call_id = str(uuid4())[:8]
+    trace_id = str(uuid4())
 
     # Verify user exists in DB (valid token but user deleted → 401)
     verify_user_exists(user_id, db)
@@ -233,8 +109,48 @@ async def chat_stream(
         db, body.session_id, user_id, force_new_session=body.force_new_session
     )
 
-    return await simple_chat_stream(
-        message=body.message,
+    # Save user message
+    append_message(
+        db,
         session_id=session.id,
-        db=db,
+        role="user",
+        content=body.message,
+    )
+
+    prefs_dict = body.user_preferences.model_dump() if body.user_preferences else None
+
+    logger.bind(
+        event="chat_stream_request",
+        call_id=call_id,
+        trace_id=trace_id,
+        user_id=user_id,
+        session_id=session.id,
+        message_preview=body.message[:100] + ("..." if len(body.message) > 100 else ""),
+        message_len=len(body.message),
+        force_new_session=body.force_new_session,
+        proxy_enabled=settings.LLM_PROXY_ENABLED,
+        proxy_url=settings.SOCKS5_PROXY_URL if settings.LLM_PROXY_ENABLED else None,
+        model=settings.GEMINI_LITE_MODEL,
+        has_preferences=prefs_dict is not None,
+        preferences_keys=list(prefs_dict.keys()) if prefs_dict else [],
+    ).info(
+        f"[{call_id}] Chat stream request | user={user_id} | session={session.id} | "
+        f"msg_len={len(body.message)} | proxy={settings.LLM_PROXY_ENABLED} | "
+        f"prefs={bool(prefs_dict)}"
+    )
+
+    return StreamingResponse(
+        stream_agent_response(
+            message=body.message,
+            session_id=session.id,
+            db=db,
+            preferences=prefs_dict,
+            trace_id=trace_id,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
