@@ -109,9 +109,15 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                   const errorMsg = chunk.slice('__ERROR__:'.length);
                   setThinking(false);
                   if (msgId !== null) {
-                    useChatStore.getState().updateStreamingMessage(msgId, `Error: ${errorMsg}`);
+                    useChatStore
+                      .getState()
+                      .updateStreamingMessage(msgId, `Error: ${errorMsg}`, 'error');
                   } else {
-                    addMessage({ role: 'assistant', content: `Error: ${errorMsg}` });
+                    addMessage({
+                      role: 'assistant',
+                      content: `Error: ${errorMsg}`,
+                      messageType: 'error',
+                    });
                   }
                   onError?.(errorMsg);
                   setAbortController(null);

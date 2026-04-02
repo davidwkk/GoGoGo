@@ -9,6 +9,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  messageType?: string;
 }
 
 export interface ChatState {
@@ -41,7 +42,7 @@ export interface ChatState {
   setMessages: (messages: Message[]) => void;
   setForceNewSessionNextMessage: (force: boolean) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
-  updateStreamingMessage: (id: string, content: string) => void;
+  updateStreamingMessage: (id: string, content: string, messageType?: string) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setThinking: (thinking: boolean) => void;
@@ -77,9 +78,13 @@ export const useChatStore = create<ChatState>(set => ({
     return id;
   },
 
-  updateStreamingMessage: (id, content) =>
+  updateStreamingMessage: (id, content, messageType) =>
     set(state => ({
-      messages: state.messages.map(msg => (msg.id === id ? { ...msg, content } : msg)),
+      messages: state.messages.map(msg =>
+        msg.id === id
+          ? { ...msg, content, ...(messageType !== undefined ? { messageType } : {}) }
+          : msg
+      ),
     })),
 
   clearMessages: () => set({ messages: [] }),
