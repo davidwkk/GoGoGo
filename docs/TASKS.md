@@ -297,10 +297,11 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 
 > Ordered from most fundamental (blocked by nothing) to most dependent (blocked by above tasks).
 
-- [ ] **Verify the return schema from tools** — Confirm the return schemas and write API testcases to test the tools.
+- [x] **Verify the return schema from tools** — Confirm the return schemas and write API testcases to test the tools.
 - [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds).
-- [ ] **Agent decides when to generate trip plan** — Remove the explicit "Generate Trip Plan" button; let the agent autonomously decide when to produce a structured `TripItinerary` based on conversation context (e.g., user expresses intent to travel, provides destinations/dates). The agent should detect trip-planning intent and invoke `generate_content` with `response_json_schema` accordingly. Frontend no longer sends a `generate_plan` flag — the agent loop handles this internally.
-- [ ] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning. Depends on: "Agent decides when to generate" (the streaming refactor builds on the unified agent loop).
+- [ ] **Fix thinking bubble display** when LLM calls tools
+- [x] **Agent decides when to generate trip plan** — Remove the explicit "Generate Trip Plan" button; let the agent autonomously decide when to produce a structured `TripItinerary` based on conversation context (e.g., user expresses intent to travel, provides destinations/dates). The agent should detect trip-planning intent and invoke `generate_content` with `response_json_schema` accordingly. Frontend no longer sends a `generate_plan` flag — the agent loop handles this internally.
+- [x] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning. Depends on: "Agent decides when to generate" (the streaming refactor builds on the unified agent loop).
 - [x] **Add 3x auto-retry on SSE disconnect** ✅ — Up to 3 retries with exponential backoff (500ms base) on SSE disconnect or fetch error; yields reconnecting status to UI on retry attempts
 
 ### 🧪 Tests to Write
@@ -400,12 +401,12 @@ backend/tests/integration/
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area     | Issue                                                                                                                                                    |
-| --- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 17  | 🟡       | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
-| 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
-| —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                  |
-| —   | 🟡       | Frontend | ✅ Done — Increase STT duration to at least 30s (now supports up to 60s + silence auto-stop) (Minqi)                                                     |
+| #   | Severity | Area     | Issue                                                                                                                                                   |
+| --- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 17  | 🟡        | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
+| 26  | 🟡        | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
+| —   | 🟡        | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                 |
+| —   | 🟡        | Frontend | ✅ Done — Increase STT duration to at least 30s (now supports up to 60s + silence auto-stop) (Minqi)                                                     |
 
 ---
 
