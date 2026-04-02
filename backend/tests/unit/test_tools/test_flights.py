@@ -82,7 +82,7 @@ async def test_search_flights_returns_expected_results():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_flights("PEK", "LAX")
+        result = await search_flights("PEK", "LAX", date="2026-05-01")
 
     assert "flights" in result
     # Two flight segments from one itinerary
@@ -113,7 +113,9 @@ async def test_search_flights_returns_expected_results():
 @pytest.mark.asyncio
 async def test_search_flights_validates_iata_codes():
     """Flights returns error for invalid airport codes."""
-    result = await search_flights("tokyo", "hong kong")  # city names, not IATA
+    result = await search_flights(
+        "tokyo", "hong kong", date="2026-05-01"
+    )  # city names, not IATA
 
     assert "error" in result
     assert "IATA airport codes" in result["error"]
@@ -126,7 +128,7 @@ async def test_search_flights_missing_api_key():
     with unittest.mock.patch("app.agent.tools.flights.settings") as mock_settings:
         mock_settings.SERPAPI_KEY = ""
 
-        result = await search_flights("PEK", "LAX")
+        result = await search_flights("PEK", "LAX", date="2026-05-01")
 
     assert "error" in result
     assert "not configured" in result["error"]
@@ -144,7 +146,7 @@ async def test_search_flights_handles_network_error():
         )
         mock_client_cls.return_value = mock_client
 
-        result = await search_flights("PEK", "LAX")
+        result = await search_flights("PEK", "LAX", date="2026-05-01")
 
     assert "error" in result
     assert result["flights"] == []
@@ -162,7 +164,7 @@ async def test_search_flights_handles_401():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_flights("PEK", "LAX")
+        result = await search_flights("PEK", "LAX", date="2026-05-01")
 
     assert "error" in result
     assert "Invalid SerpAPI key" in result["error"]
@@ -181,7 +183,7 @@ async def test_search_flights_handles_429():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_flights("PEK", "LAX")
+        result = await search_flights("PEK", "LAX", date="2026-05-01")
 
     assert "error" in result
     assert "rate limit" in result["error"].lower()
@@ -226,7 +228,7 @@ async def test_search_flights_other_flights_fallback():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_flights("HND", "LAX")
+        result = await search_flights("HND", "LAX", date="2026-05-01")
 
     assert len(result["flights"]) == 1
     assert result["flights"][0]["airline"] == "United"
