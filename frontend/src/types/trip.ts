@@ -167,7 +167,14 @@ export interface TripDetail extends TripSummary {
 // Travel Settings (combined preferences + trip parameters)
 // ============================================================
 
-export type TravelStyle = 'adventure' | 'relaxing' | 'cultural' | 'foodie' | 'nature' | 'shopping';
+export type TravelStyle =
+  | 'adventure'
+  | 'relaxing'
+  | 'cultural'
+  | 'foodie'
+  | 'nature'
+  | 'shopping'
+  | 'no_special_style';
 
 export type DietaryRestriction =
   | 'none'
@@ -189,7 +196,8 @@ export type TripPurpose =
   | 'business_trip'
   | 'first_trip'
   | 'anniversary'
-  | 'friends_getaway';
+  | 'friends_getaway'
+  | 'leisure';
 
 export interface TravelSettings {
   // User Preferences
@@ -210,19 +218,18 @@ export interface TravelSettings {
 
 export const DEFAULT_TRAVEL_SETTINGS: TravelSettings = {
   // User Preferences
-  travel_style: 'relaxing',
+  travel_style: 'no_special_style',
   dietary_restriction: 'none',
   hotel_tier: 'mid_range',
   budget_min_hkd: 5000,
   budget_max_hkd: 20000,
   max_flight_stops: 1,
-  // Trip Parameters
   destination: '',
   start_date: '',
   end_date: '',
-  group_type: 'couple',
-  group_size: 2,
-  purpose: 'first_trip',
+  group_type: 'solo',
+  group_size: 1,
+  purpose: 'leisure',
 };
 
 export function canGeneratePlan(settings: TravelSettings): boolean {
