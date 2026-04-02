@@ -148,7 +148,7 @@ from app.core.config import settings
 
 async def search_hotels(
     destination: str,
-    check_in: str | None = None,
+    check_in: str,
     check_out: str | None = None,
 ) -> dict:
     """Search for hotels using SerpAPI Google Hotels."""

@@ -2,7 +2,7 @@
 
 API: GET https://serpapi.com/search.json
 Params: engine=google_flights, departure_id=PEK, arrival_id=AUS,
-        outbound_date=2026-03-31, return_date=2026-04-06, currency=HKD, hl=en
+        outbound_date=2026-03-31, type=2 (one-way), currency=HKD, hl=en
 
 NOTE: google_flights engine does NOT support free-text "q" param.
       It requires structured params: departure_id, arrival_id, outbound_date.
@@ -79,7 +79,7 @@ NOTE: google_flights engine does NOT support free-text "q" param.
 from __future__ import annotations
 
 import re
-from datetime import date as _date, datetime
+from datetime import datetime
 
 import httpx
 from loguru import logger
@@ -94,12 +94,14 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
 async def search_flights(
     departure: str,
     arrival: str,
-    date: str | None = None,
+    date: str,
+    return_date: str | None = None,
 ) -> dict:
-    """Search for flights using SerpAPI Google Flights.
+    """Search for flights using SerpAPI Google Flights (round-trip by default).
 
     departure / arrival must be valid IATA airport codes (3-4 uppercase letters).
     SerpAPI google_flights engine does not support free-text queries.
+    Pass return_date to make it a round-trip; omit for one-way.
     """
     logger.bind(
         event="tool_start",
@@ -108,6 +110,7 @@ async def search_flights(
         departure=departure,
         arrival=arrival,
         date=date,
+        return_date=return_date,
     ).info("TOOL: search_flights start")
 
     if not settings.SERPAPI_KEY:
@@ -137,8 +140,8 @@ async def search_flights(
             "flights": [],
         }
 
-    # outbound_date is required — default to today if not supplied
-    if date and not _DATE_RE.match(date):
+    # Validate date formats
+    if not _DATE_RE.match(date):
         logger.bind(
             event="tool_invalid_params",
             layer="tool",
@@ -149,18 +152,30 @@ async def search_flights(
             "error": f"date must be YYYY-MM-DD format, got: {date!r}",
             "flights": [],
         }
-    outbound_date = date or _date.today().isoformat()
+    if return_date and not _DATE_RE.match(return_date):
+        logger.bind(
+            event="tool_invalid_params",
+            layer="tool",
+            tool="search_flights",
+            return_date=return_date,
+        ).error(f"TOOL: Invalid return_date format: {return_date!r}")
+        return {
+            "error": f"return_date must be YYYY-MM-DD format, got: {return_date!r}",
+            "flights": [],
+        }
 
     params: dict = {
         "api_key": settings.SERPAPI_KEY,
         "engine": "google_flights",
         "departure_id": dep_code,
         "arrival_id": arr_code,
-        "outbound_date": outbound_date,
-        "type": "1",  # 1 = one-way, 2 = round trip (default)
+        "outbound_date": date,
+        "type": "1",  # 1 = round trip (default), 2 = one-way
         "currency": "HKD",
         "hl": "en",
     }
+    if return_date:
+        params["return_date"] = return_date
 
     # Pre-build booking URL once (shared across all segments).
     # Note: outbound_date is NOT a valid param for google.com/travel — the date won't
@@ -175,8 +190,12 @@ async def search_flights(
         tool="search_flights",
         dep_code=dep_code,
         arr_code=arr_code,
-        date=outbound_date,
-    ).info(f"TOOL: Searching flights: {dep_code} → {arr_code} on {outbound_date}")
+        date=date,
+        return_date=return_date,
+    ).info(
+        f"TOOL: Searching flights: {dep_code} → {arr_code} on {date}"
+        + (f", return {return_date}" if return_date else " (one-way)")
+    )
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:

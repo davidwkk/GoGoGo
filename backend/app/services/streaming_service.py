@@ -50,6 +50,41 @@ TIMEOUT_SECONDS = 120.0
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _format_error_message(error: Exception) -> str:
+    """Convert raw exceptions into user-friendly error messages."""
+    error_str = str(error)
+    error_type = type(error).__name__
+
+    # Connection / network errors
+    if "Server disconnected" in error_str or "Connection reset" in error_str:
+        return "Connection lost. Please check your internet and try again."
+    if "ConnectTimeout" in error_str or "ConnectError" in error_str:
+        return "Could not connect to the AI service. Please check your internet connection."
+    if "Timeout" in error_str:
+        return "The request took too long. Please try again."
+
+    # Proxy errors
+    if "proxy" in error_str.lower():
+        return "Proxy error. Please check your VPN/proxy settings and try again."
+
+    # Gemini API errors
+    if "400" in error_str and "FAILED_PRECONDITION" in error_str:
+        if "User location" in error_str:
+            return "AI service is not available in your region. Please try using a VPN."
+        return "AI request error. Please try again."
+    if "429" in error_str or "rate limit" in error_str.lower():
+        return "Too many requests. Please wait a moment and try again."
+    if "503" in error_str or "unavailable" in error_str.lower():
+        return (
+            "AI service is temporarily unavailable. Please try again in a few moments."
+        )
+
+    # Default: show type + short message
+    if len(error_str) > 100:
+        return f"{error_type}: {error_str[:100]}..."
+    return f"{error_type}: {error_str}"
+
+
 def _messages_to_content(messages: list[Message]) -> list[types.Content]:
     """
     Convert stored Message records to Gemini types.Content format.
@@ -697,7 +732,7 @@ async def stream_agent_response(
             traceback=tb_str,
         ).error(f"Stream error: {e}")
 
-        error_msg = f"[{type(e).__name__}] {e}"
+        error_msg = _format_error_message(e)
         update_message_content(
             db,
             assistant_msg.id,

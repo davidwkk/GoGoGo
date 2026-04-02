@@ -147,7 +147,7 @@ async def test_search_hotels_non_matching_fallback():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_hotels("UnknownPlace")
+        result = await search_hotels("UnknownPlace", check_in="2026-05-01")
 
     assert len(result["hotels"]) == 1
     assert result["hotels"][0]["name"] == "Fallback Hotel"
@@ -159,7 +159,7 @@ async def test_search_hotels_handles_missing_api_key():
     with unittest.mock.patch("app.agent.tools.hotels.settings") as mock_settings:
         mock_settings.SERPAPI_KEY = ""
 
-        result = await search_hotels("Bali")
+        result = await search_hotels("Bali", check_in="2026-05-01")
 
     assert "error" in result
     assert "not configured" in result["error"]
@@ -177,7 +177,7 @@ async def test_search_hotels_handles_network_error():
         )
         mock_client_cls.return_value = mock_client
 
-        result = await search_hotels("Bali")
+        result = await search_hotels("Bali", check_in="2026-05-01")
 
     assert "error" in result
     assert result["hotels"] == []
@@ -195,7 +195,7 @@ async def test_search_hotels_handles_401():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_hotels("Bali")
+        result = await search_hotels("Bali", check_in="2026-05-01")
 
     assert "error" in result
     assert "Invalid SerpAPI key" in result["error"]
@@ -213,7 +213,7 @@ async def test_search_hotels_handles_429():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_hotels("Bali")
+        result = await search_hotels("Bali", check_in="2026-05-01")
 
     assert "error" in result
     assert "rate limit" in result["error"].lower()
@@ -242,7 +242,7 @@ async def test_search_hotels_missing_price_returns_none():
         mock_client.__aenter__.return_value.get.return_value = mock_response
         mock_client_cls.return_value = mock_client
 
-        result = await search_hotels("Somewhere")
+        result = await search_hotels("Somewhere", check_in="2026-05-01")
 
     assert result["hotels"][0]["price_per_night_min_hkd"] is None
     assert result["hotels"][0]["price_per_night_max_hkd"] is None
