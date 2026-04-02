@@ -876,9 +876,7 @@ export function ChatPage() {
             )}
             <button
               onClick={startNewChat}
-              className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
-              disabled={!isLoggedIn}
-              title={!isLoggedIn ? 'Sign in to use chat history' : undefined}
+              className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               <PlusCircle className="size-3" />
               New Chat
