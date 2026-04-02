@@ -4,6 +4,28 @@ import { useState, useEffect } from 'react';
 import type { Activity } from '@/types/trip';
 import { ImageLightbox } from '../common/ImageLightbox';
 
+const checkImageWorks = (url: string): Promise<boolean> => {
+  return new Promise(resolve => {
+    const img = new Image();
+
+    const cleanup = () => {
+      img.onload = null;
+      img.onerror = null;
+      img.src = ''; // Releases the image resource from memory
+    };
+
+    img.onload = () => {
+      cleanup();
+      resolve(true);
+    };
+    img.onerror = () => {
+      cleanup();
+      resolve(false);
+    };
+    img.src = url;
+  });
+};
+
 const ActivityImage = ({
   imageUrl,
   name,
@@ -21,16 +43,6 @@ const ActivityImage = ({
 
   useEffect(() => {
     let isMounted = true;
-
-    // Helper to silently test if an image URL actually works (catches 403s)
-    const checkImageWorks = (url: string): Promise<boolean> => {
-      return new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
-        img.src = url;
-      });
-    };
 
     // Robust Wikipedia search (fuzzy search)
     const getWikiImage = async (searchQuery: string): Promise<string | null> => {
