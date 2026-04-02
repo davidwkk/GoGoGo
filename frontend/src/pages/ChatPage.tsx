@@ -463,7 +463,8 @@ export function ChatPage() {
     Array<{ id: number; title: string; created_at: string | null }>
   >([]);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
-  const [editingTitleSessionId, setEditingTitleSessionId] = useState<number | null>(null);
+  const [editingSidebarSessionId, setEditingSidebarSessionId] = useState<number | null>(null);
+  const [editingHeaderSessionId, setEditingHeaderSessionId] = useState<number | null>(null);
   const [titleDraft, setTitleDraft] = useState('');
 
   const [demoItinerary, setDemoItinerary] = useState<TripItinerary | null>(null);
@@ -581,20 +582,29 @@ export function ChatPage() {
     setTypewriterDone(true);
   };
 
-  const beginRename = (id: number, current: string) => {
-    setEditingTitleSessionId(id);
+  const beginSidebarRename = (id: number, current: string) => {
+    setEditingSidebarSessionId(id);
+    setEditingHeaderSessionId(null);
+    setTitleDraft(current);
+  };
+
+  const beginHeaderRename = (id: number, current: string) => {
+    setEditingHeaderSessionId(id);
+    setEditingSidebarSessionId(null);
     setTitleDraft(current);
   };
 
   const commitRename = async (id: number) => {
     const next = titleDraft.trim();
     if (!next) {
-      setEditingTitleSessionId(null);
+      setEditingSidebarSessionId(null);
+      setEditingHeaderSessionId(null);
       return;
     }
     const updated = await chatSessionsService.rename(id, next);
     setSessions(prev => prev.map(s => (s.id === id ? { ...s, title: updated.title } : s)));
-    setEditingTitleSessionId(null);
+    setEditingSidebarSessionId(null);
+    setEditingHeaderSessionId(null);
   };
 
   const deleteSession = async (id: number) => {
@@ -758,7 +768,7 @@ export function ChatPage() {
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {sessions.map(s => {
                 const active = currentSessionPk === s.id;
-                const isEditing = editingTitleSessionId === s.id;
+                const isSidebarEditing = editingSidebarSessionId === s.id;
                 return (
                   <div
                     key={s.id}
@@ -768,20 +778,20 @@ export function ChatPage() {
                         : 'bg-background hover:bg-muted/40 border-slate-200'
                     }`}
                     onClick={() => {
-                      if (isEditing || editingTitleSessionId) return;
+                      if (isSidebarEditing || editingSidebarSessionId) return;
                       console.log('[ChatPage] Clicked session:', { id: s.id, title: s.title });
                       loadSession(s.id);
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      {isEditing ? (
+                      {isSidebarEditing ? (
                         <input
                           className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                           value={titleDraft}
                           onChange={e => setTitleDraft(e.target.value)}
                           onKeyDown={e => {
                             if (e.key === 'Enter') commitRename(s.id);
-                            if (e.key === 'Escape') setEditingTitleSessionId(null);
+                            if (e.key === 'Escape') setEditingSidebarSessionId(null);
                           }}
                           autoFocus
                         />
@@ -791,13 +801,13 @@ export function ChatPage() {
                         </span>
                       )}
 
-                      {!isEditing && (
+                      {!isSidebarEditing && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             className="text-muted-foreground hover:text-foreground"
                             onClick={e => {
                               e.stopPropagation();
-                              beginRename(s.id, s.title);
+                              beginSidebarRename(s.id, s.title);
                             }}
                             aria-label="Rename chat"
                             type="button"
@@ -847,26 +857,29 @@ export function ChatPage() {
             <h1 className="text-sm font-semibold">GoGoGo</h1>
             <div className="flex items-center gap-2">
               {isLoggedIn && currentSessionPk && currentSession ? (
-                editingTitleSessionId === currentSessionPk ? (
+                editingHeaderSessionId === currentSessionPk ? (
                   <input
                     className="h-7 w-56 max-w-full rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                     value={titleDraft}
+                    maxLength={40}
                     onChange={e => setTitleDraft(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter') commitRename(currentSessionPk);
-                      if (e.key === 'Escape') setEditingTitleSessionId(null);
+                      if (e.key === 'Escape') setEditingHeaderSessionId(null);
                     }}
                     autoFocus
                   />
                 ) : (
                   <>
-                    <p className="text-xs text-muted-foreground truncate max-w-[220px]">
+                    <p
+                      className={`text-xs text-muted-foreground truncate max-w-[${historyCollapsed ? '300px' : '130px'}]`}
+                    >
                       {currentSession.title}
                     </p>
                     <button
                       type="button"
                       className="text-muted-foreground hover:text-foreground"
-                      onClick={() => beginRename(currentSessionPk, currentSession.title)}
+                      onClick={() => beginHeaderRename(currentSessionPk, currentSession.title)}
                       aria-label="Rename current chat"
                     >
                       <Pencil className="size-3.5" />
