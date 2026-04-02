@@ -553,6 +553,20 @@ export function ChatPage() {
 
   const loadSession = async (id: number) => {
     if (!isLoggedIn) return;
+
+    // Cancel any in-progress stream first
+    if (abortController) {
+      abortController.abort();
+    }
+
+    // Immediately reset UI state before async ops to prevent stale render
+    clearMessages();
+    setTypewriterDone(false);
+    setDemoItinerary(null);
+    useChatStore.getState().setThinking(false);
+    useChatStore.getState().setPartialThoughtText('');
+    useChatStore.setState({ thinkingSteps: [] });
+
     const res = await chatSessionsService.getMessages(id);
     setSessionId(String(id));
     setMessages(
@@ -564,7 +578,6 @@ export function ChatPage() {
         messageType: m.message_type,
       }))
     );
-    setDemoItinerary(null);
     setTypewriterDone(true);
   };
 
@@ -749,11 +762,16 @@ export function ChatPage() {
                 return (
                   <div
                     key={s.id}
-                    className={`group rounded-xl border px-3 py-2 text-sm transition-colors ${
+                    className={`group rounded-xl border px-3 py-2 text-sm transition-colors cursor-pointer ${
                       active
-                        ? 'bg-muted border-border'
-                        : 'bg-background hover:bg-muted/40 border-transparent'
+                        ? 'bg-muted border-slate-300 shadow-sm'
+                        : 'bg-background hover:bg-muted/40 border-slate-200'
                     }`}
+                    onClick={() => {
+                      if (isEditing || editingTitleSessionId) return;
+                      console.log('[ChatPage] Clicked session:', { id: s.id, title: s.title });
+                      loadSession(s.id);
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       {isEditing ? (
@@ -768,20 +786,19 @@ export function ChatPage() {
                           autoFocus
                         />
                       ) : (
-                        <button
-                          className="flex-1 text-left truncate"
-                          onClick={() => loadSession(s.id)}
-                          title={s.title}
-                        >
+                        <span className="flex-1 text-left truncate" title={s.title}>
                           {s.title}
-                        </button>
+                        </span>
                       )}
 
                       {!isEditing && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             className="text-muted-foreground hover:text-foreground"
-                            onClick={() => beginRename(s.id, s.title)}
+                            onClick={e => {
+                              e.stopPropagation();
+                              beginRename(s.id, s.title);
+                            }}
                             aria-label="Rename chat"
                             type="button"
                           >
@@ -789,7 +806,10 @@ export function ChatPage() {
                           </button>
                           <button
                             className="text-muted-foreground hover:text-destructive"
-                            onClick={() => deleteSession(s.id)}
+                            onClick={e => {
+                              e.stopPropagation();
+                              deleteSession(s.id);
+                            }}
                             aria-label="Delete chat"
                             type="button"
                           >
