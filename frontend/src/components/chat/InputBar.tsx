@@ -1,15 +1,15 @@
-// InputBar — Text input + Send + Generate Trip Plan + Voice input
+// InputBar — Text input + Send + Voice input
 // Wired to useChat hook; voice button uses ASR to populate input field.
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Send, Map } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { VoiceButton } from '@/components/voice/VoiceButton';
 import { useChat } from '@/hooks/useChat';
 import { useASR } from '@/hooks/useASR';
 import { useChatStore } from '@/store';
-import { canGeneratePlan, type TripItinerary } from '@/types/trip';
+import { type TripItinerary } from '@/types/trip';
 
 interface InputBarProps {
   disabled?: boolean;
@@ -127,19 +127,6 @@ export function InputBar({ disabled, onItinerary }: InputBarProps) {
           aria-label="Send message"
         >
           <Send className="size-4" />
-        </Button>
-
-        {/* Generate Trip Plan button */}
-        <Button
-          size="lg"
-          variant="default"
-          onClick={() => handleSend(true)}
-          disabled={!text.trim() || disabled || isLoading || !canGeneratePlan(travelSettings)}
-          className="gap-1.5"
-          aria-label="Generate full trip plan"
-        >
-          <Map className="size-3.5" />
-          Generate Trip Plan
         </Button>
       </div>
     </div>
