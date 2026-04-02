@@ -2,6 +2,28 @@ import { Star, Building2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ImageLightbox } from '../common/ImageLightbox';
 
+const checkImageWorks = (url: string): Promise<boolean> => {
+  return new Promise(resolve => {
+    const img = new Image();
+
+    const cleanup = () => {
+      img.onload = null;
+      img.onerror = null;
+      img.src = ''; // Releases the image resource from memory
+    };
+
+    img.onload = () => {
+      cleanup();
+      resolve(true);
+    };
+    img.onerror = () => {
+      cleanup();
+      resolve(false);
+    };
+    img.src = url;
+  });
+};
+
 export function HotelCard({ hotel }: { hotel: any }) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -12,16 +34,6 @@ export function HotelCard({ hotel }: { hotel: any }) {
   useEffect(() => {
     if (!hotel) return;
     let isMounted = true;
-
-    // Helper to silently test if an image URL actually works (catches Google 403s)
-    const checkImageWorks = (url: string): Promise<boolean> => {
-      return new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
-        img.src = url;
-      });
-    };
 
     // NEW: Robust Wikipedia search instead of exact title match
     const getWikiImage = async (searchQuery: string): Promise<string | null> => {
