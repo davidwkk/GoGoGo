@@ -73,12 +73,9 @@ export function LoginPage() {
         navigate('/chat');
       }
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { detail?: string } } };
-        setError(axiosErr.response?.data?.detail ?? 'Something went wrong');
-      } else {
-        setError('Something went wrong');
-      }
+      // Because of our interceptor, we know `err` is our APIError envelope
+      const apiErr = err as import('@/services/api').APIError;
+      setError(apiErr.detail || 'Something went wrong');
     } finally {
       setLoading(false);
     }
