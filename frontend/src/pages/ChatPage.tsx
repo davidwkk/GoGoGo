@@ -1005,7 +1005,10 @@ export function ChatPage() {
             const exchangeEnd = isInProgress
               ? thinkingSteps.length
               : (exchange?.endStep ?? exchangeStart);
-            const isZeroSteps = !hasLoadedThinkingSteps && exchangeEnd === exchangeStart;
+            // For loaded messages (exchangeTracking is empty), use hasLoadedThinkingSteps as the
+            // authoritative source — msg.thinking_steps from DB is more reliable than empty tracking.
+            // For live messages (hasLoadedThinkingSteps=false), fall back to exchangeTracking.
+            const isZeroSteps = exchangeEnd === exchangeStart && !hasLoadedThinkingSteps;
 
             return (
               <>

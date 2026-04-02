@@ -223,9 +223,11 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
               const allSteps = useChatStore.getState().thinkingSteps;
               // Update the assistant message with thinking steps in store
               useChatStore.getState().updateStreamingMessage(msgId, fullText, undefined, allSteps);
-              // Fire-and-forget: persist to backend (don't await)
+              // Fire-and-forget: persist to backend (don't await — SSE stream must not be blocked)
+              // Include guest_uid for unauthenticated users
+              const guestUid = localStorage.getItem('guest_uid') ?? undefined;
               chatSessionsService
-                .updateThinkingSteps(parseInt(msgId, 10), allSteps)
+                .updateThinkingSteps(parseInt(msgId, 10), allSteps, guestUid)
                 .catch(err => console.warn('[useChat] Failed to persist thinking steps:', err));
             }
           } catch (err) {

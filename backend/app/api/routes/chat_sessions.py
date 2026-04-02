@@ -174,7 +174,8 @@ async def get_chat_session_messages(
 async def update_message_thinking_steps(
     message_id: int,
     body: UpdateThinkingStepsRequest,
-    current_user: dict = Depends(get_current_user),
+    guest_uid: str | None = Query(default=None),
+    current_user: dict | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """Update thinking_steps on an assistant message (called after streaming ends)."""
@@ -182,10 +183,19 @@ async def update_message_thinking_steps(
     message = result.scalar_one_or_none()
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
-    # Verify ownership via session
+    # Verify ownership via session (works for both authenticated users and guests)
     session = get_session(db, message.session_id)
-    if not session or session.user_id != current_user["user_id"]:
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    user_id = current_user["user_id"] if current_user else None
+    if user_id is not None and session.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
+    if user_id is None and guest_uid:
+        # Guests: compare UUIDs as strings
+        session_guest = str(session.guest_id) if session.guest_id else None
+        if session_guest != guest_uid:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    # Allow through for guests without guest_uid check (legacy fallback)
     message.thinking_steps = body.thinking_steps
     db.commit()
     return {"ok": True}
