@@ -1,6 +1,7 @@
 import { Clock, MapPin, Star, Lightbulb, Ticket, Image as ImageIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Activity } from '@/types/trip';
+import { ImageLightbox } from '../common/ImageLightbox'; // Adjust import path as needed
 
 const ActivityImage = ({
   imageUrl,
@@ -13,46 +14,37 @@ const ActivityImage = ({
 }) => {
   const [bgUrl, setBgUrl] = useState<string | null>(imageUrl || null);
   const [loading, setLoading] = useState(!imageUrl);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false); // Added Lightbox state
 
   useEffect(() => {
-    // If backend provided an image, use it immediately
     if (imageUrl) {
       setBgUrl(imageUrl);
       return;
     }
 
     let isMounted = true;
-
-    // The fallback image if Wikipedia fails
     const safeName = encodeURIComponent(name || 'travel');
     const fallbackUrl = `https://picsum.photos/seed/${safeName}/800/600`;
 
     const fetchWikiImage = async () => {
       try {
-        // Switch to the Action API. It returns 200 OK even if the page is missing!
-        // origin=* is required to prevent CORS errors
         const res = await fetch(
           `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&titles=${encodeURIComponent(name)}&pithumbsize=800&format=json&origin=*`
         );
-
         const data = await res.json();
         const pages = data.query?.pages;
 
         if (isMounted) {
           if (pages) {
             const pageId = Object.keys(pages)[0];
-            // If pageId is '-1', the page doesn't exist.
-            // If it exists but has no image, thumbnail will be undefined.
             if (pageId !== '-1' && pages[pageId].thumbnail?.source) {
               setBgUrl(pages[pageId].thumbnail.source);
-              return; // Success!
+              return;
             }
           }
-          // If we reach here, no image was found, but NO 404 was thrown!
           setBgUrl(fallbackUrl);
         }
       } catch (e) {
-        // Only actual network failures (like being offline) will trigger this now
         if (isMounted) setBgUrl(fallbackUrl);
       } finally {
         if (isMounted) setLoading(false);
@@ -66,30 +58,38 @@ const ActivityImage = ({
   }, [name, imageUrl]);
 
   return (
-    <div className="w-full h-48 relative bg-slate-100 overflow-hidden flex items-center justify-center">
-      {bgUrl ? (
-        <img
-          src={bgUrl}
-          alt={name}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-        />
-      ) : (
-        <div className="text-slate-300 flex flex-col items-center gap-2">
-          <ImageIcon className="size-8 opacity-50" />
-          {loading && (
-            <span className="text-[10px] font-bold uppercase tracking-widest">Searching...</span>
-          )}
-        </div>
-      )}
+    <>
+      <div className="w-full h-48 relative bg-slate-100 overflow-hidden flex items-center justify-center group/image">
+        {bgUrl ? (
+          <img
+            src={bgUrl}
+            alt={name}
+            onClick={() => setIsLightboxOpen(true)}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-zoom-in"
+          />
+        ) : (
+          <div className="text-slate-300 flex flex-col items-center gap-2">
+            <ImageIcon className="size-8 opacity-50" />
+            {loading && (
+              <span className="text-[10px] font-bold uppercase tracking-widest">Searching...</span>
+            )}
+          </div>
+        )}
 
-      {category && (
-        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
-          <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
-            {category}
-          </span>
-        </div>
+        {category && (
+          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm pointer-events-none">
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
+              {category}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Render Lightbox if open */}
+      {isLightboxOpen && bgUrl && (
+        <ImageLightbox imageUrl={bgUrl} altText={name} onClose={() => setIsLightboxOpen(false)} />
       )}
-    </div>
+    </>
   );
 };
 
