@@ -115,8 +115,37 @@ All fields passed via `types.GenerateContentConfig(...)` in the Python SDK.
 | `labels`                        | `dict[str,str]`    | Custom key-value labels attached to the request.                                                             |
 | `enable_enhanced_civic_answers` | `bool`             | Enable enhanced civic information in responses.                                                              |
 | `model_armor_config`            | `ModelArmorConfig` | Model armor safety configuration.                                                                            |
-| `http_options`                  | `HttpOptions`      | HTTP client options (proxy, timeouts).                                                                       |
+| `http_options`                  | `HttpOptions`      | HTTP client options (proxy, timeouts). **See ⚠️ Proxy Warning below.**                                       |
 | `should_return_http_response`   | `bool`             | Return raw HTTP response instead of parsed content.                                                          |
+
+## ⚠️ Proxy / Async Gotcha
+
+**Problem:** The async client (`client.aio.models.generate_content_stream`) does **not** properly route through SOCKS5 proxies, causing `400 FAILED_PRECONDITION: User location is not supported` errors. The sync client works correctly.
+
+**Solution:** Use the sync client wrapped in `asyncio.to_thread()`:
+
+```python
+import asyncio
+
+def call_llm():
+    return client.models.generate_content(
+        model=model,
+        contents=contents,
+        config={
+            "system_instruction": system_instruction,
+            "temperature": 0.7,
+        },
+    )
+
+response = await asyncio.to_thread(call_llm)
+```
+
+**Why it works:** The sync HTTP client properly respects `http_options={"proxy": "socks5://..."}`. The async client does not.
+
+**When to use sync-in-thread vs pure async:**
+
+- Use sync-in-thread for single LLM calls per request — simpler and proxy-compatible
+- Use pure async (`client.aio.models.generate_content_stream`) only when proxy is not needed and you need true async streaming with chunk-by-chunk delivery
 
 ## Usage in GoGoGo
 
