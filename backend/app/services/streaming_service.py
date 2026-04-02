@@ -23,7 +23,12 @@ from app.agent.tools import (
 )
 from app.core.config import settings
 from app.schemas.itinerary import TripItinerary
-from app.services.message_service import append_message, update_message_content
+from app.db.models.message import Message
+from app.services.message_service import (
+    append_message,
+    get_session_messages,
+    update_message_content,
+)
 
 # Sync tool_map for the Gemini SDK
 TOOL_MAP = {
@@ -38,6 +43,45 @@ TOOL_MAP = {
 
 MAX_TOOL_ROUNDS = 20
 TIMEOUT_SECONDS = 120.0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Message history helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _messages_to_content(messages: list[Message]) -> list[types.Content]:
+    """
+    Convert stored Message records to Gemini types.Content format.
+
+    Handles:
+    - Regular text messages (user/assistant roles)
+    - Itinerary messages stored by finalize_trip_plan (assistant role, JSON content)
+    """
+    result: list[types.Content] = []
+    for msg in messages:
+        if msg.role not in ("user", "assistant"):
+            continue
+        content = msg.content or ""
+        # If it's a stored itinerary message, extract just the text summary
+        if msg.message_type == "itinerary":
+            try:
+                import json
+
+                data = json.loads(content)
+                if data.get("__type") == "itinerary":
+                    itinerary_data = data.get("data", {})
+                    summary = (
+                        f"[Trip itinerary generated: {itinerary_data.get('destination', 'Unknown')} "
+                        f"from {itinerary_data.get('start_date', '')} to {itinerary_data.get('end_date', '')}]"
+                    )
+                    content = summary
+            except Exception:
+                pass
+        result.append(
+            types.Content(role=msg.role, parts=[types.Part.from_text(text=content)])
+        )
+    return result
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -286,7 +330,22 @@ async def stream_agent_response(
         },
     )
 
-    messages: list[types.Content] = [
+    # ── Load conversation history from DB ────────────────────────────────────
+    history = get_session_messages(db, session_id)
+    history_content = _messages_to_content(history)
+
+    # If the last history message is the current user message (already saved to DB),
+    # exclude it to avoid duplication since we add it explicitly below
+    if history_content and message:
+        last = history_content[-1]
+        if (
+            last.role == "user"
+            and last.parts
+            and any(p.text == message for p in last.parts)
+        ):
+            history_content = history_content[:-1]
+
+    messages: list[types.Content] = history_content + [
         types.Content(role="user", parts=[types.Part.from_text(text=message)])
     ]
 
@@ -307,8 +366,7 @@ async def stream_agent_response(
                     system_instruction=system_instruction,
                     tools=[*ALL_TOOLS, finalize_trip_plan_decl],
                     thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel.MINIMAL,
-                        include_thoughts=False,
+                        thinking_level=types.ThinkingLevel.MEDIUM,
                     ),
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(
                         disable=True
@@ -316,11 +374,25 @@ async def stream_agent_response(
                 )
 
                 # ── Step 1: Drain the full stream first ──────────────────────────
-                stream = await client.aio.models.generate_content_stream(
-                    model=model,
-                    contents=messages,
-                    config=config,
-                )
+                try:
+                    stream = await client.aio.models.generate_content_stream(
+                        model=model,
+                        contents=messages,
+                        config=config,
+                    )
+                except Exception as call_err:
+                    logger.bind(
+                        event="generate_content_stream_error",
+                        service="chat",
+                        trace_id=trace_id,
+                        error_type=type(call_err).__name__,
+                        error_message=str(call_err),
+                        model=model,
+                        messages_count=len(messages),
+                        messages_roles=[m.role for m in messages],
+                        system_instruction_len=len(system_instruction),
+                    ).error(f"generate_content_stream failed: {call_err}")
+                    raise
 
                 round_text_parts: list[types.Part] = []
                 round_func_parts: list[types.Part] = []
@@ -493,14 +565,27 @@ async def stream_agent_response(
         )
         yield SSE({"done": True})
     except Exception as e:
-        import traceback
+        import traceback as tb
+
+        tb_str = tb.format_exc()
+        # Build a snapshot of the current state for debugging
+        msg_snapshot = [
+            {"role": str(m.role), "parts_len": len(m.parts) if m.parts else 0}
+            for m in messages
+        ]
 
         logger.bind(
             event="stream_error",
             service="chat",
             trace_id=trace_id,
-            error=f"{type(e).__name__}: {e}",
-            traceback=traceback.format_exc(),
+            error_type=type(e).__name__,
+            error_message=str(e),
+            model=model,
+            proxy_enabled=settings.LLM_PROXY_ENABLED,
+            messages_count=len(messages),
+            messages_snapshot=msg_snapshot,
+            traceback=tb_str,
         ).error("Stream error")
-        yield SSE({"message_type": "error", "error": f"An error occurred: {e}"})
+
+        yield SSE({"message_type": "error", "error": f"[{type(e).__name__}] {e}"})
         yield SSE({"done": True})

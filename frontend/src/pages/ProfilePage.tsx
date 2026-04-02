@@ -1,14 +1,14 @@
 // ProfilePage — View and edit user account details
 
-import { useCallback, useEffect, useState } from 'react';
 import { LogOut, User } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { userService, UserProfile } from '@/services/api';
+import { UserProfile, userService } from '@/services/api';
 
 interface AuthError {
   userMessage?: string;
@@ -20,6 +20,7 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Set error need to be prettier, use custom error component
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 

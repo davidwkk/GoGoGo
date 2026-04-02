@@ -1,6 +1,6 @@
 # Agent-Decides Generation: Scope & Estimate
 
-> Status: Draft — needs implementation
+> Status: Phase 1 Complete — Backend unified streaming loop implemented
 
 ## Current Flow (Button-Gated)
 
