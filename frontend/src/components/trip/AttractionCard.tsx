@@ -1,19 +1,103 @@
-// AttractionCard
 import { Clock, MapPin, Star, Lightbulb, Ticket, Building2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Activity } from '@/types/trip';
 import { ImageLightbox } from '../common/ImageLightbox';
 
+// --- ULTIMATE WIKI THROTTLE & RETRY SYSTEM ---
+const win = window as any;
+
+if (!win.__wikiQueueSystem) {
+  win.__wikiQueueSystem = {
+    queue: [],
+    isProcessing: false,
+    cache: new Map(),
+
+    process: async () => {
+      if (win.__wikiQueueSystem.isProcessing) return;
+      win.__wikiQueueSystem.isProcessing = true;
+
+      while (win.__wikiQueueSystem.queue.length > 0) {
+        const { url, resolve, reject } = win.__wikiQueueSystem.queue[0]; // Peek at next
+        try {
+          const res = await fetch(url);
+
+          if (res.status === 429) {
+            console.warn('Wiki 429 Rate Limit Hit. Pausing for 2 seconds then retrying...');
+            await new Promise(r => setTimeout(r, 2000));
+            continue; // Retry the exact same request!
+          }
+
+          win.__wikiQueueSystem.queue.shift(); // Remove from queue
+          resolve(res);
+        } catch (e) {
+          win.__wikiQueueSystem.queue.shift();
+          reject(e);
+        }
+
+        // Strictly wait 500ms between requests to keep Wikipedia happy
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      win.__wikiQueueSystem.isProcessing = false;
+    },
+
+    fetch: (url: string) => {
+      return new Promise((resolve, reject) => {
+        win.__wikiQueueSystem.queue.push({ url, resolve, reject });
+        win.__wikiQueueSystem.process();
+      });
+    },
+  };
+}
+
+const getWikiImage = async (searchQuery: string): Promise<string | null> => {
+  if (!searchQuery) return null;
+  const query = searchQuery.trim().toLowerCase();
+
+  // Return cached URL or hook into an already-running Promise to stop duplicates!
+  if (win.__wikiQueueSystem.cache.has(query)) {
+    return win.__wikiQueueSystem.cache.get(query);
+  }
+
+  const promise = (async () => {
+    try {
+      const res = await win.__wikiQueueSystem.fetch(
+        `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchQuery)}&gsrlimit=1&prop=pageimages&pithumbsize=800&format=json&origin=*`
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const pages = data?.query?.pages;
+        if (pages) {
+          const pageId = Object.keys(pages)[0];
+          if (pageId !== '-1' && pages[pageId].thumbnail?.source) {
+            const url = pages[pageId].thumbnail.source;
+            win.__wikiQueueSystem.cache.set(query, url); // Overwrite promise with real URL
+            return url;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Wiki fetch error', e);
+    }
+
+    win.__wikiQueueSystem.cache.set(query, null);
+    return null;
+  })();
+
+  // Cache the Promise immediately to stop the "Thundering Herd"
+  win.__wikiQueueSystem.cache.set(query, promise);
+  return promise;
+};
+
 const checkImageWorks = (url: string): Promise<boolean> => {
   return new Promise(resolve => {
     const img = new Image();
-
     const cleanup = () => {
       img.onload = null;
       img.onerror = null;
-      img.src = ''; // Releases the image resource from memory
+      img.src = '';
     };
-
     img.onload = () => {
       cleanup();
       resolve(true);
@@ -44,31 +128,10 @@ const ActivityImage = ({
   useEffect(() => {
     let isMounted = true;
 
-    // Robust Wikipedia search (fuzzy search)
-    const getWikiImage = async (searchQuery: string): Promise<string | null> => {
-      if (!searchQuery) return null;
-      try {
-        const res = await fetch(
-          `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchQuery)}&gsrlimit=1&prop=pageimages&pithumbsize=800&format=json&origin=*`
-        );
-        const data = await res.json();
-        const pages = data.query?.pages;
-        if (pages) {
-          const pageId = Object.keys(pages)[0];
-          if (pageId !== '-1' && pages[pageId].thumbnail?.source) {
-            return pages[pageId].thumbnail.source;
-          }
-        }
-      } catch (e) {
-        console.error('Wiki fetch error', e);
-      }
-      return null;
-    };
-
     const loadBestImage = async () => {
       setLoading(true);
 
-      // 1. Try provided backend image first (and verify it works)
+      // 1. Try provided backend image first
       if (imageUrl) {
         const works = await checkImageWorks(imageUrl);
         if (works && isMounted) {
@@ -78,29 +141,24 @@ const ActivityImage = ({
         }
       }
 
-      // 2. Try Wikipedia Fuzzy Search for the Attraction Name
-      const attractionWiki = await getWikiImage(name);
-      if (attractionWiki && isMounted) {
-        setImgSrc(attractionWiki);
-        setLoading(false);
-        return;
-      }
+      // 2. Fire BOTH Wikipedia searches in parallel (Queue protects us!)
+      const cityQuery = location ? location.split(',')[0].trim() : '';
 
-      // 3. Try Wikipedia Search for the Location/City as fallback
-      if (location) {
-        const cityQuery = location.split(',')[0].trim();
-        const cityWiki = await getWikiImage(cityQuery);
-        if (cityWiki && isMounted) {
-          setImgSrc(cityWiki);
-          setLoading(false);
-          return;
-        }
-      }
+      const [attractionWiki, cityWiki] = await Promise.all([
+        getWikiImage(name),
+        cityQuery ? getWikiImage(cityQuery) : Promise.resolve(null),
+      ]);
 
-      // 4. Absolute Last Resort: Picsum
+      // 3. Prioritize Attraction > City > Picsum
       if (isMounted) {
-        const safeName = encodeURIComponent(name || 'travel');
-        setImgSrc(`https://picsum.photos/seed/${safeName}/800/600`);
+        if (attractionWiki) {
+          setImgSrc(attractionWiki);
+        } else if (cityWiki) {
+          setImgSrc(cityWiki);
+        } else {
+          const safeName = encodeURIComponent(name || 'travel');
+          setImgSrc(`https://picsum.photos/seed/${safeName}/800/600`);
+        }
         setLoading(false);
       }
     };
@@ -118,7 +176,6 @@ const ActivityImage = ({
         className={`w-full h-48 relative bg-slate-100 overflow-hidden flex items-center justify-center group/image ${imgSrc ? 'cursor-zoom-in' : ''}`}
         onClick={() => imgSrc && setIsLightboxOpen(true)}
       >
-        {/* Loading Overlay */}
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-100 z-10">
             <Building2 className="size-8 mb-2 animate-pulse opacity-50" />
@@ -169,12 +226,10 @@ export const AttractionCard = ({
 
   return (
     <div className="relative pl-8 pb-8 last:pb-0 group">
-      {/* Timeline Connector */}
       <div className="absolute left-[11px] top-2 bottom-0 w-px bg-slate-200 group-last:hidden" />
       <div className="absolute left-0 top-1 size-[23px] rounded-full border-4 border-white bg-blue-600 shadow-sm z-10" />
 
       <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:border-blue-200 transition-all hover:shadow-md flex flex-col">
-        {/* Pass the correct props to the image component */}
         <ActivityImage
           imageUrl={data.image_url || data.thumbnail_url}
           name={data.name || 'Activity'}
