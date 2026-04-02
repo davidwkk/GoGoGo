@@ -193,15 +193,23 @@ export function TripPage() {
           <>
             <AlertCircle className="size-8 text-red-400" />
             <div>
-              <p className="text-sm font-medium text-destructive">Session Error</p>
+              <p className="text-sm font-medium text-destructive">Connection Error</p>
               <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
             </div>
-            <button
-              onClick={() => navigate('/login')}
-              className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
-            >
-              Go to Login
-            </button>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => window.location.reload()} // Quick retry via reload
+                className="h-8 rounded-xl bg-slate-100 text-slate-900 px-4 text-sm font-medium hover:bg-slate-200 transition-colors"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => navigate('/login')}
+                className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
+              >
+                Go to Login
+              </button>
+            </div>
           </>
         ) : (
           <>

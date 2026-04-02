@@ -1,4 +1,4 @@
-// API service layer — Axios base client
+// frontend/src/services/api.ts
 
 import axios from 'axios';
 
@@ -15,9 +15,18 @@ const error = (...args: unknown[]) => {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+// 1. Define the Standardized Error Envelope
+export interface APIError {
+  detail: string;
+  code?: string;
+  statusCode?: number;
+  isNetworkError?: boolean;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 180000, // 180-second global timeout for all requests
 });
 
 // Attach JWT token if present
@@ -29,30 +38,63 @@ apiClient.interceptors.request.use(config => {
   return config;
 });
 
-// Handle auth errors gracefully with user-friendly messages
+// THE BOUNCER: Handle all errors and format them into APIError
 apiClient.interceptors.response.use(
   response => response,
   error => {
+    // Start with a default error shape
+    const apiError: APIError = {
+      detail: 'An unexpected error occurred. Please try again.',
+      statusCode: error.response?.status,
+    };
+
+    // Handle Network & Timeout Errors
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      apiError.detail = 'The request took too long. Please check your connection and try again.';
+      apiError.code = 'TIMEOUT';
+      apiError.isNetworkError = true;
+    } else if (!error.response) {
+      apiError.detail = 'Network error. Are you connected to the internet?';
+      apiError.code = 'NETWORK_ERROR';
+      apiError.isNetworkError = true;
+    }
+    // Handle Server Errors (FastAPI formatting)
+    else {
+      const data = error.response.data;
+      if (data && data.detail) {
+        // FastAPI validation errors return an array of issues
+        if (Array.isArray(data.detail)) {
+          apiError.detail = data.detail
+            .map((err: any) => {
+              const field = err.loc?.[err.loc.length - 1];
+              return field ? `${field}: ${err.msg}` : err.msg;
+            })
+            .join(', ');
+        } else {
+          // Standard string detail (e.g., "Invalid credentials")
+          apiError.detail = data.detail;
+        }
+      } else if (error.response.status >= 500) {
+        apiError.detail = 'Our servers are currently experiencing issues. Please try again later.';
+      }
+    }
+
+    // Auth graceful fallback
     const status = error.response?.status;
     const endpoint = error.config?.url;
-
-    // Only handle errors for auth-related endpoints
     if (endpoint?.includes('/users/me') || endpoint?.includes('/trips')) {
       if (status === 401 || status === 404) {
         localStorage.removeItem('access_token');
-        // Redirect to login using window.location for reliability
         window.location.href = '/login';
-        return Promise.reject({
-          ...error,
-          userMessage:
-            status === 401
-              ? 'Your session has expired. Please logout and login again.'
-              : 'Your account could not be found. Please login again.',
-        });
+        apiError.detail =
+          status === 401
+            ? 'Your session has expired. Please login again.'
+            : 'Your account could not be found. Please login again.';
       }
     }
-    // For other errors or other endpoints, pass through
-    return Promise.reject(error);
+
+    // Always reject with the clean APIError object
+    return Promise.reject(apiError);
   }
 );
 
