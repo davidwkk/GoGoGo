@@ -514,6 +514,7 @@ export function ChatPage() {
             role: m.role as 'user' | 'assistant',
             content: m.content,
             timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+            messageType: m.message_type,
           }))
         );
       } catch {
@@ -560,6 +561,7 @@ export function ChatPage() {
         role: m.role as 'user' | 'assistant',
         content: m.content,
         timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+        messageType: m.message_type,
       }))
     );
     setDemoItinerary(null);
@@ -966,6 +968,16 @@ export function ChatPage() {
                         isDone={!isLoading}
                         onComplete={() => setTypewriterDone(true)}
                       />
+                    ) : msg.messageType === 'error' ? (
+                      <div className="flex items-start gap-2 text-red-600">
+                        <span className="text-red-500 mt-0.5">⚠</span>
+                        <div>
+                          <p className="font-semibold text-red-600 text-xs uppercase tracking-wide mb-1">
+                            Error
+                          </p>
+                          <p className="text-red-700 text-sm">{msg.content}</p>
+                        </div>
+                      </div>
                     ) : msg.role === 'assistant' ? (
                       <div>
                         <div className="prose prose-sm dark:prose-invert max-w-none">

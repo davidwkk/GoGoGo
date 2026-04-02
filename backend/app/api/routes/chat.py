@@ -122,7 +122,13 @@ async def simple_chat_stream(
                 system_instruction_len=len(SYSTEM_PROMPT),
                 traceback=tb_str,
             ).error(f"[{call_id}] Chat stream error: {e}")
-            yield SSE({"message_type": "error", "error": f"[{type(e).__name__}] {e}"})
+            error_msg = f"[{type(e).__name__}] {e}"
+            from app.services.message_service import update_message_content
+
+            update_message_content(
+                db, assistant_msg.id, error_msg, message_type="error"
+            )
+            yield SSE({"message_type": "error", "error": error_msg})
 
         yield SSE({"done": True})
 

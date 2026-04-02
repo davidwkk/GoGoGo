@@ -22,8 +22,8 @@ from app.agent.tools import (
     search_web,
 )
 from app.core.config import settings
-from app.schemas.itinerary import TripItinerary
 from app.db.models.message import Message
+from app.schemas.itinerary import TripItinerary
 from app.services.message_service import (
     append_message,
     get_session_messages,
@@ -417,6 +417,12 @@ async def stream_agent_response(
                 # ── Exit if no function calls (pure text response) ────────────────
                 if not round_func_parts:
                     if not round_text_parts:
+                        update_message_content(
+                            db,
+                            assistant_msg.id,
+                            "Empty response from model.",
+                            message_type="error",
+                        )
                         yield SSE(
                             {
                                 "message_type": "error",
@@ -525,7 +531,7 @@ async def stream_agent_response(
                                 service="chat",
                                 tool=tool_name,
                                 error=str(e),
-                            ).error(f"❌ {tool_name} failed")
+                            ).error(f"❌ {tool_name} failed: {e}")
                             result = {"error": str(e)}
                     else:
                         result = {"error": f"Unknown tool: {tool_name}"}
@@ -551,6 +557,12 @@ async def stream_agent_response(
                 tool_round += 1
 
             # Max tool rounds reached
+            update_message_content(
+                db,
+                assistant_msg.id,
+                "Max tool rounds reached — please try a more specific request.",
+                message_type="error",
+            )
             yield SSE(
                 {
                     "message_type": "error",
@@ -560,6 +572,12 @@ async def stream_agent_response(
             yield SSE({"done": True})
 
     except asyncio.TimeoutError:
+        update_message_content(
+            db,
+            assistant_msg.id,
+            "Request timed out. Please try again.",
+            message_type="error",
+        )
         yield SSE(
             {"message_type": "error", "error": "Request timed out. Please try again."}
         )
@@ -585,7 +603,14 @@ async def stream_agent_response(
             messages_count=len(messages),
             messages_snapshot=msg_snapshot,
             traceback=tb_str,
-        ).error("Stream error")
+        ).error(f"Stream error: {e}")
 
-        yield SSE({"message_type": "error", "error": f"[{type(e).__name__}] {e}"})
+        error_msg = f"[{type(e).__name__}] {e}"
+        update_message_content(
+            db,
+            assistant_msg.id,
+            error_msg,
+            message_type="error",
+        )
+        yield SSE({"message_type": "error", "error": error_msg})
         yield SSE({"done": True})

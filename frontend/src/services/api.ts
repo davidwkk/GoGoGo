@@ -134,7 +134,13 @@ export interface ChatResponse {
 
 export interface ChatSessionMessagesResponse {
   session_id: string | null;
-  messages: Array<{ id: number; role: string; content: string; created_at: string | null }>;
+  messages: Array<{
+    id: number;
+    role: string;
+    content: string;
+    message_type?: string;
+    created_at: string | null;
+  }>;
 }
 
 export const chatService = {
