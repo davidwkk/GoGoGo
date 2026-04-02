@@ -97,7 +97,7 @@ async def get_attraction(attraction_name: str) -> dict:
                     tool="get_attraction",
                     status_code=404,
                     attraction_name=attraction_name,
-                ).warning(f"TOOL: Attraction not found: {attraction_name}")
+                ).error(f"TOOL: Attraction not found: {attraction_name}")
                 return {
                     "error": f"Attraction not found: {attraction_name}",
                     "name": attraction_name,
@@ -165,7 +165,7 @@ async def get_attraction(attraction_name: str) -> dict:
             layer="tool",
             tool="get_attraction",
             attraction_name=attraction_name,
-        ).warning(f"TOOL: Timeout fetching attraction: {attraction_name}")
+        ).error(f"TOOL: Timeout fetching attraction: {attraction_name}")
         return {
             "error": f"Timeout fetching attraction: {attraction_name}",
             "name": attraction_name,
@@ -176,7 +176,7 @@ async def get_attraction(attraction_name: str) -> dict:
             layer="tool",
             tool="get_attraction",
             status_code=e.response.status_code,
-        ).warning(f"TOOL: HTTP error fetching attraction: {e}")
+        ).error(f"TOOL: HTTP error fetching attraction: {e}")
         return {
             "error": f"HTTP error fetching attraction: {e}",
             "name": attraction_name,
@@ -187,7 +187,7 @@ async def get_attraction(attraction_name: str) -> dict:
             layer="tool",
             tool="get_attraction",
             error=str(e),
-        ).warning(f"TOOL: Failed to fetch attraction: {e}")
+        ).error(f"TOOL: Failed to fetch attraction: {e}")
         return {"error": f"Failed to fetch attraction: {e}", "name": attraction_name}
 
 

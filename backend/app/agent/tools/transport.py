@@ -77,7 +77,7 @@ async def get_transport(
             event="tool_no_api_key",
             layer="tool",
             tool="get_transport",
-        ).warning("TOOL: SERPAPI_KEY not configured")
+        ).error("TOOL: SERPAPI_KEY not configured")
         return {"error": "SERPAPI_KEY not configured", "options": []}
 
     query = f"transport from {from_location} to {to_location}"
@@ -108,7 +108,7 @@ async def get_transport(
                     layer="tool",
                     tool="get_transport",
                     status_code=401,
-                ).warning("TOOL: Invalid SerpAPI key")
+                ).error("TOOL: Invalid SerpAPI key")
                 return {"error": "Invalid SerpAPI key", "options": []}
             response.raise_for_status()
             data = response.json()
@@ -162,7 +162,7 @@ async def get_transport(
             tool="get_transport",
             from_location=from_location,
             to_location=to_location,
-        ).warning(f"TOOL: Timeout fetching transport: {from_location} → {to_location}")
+        ).error(f"TOOL: Timeout fetching transport: {from_location} → {to_location}")
         return {
             "error": f"Timeout fetching transport: {from_location} → {to_location}",
             "options": [],
@@ -173,7 +173,7 @@ async def get_transport(
             layer="tool",
             tool="get_transport",
             status_code=e.response.status_code,
-        ).warning(f"TOOL: HTTP error fetching transport: {e}")
+        ).error(f"TOOL: HTTP error fetching transport: {e}")
         return {"error": f"HTTP error fetching transport: {e}", "options": []}
     except Exception as e:
         logger.bind(
@@ -181,5 +181,5 @@ async def get_transport(
             layer="tool",
             tool="get_transport",
             error=str(e),
-        ).warning(f"TOOL: Transport search failed: {e}")
+        ).error(f"TOOL: Transport search failed: {e}")
         return {"error": f"Transport search failed: {e}", "options": []}
