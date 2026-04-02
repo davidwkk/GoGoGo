@@ -1,4 +1,26 @@
 // frontend/src/pages/TripPage.tsx
+import {
+  AlertCircle,
+  Calendar,
+  ChevronRight,
+  Map,
+  MapPin,
+  Banknote,
+  Plane,
+  Bed,
+  Ticket,
+  Trash2,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AttractionCard } from '../components/trip/AttractionCard';
+import { FlightCard } from '../components/trip/FlightCard';
+import { tripService } from '../services/tripService';
+import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
+import { HotelCard } from '../components/trip/HotelCard';
+import { MapEmbed } from '../components/trip/MapEmbed';
+
+// --- SKELETON COMPONENTS (defined after imports per ES module rules) ---
 
 function SidebarTripSkeleton() {
   return (
@@ -55,27 +77,6 @@ function TripDetailSkeleton() {
     </div>
   );
 }
-
-import {
-  AlertCircle,
-  Calendar,
-  ChevronRight,
-  Map,
-  MapPin,
-  Banknote,
-  Plane,
-  Bed,
-  Ticket,
-  Trash2,
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AttractionCard } from '../components/trip/AttractionCard';
-import { FlightCard } from '../components/trip/FlightCard';
-import { tripService } from '../services/tripService';
-import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
-import { HotelCard } from '../components/trip/HotelCard';
-import { MapEmbed } from '../components/trip/MapEmbed';
 
 interface AuthError {
   userMessage?: string;
