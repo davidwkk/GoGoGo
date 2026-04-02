@@ -29,12 +29,14 @@ def append_message(
     session_id: int,
     role: str,
     content: str,
+    message_type: str | None = None,
 ) -> Message:
     """Append a message to a chat session."""
     message = Message(
         session_id=session_id,
         role=role,
         content=content,
+        message_type=message_type,
     )
     db.add(message)
     db.commit()
@@ -46,6 +48,7 @@ def update_message_content(
     db: Session,
     message_id: int,
     content: str,
+    message_type: str | None = None,
 ) -> Message | None:
     """Update the content of an existing message."""
     result = db.execute(select(Message).where(Message.id == message_id))
@@ -53,6 +56,8 @@ def update_message_content(
     if message is None:
         return None
     message.content = content
+    if message_type is not None:
+        message.message_type = message_type
     db.commit()
     db.refresh(message)
     return message

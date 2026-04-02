@@ -4,10 +4,7 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.schemas.chat import (
-    ChatMessage,
     ChatRequest,
-    ChatResponse,
-    TripParameters,
 )
 from app.schemas.enums import (
     DietaryRestriction,
@@ -58,8 +55,5 @@ __all__ = [
     "PriceRange",
     "TripItinerary",
     # Chat
-    "ChatMessage",
     "ChatRequest",
-    "ChatResponse",
-    "TripParameters",
 ]
