@@ -38,6 +38,13 @@ apiClient.interceptors.request.use(config => {
   return config;
 });
 
+// Helper to strip HTML tags and prevent XSS in error messages
+const sanitizeHTML = (str: string): string => {
+  if (typeof str !== 'string') return 'Unknown error';
+  // Removes anything inside < > brackets
+  return str.replace(/<\/?[^>]+(>|$)/g, '');
+};
+
 // THE BOUNCER: Handle all errors and format them into APIError
 apiClient.interceptors.response.use(
   response => response,
@@ -59,6 +66,7 @@ apiClient.interceptors.response.use(
       apiError.isNetworkError = true;
     }
     // Handle Server Errors (FastAPI formatting)
+    // Handle Server Errors (FastAPI formatting)
     else {
       const data = error.response.data;
       if (data && data.detail) {
@@ -67,12 +75,14 @@ apiClient.interceptors.response.use(
           apiError.detail = data.detail
             .map((err: any) => {
               const field = err.loc?.[err.loc.length - 1];
-              return field ? `${field}: ${err.msg}` : err.msg;
+              // Sanitize the specific error message
+              const safeMsg = sanitizeHTML(err.msg);
+              return field ? `${field}: ${safeMsg}` : safeMsg;
             })
             .join(', ');
         } else {
           // Standard string detail (e.g., "Invalid credentials")
-          apiError.detail = data.detail;
+          apiError.detail = sanitizeHTML(data.detail); // Sanitize the main string
         }
       } else if (error.response.status >= 500) {
         apiError.detail = 'Our servers are currently experiencing issues. Please try again later.';
