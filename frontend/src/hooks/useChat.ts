@@ -2,7 +2,7 @@
 // Handles ChatResponse (text + itinerary + message_type)
 
 import { useCallback } from 'react';
-import { chatService, ChatRequest, guestPreferences } from '@/services/api';
+import { chatService, chatSessionsService, ChatRequest, guestPreferences } from '@/services/api';
 import { useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
 
@@ -216,6 +216,17 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                 addThinkingStep(partial);
                 setPartialThoughtText('');
               }
+            }
+
+            // Persist thinking steps to backend for retrieval after page refresh
+            if (msgId !== null) {
+              const allSteps = useChatStore.getState().thinkingSteps;
+              // Update the assistant message with thinking steps in store
+              useChatStore.getState().updateStreamingMessage(msgId, fullText, undefined, allSteps);
+              // Fire-and-forget: persist to backend (don't await)
+              chatSessionsService
+                .updateThinkingSteps(parseInt(msgId, 10), allSteps)
+                .catch(err => console.warn('[useChat] Failed to persist thinking steps:', err));
             }
           } catch (err) {
             // Ignore AbortError — user cancelled the stream

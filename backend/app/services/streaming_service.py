@@ -26,6 +26,7 @@ from app.db.models.message import Message
 from app.schemas.itinerary import TripItinerary
 from app.services.message_service import (
     append_message,
+    append_tool_message,
     get_session_messages,
     update_message_content,
 )
@@ -92,17 +93,39 @@ def _messages_to_content(messages: list[Message]) -> list[types.Content]:
     Handles:
     - Regular text messages (user/assistant roles)
     - Itinerary messages stored by finalize_trip_plan (assistant role, JSON content)
+    - Tool result messages (function role) from previous requests
     """
+    import json
+
     result: list[types.Content] = []
     for msg in messages:
+        # Include function messages (tool results from previous requests)
+        if msg.role == "function" and msg.message_type == "tool_result":
+            try:
+                payload = json.loads(msg.content)
+                tool_name = payload.get("tool", "")
+                tool_result = payload.get("result", {})
+                result.append(
+                    types.Content(
+                        role="function",
+                        parts=[
+                            types.Part.from_function_response(
+                                name=tool_name,
+                                response=tool_result,
+                            )
+                        ],
+                    )
+                )
+            except Exception:
+                pass
+            continue
+
         if msg.role not in ("user", "assistant"):
             continue
         content = msg.content or ""
         # If it's a stored itinerary message, extract just the text summary
         if msg.message_type == "itinerary":
             try:
-                import json
-
                 data = json.loads(content)
                 if data.get("__type") == "itinerary":
                     itinerary_data = data.get("data", {})
@@ -117,6 +140,34 @@ def _messages_to_content(messages: list[Message]) -> list[types.Content]:
             types.Content(role=msg.role, parts=[types.Part.from_text(text=content)])
         )
     return result
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tool result persistence helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _save_tool_result_to_db(
+    db: Session,
+    session_id: int,
+    tool_name: str,
+    args: dict,
+    result: dict,
+) -> None:
+    """Persist a tool call + result to the DB for cross-request context."""
+    try:
+        append_tool_message(
+            db,
+            session_id=session_id,
+            tool_name=tool_name,
+            args=args,
+            result=result,
+        )
+    except Exception:
+        # Non-fatal — log but don't interrupt the stream
+        logger.bind(event="tool_db_save_error", tool=tool_name).warning(
+            "Failed to save tool result to DB"
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -650,6 +701,11 @@ async def stream_agent_response(
                                 )
                             ],
                         )
+                    )
+
+                    # Persist tool result to DB so it's available in future requests
+                    _save_tool_result_to_db(
+                        db, assistant_msg.session_id, tool_name, args, result
                     )
 
                 tool_round += 1

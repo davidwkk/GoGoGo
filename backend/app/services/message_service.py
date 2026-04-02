@@ -44,11 +44,35 @@ def append_message(
     return message
 
 
+def append_tool_message(
+    db: Session,
+    session_id: int,
+    tool_name: str,
+    args: dict,
+    result: dict,
+) -> Message:
+    """Append a tool call + result pair as a function-role message."""
+    import json
+
+    payload = json.dumps({"tool": tool_name, "args": args, "result": result})
+    message = Message(
+        session_id=session_id,
+        role="function",
+        content=payload,
+        message_type="tool_result",
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
+
+
 def update_message_content(
     db: Session,
     message_id: int,
     content: str,
     message_type: str | None = None,
+    thinking_steps: list | None = None,
 ) -> Message | None:
     """Update the content of an existing message."""
     result = db.execute(select(Message).where(Message.id == message_id))
@@ -58,6 +82,8 @@ def update_message_content(
     message.content = content
     if message_type is not None:
         message.message_type = message_type
+    if thinking_steps is not None:
+        message.thinking_steps = thinking_steps
     db.commit()
     db.refresh(message)
     return message
