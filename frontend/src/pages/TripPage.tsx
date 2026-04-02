@@ -1,4 +1,4 @@
-// frontend/src/pages/TripPage.tsx (Add to top of file)
+// frontend/src/pages/TripPage.tsx
 
 function SidebarTripSkeleton() {
   return (
@@ -117,8 +117,8 @@ export function TripPage() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // Fetch trips only when auth state becomes true (not on every render)
-  useEffect(() => {
+  // --- DAVID'S FIX: Extract fetch logic to a reusable function ---
+  const fetchTrips = () => {
     if (!isLoggedIn) return;
 
     // Cancel any in-flight request from a previous auth state
@@ -150,6 +150,11 @@ export function TripPage() {
         }
       })
       .finally(() => setLoading(false));
+  };
+
+  // Fetch trips only when auth state becomes true (not on every render)
+  useEffect(() => {
+    fetchTrips();
 
     return () => {
       abortControllerRef.current?.abort();
@@ -198,7 +203,7 @@ export function TripPage() {
             </div>
             <div className="flex gap-2 mt-2">
               <button
-                onClick={() => window.location.reload()} // Quick retry via reload
+                onClick={fetchTrips} // --- DAVID'S FIX: Call the fetch function instead of reload ---
                 className="h-8 rounded-xl bg-slate-100 text-slate-900 px-4 text-sm font-medium hover:bg-slate-200 transition-colors"
               >
                 Try Again
@@ -419,7 +424,7 @@ export function TripPage() {
                 </section>
               )}
 
-              {/* 2. FLIGHTS SECTION */}
+              {/* 2. FLIGHT SECTION */}
               {selectedTrip.itinerary.flights && (
                 <section>
                   <div className="flex items-center gap-4 mb-6">
