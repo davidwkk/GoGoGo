@@ -10,6 +10,7 @@ export interface Message {
   content: string;
   timestamp: number;
   messageType?: string;
+  thinking_steps?: string[];
 }
 
 export interface ChatState {
@@ -42,7 +43,12 @@ export interface ChatState {
   setMessages: (messages: Message[]) => void;
   setForceNewSessionNextMessage: (force: boolean) => void;
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string;
-  updateStreamingMessage: (id: string, content: string, messageType?: string) => void;
+  updateStreamingMessage: (
+    id: string,
+    content: string,
+    messageType?: string,
+    thinking_steps?: string[]
+  ) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setThinking: (thinking: boolean) => void;
@@ -78,11 +84,16 @@ export const useChatStore = create<ChatState>(set => ({
     return id;
   },
 
-  updateStreamingMessage: (id, content, messageType) =>
+  updateStreamingMessage: (id, content, messageType, thinking_steps) =>
     set(state => ({
       messages: state.messages.map(msg =>
         msg.id === id
-          ? { ...msg, content, ...(messageType !== undefined ? { messageType } : {}) }
+          ? {
+              ...msg,
+              content,
+              ...(messageType !== undefined ? { messageType } : {}),
+              ...(thinking_steps !== undefined ? { thinking_steps } : {}),
+            }
           : msg
       ),
     })),

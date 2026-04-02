@@ -510,13 +510,16 @@ export function ChatPage() {
         const msgRes = await chatSessionsService.getMessages(first.id);
         setSessionId(String(first.id));
         setMessages(
-          msgRes.messages.map(m => ({
-            id: String(m.id),
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-            timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-            messageType: m.message_type,
-          }))
+          msgRes.messages
+            .filter(m => m.message_type !== 'tool_result') // exclude persisted tool results (not user-visible)
+            .map(m => ({
+              id: String(m.id),
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+              timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+              messageType: m.message_type,
+              thinking_steps: m.thinking_steps,
+            }))
         );
       } catch {
         // Best-effort — don't block chat UI if history load fails.
@@ -571,13 +574,16 @@ export function ChatPage() {
     const res = await chatSessionsService.getMessages(id);
     setSessionId(String(id));
     setMessages(
-      res.messages.map(m => ({
-        id: String(m.id),
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-        timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-        messageType: m.message_type,
-      }))
+      res.messages
+        .filter(m => m.message_type !== 'tool_result') // exclude persisted tool results (not user-visible)
+        .map(m => ({
+          id: String(m.id),
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+          messageType: m.message_type,
+          thinking_steps: m.thinking_steps,
+        }))
     );
     setTypewriterDone(true);
   };
@@ -690,11 +696,36 @@ export function ChatPage() {
     }
   };
 
+  // Persist thinking steps and exchange tracking across clearMessages / session switches
+  const thinkingStepsSnapshotRef = useRef<{
+    steps: string[];
+    tracking: Record<string, { startStep: number; endStep: number }>;
+  }>({
+    steps: [],
+    tracking: {},
+  });
   // Track thinking checkpoints and typewriter state across loading transitions
   const prevLoadingRef = useRef(isLoading);
   useEffect(() => {
     if (isLoading && !prevLoadingRef.current) {
-      // Loading started — record start checkpoint for the exchange
+      // Loading started (new exchange) — record start checkpoint
+      setTypewriterDone(false);
+      setExpandedBubbles(new Set());
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+      if (lastUserMsg) {
+        setCurrentThinkingUserMsgId(lastUserMsg.id);
+        setExchangeTracking(prev => ({
+          ...prev,
+          [lastUserMsg.id]: { startStep: thinkingSteps.length, endStep: thinkingSteps.length },
+        }));
+      }
+    } else if (isLoading && prevLoadingRef.current && currentThinkingUserMsgId) {
+      // A new message arrived while a prior exchange was in progress.
+      // Snapshot the in-progress exchange's steps before starting a new one.
+      thinkingStepsSnapshotRef.current = {
+        steps: thinkingSteps,
+        tracking: { ...exchangeTracking },
+      };
       setTypewriterDone(false);
       setExpandedBubbles(new Set());
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
@@ -707,22 +738,12 @@ export function ChatPage() {
       }
     } else if (!isLoading && prevLoadingRef.current) {
       // Loading ended — record end checkpoint for the completed exchange
-      if (currentThinkingUserMsgId && thinkingSteps.length > 0) {
+      if (currentThinkingUserMsgId) {
         setExchangeTracking(prev => ({
           ...prev,
           [currentThinkingUserMsgId]: {
             ...prev[currentThinkingUserMsgId],
             endStep: thinkingSteps.length,
-          },
-        }));
-      }
-      // Also record exchanges with zero steps
-      if (currentThinkingUserMsgId && thinkingSteps.length === 0) {
-        setExchangeTracking(prev => ({
-          ...prev,
-          [currentThinkingUserMsgId]: {
-            startStep: 0,
-            endStep: 0,
           },
         }));
       }
@@ -974,14 +995,17 @@ export function ChatPage() {
             // Check if this user message has a recorded thinking exchange
             const exchange = msg.role === 'user' ? exchangeTracking[msg.id] : null;
             const isInProgress = currentThinkingUserMsgId === msg.id && isLoading;
-            const showBubble = exchange !== null || isInProgress;
+            // Has thinking steps from DB (loaded history)
+            const hasLoadedThinkingSteps =
+              Array.isArray(msg.thinking_steps) && msg.thinking_steps.length > 0;
+            const showBubble = exchange !== null || isInProgress || hasLoadedThinkingSteps;
 
             // Steps for this specific exchange
             const exchangeStart = exchange?.startStep ?? thinkingSteps.length;
             const exchangeEnd = isInProgress
               ? thinkingSteps.length
               : (exchange?.endStep ?? exchangeStart);
-            const isZeroSteps = exchangeEnd === exchangeStart;
+            const isZeroSteps = !hasLoadedThinkingSteps && exchangeEnd === exchangeStart;
 
             return (
               <>
@@ -1090,7 +1114,9 @@ export function ChatPage() {
                       </button>
                       {expandedBubbles.has(msg.id) && !isZeroSteps && (
                         <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
-                          {thinkingSteps.slice(exchangeStart, exchangeEnd).map((step, i) => (
+                          {(
+                            msg.thinking_steps ?? thinkingSteps.slice(exchangeStart, exchangeEnd)
+                          ).map((step, i) => (
                             <div key={i} className="text-xs text-muted-foreground leading-relaxed">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
                             </div>

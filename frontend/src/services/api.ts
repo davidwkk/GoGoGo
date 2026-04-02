@@ -128,7 +128,7 @@ export interface ChatResponse {
   session_id: string;
   text: string;
   itinerary: unknown | null;
-  message_type: 'chat' | 'itinerary' | 'error';
+  message_type: 'chat' | 'itinerary' | 'error' | 'tool_result';
   history?: Array<{ role: string; content: string; created_at: string }>;
 }
 
@@ -139,6 +139,7 @@ export interface ChatSessionMessagesResponse {
     role: string;
     content: string;
     message_type?: string;
+    thinking_steps?: string[];
     created_at: string | null;
   }>;
 }
@@ -346,6 +347,14 @@ export const chatSessionsService = {
   async getMessages(sessionId: number): Promise<ChatSessionMessagesResponse> {
     const { data } = await apiClient.get<ChatSessionMessagesResponse>(
       `/chat/sessions/${sessionId}/messages`
+    );
+    return data;
+  },
+
+  async updateThinkingSteps(messageId: number, thinkingSteps: string[]): Promise<{ ok: boolean }> {
+    const { data } = await apiClient.patch<{ ok: boolean }>(
+      `/chat/messages/${messageId}/thinking-steps`,
+      { thinking_steps: thinkingSteps }
     );
     return data;
   },

@@ -6,9 +6,11 @@ GET /chat/sessions/{id}/messages — retrieve session message history
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_current_user_optional, get_db
+from app.db.models.message import Message
 from app.services.message_service import (
     delete_session,
     end_session,
@@ -26,6 +28,10 @@ router = APIRouter()
 
 class UpdateSessionTitleRequest(BaseModel):
     title: str = Field(min_length=1, max_length=40)
+
+
+class UpdateThinkingStepsRequest(BaseModel):
+    thinking_steps: list[str]
 
 
 @router.post("/sessions")
@@ -155,11 +161,34 @@ async def get_chat_session_messages(
                 "id": msg.id,
                 "role": msg.role,
                 "content": msg.content,
+                "message_type": msg.message_type,
+                "thinking_steps": msg.thinking_steps,
                 "created_at": msg.created_at.isoformat() if msg.created_at else None,
             }
             for msg in messages
         ],
     }
+
+
+@router.patch("/messages/{message_id}/thinking-steps")
+async def update_message_thinking_steps(
+    message_id: int,
+    body: UpdateThinkingStepsRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update thinking_steps on an assistant message (called after streaming ends)."""
+    result = db.execute(select(Message).where(Message.id == message_id))
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    # Verify ownership via session
+    session = get_session(db, message.session_id)
+    if not session or session.user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    message.thinking_steps = body.thinking_steps
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/sessions/active")
@@ -195,6 +224,8 @@ async def get_active_session_messages(
                 "id": msg.id,
                 "role": msg.role,
                 "content": msg.content,
+                "message_type": msg.message_type,
+                "thinking_steps": msg.thinking_steps,
                 "created_at": msg.created_at.isoformat() if msg.created_at else None,
             }
             for msg in messages
