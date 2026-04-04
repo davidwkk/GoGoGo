@@ -380,7 +380,7 @@ backend/tests/integration/
 
 ### 🔲 Remaining Tasks
 
-- [ ] **Image popup dialog** — Make images in trip cards clickable; show full-size image in a popup dialog when clicked (e.g., lightbox modal)
+- [x] **Image popup dialog** — Make images in trip cards clickable; show full-size image in a popup dialog when clicked (e.g., lightbox modal)
 
 #### Frontend E2E Tests
 
@@ -396,7 +396,7 @@ backend/tests/integration/
 
 - [ ] **Skeleton/loading states** — Add skeleton loaders for trip cards, chat messages, and itinerary sections while data loads
 - [ ] **Error handling UI** — Timeout displays for failed API calls, retry buttons where applicable
-- [ ] **API error envelope standardization** — Standardize `APIError { detail: string; code?: string }` in `api.ts`
+- [x] **API error envelope standardization** — Standardize `APIError { detail: string; code?: string }` in `api.ts` ✅ (already implemented in `api.ts` with interceptor; used in `LoginPage.tsx`)
 - [ ] **Mobile responsive layout audit** — Verify all pages (Login, Chat, Trip) render correctly on narrow viewports; fix any overflow or truncation issues
 
 ---
@@ -406,7 +406,6 @@ backend/tests/integration/
 | #   | Severity | Area     | Issue                                                                                                                                                    |
 | --- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
-| —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                  |
 
 ---
 
