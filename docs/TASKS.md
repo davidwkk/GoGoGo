@@ -352,6 +352,7 @@ backend/tests/integration/
 - [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
 - [ ] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
 - [x] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations. Backend: implement `get_active_session_by_user(user_id)` in `message_service`; wire into `chat.py` on session resume. Frontend: load previous messages when user opens an existing session.
+- [ ] **Guest access**: the chat history bar must be visible to guest users too; guest users can create new chat sessions, but cannot save trips.
 - [x] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
 
 #### Phase 4 — TTS Upgrades (Minqi)
@@ -401,12 +402,10 @@ backend/tests/integration/
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area     | Issue                                                                                                                                                   |
-| --- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 17  | 🟡        | Backend  | ⚠️ Open — `message_service` needs `get_active_session_by_user(user_id)` for page refresh resumption (chat history load on session resume)                |
-| 26  | 🟡        | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
-| —   | 🟡        | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                 |
-| —   | 🟡        | Frontend | ✅ Done — Increase STT duration to at least 30s (now supports up to 60s + silence auto-stop) (Minqi)                                                     |
+| #   | Severity | Area     | Issue                                                                                                                                                    |
+| --- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
+| —   | 🟡       | Frontend | Standardize API error envelope: `APIError { detail: string; code?: string }` in `api.ts` (nice to have)                                                  |
 
 ---
 
