@@ -11,7 +11,7 @@ class TripSummary(BaseModel):
     destination: str
     duration_days: int
     thumbnail_url: str | None = None
-    created_at: DateTime
+    created_at: DateTime | str
 
     model_config = ConfigDict(from_attributes=True)
 

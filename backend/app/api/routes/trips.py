@@ -61,6 +61,7 @@ def get_demo_trip(db: Session = Depends(get_db)):
     Used by the frontend Demo Trip button for quick testing.
     """
     from app.db.models.trip import Trip
+    from app.schemas.itinerary import TripItinerary
     from sqlalchemy import select
 
     result = db.execute(
@@ -75,6 +76,12 @@ def get_demo_trip(db: Session = Depends(get_db)):
             detail="Demo trip not found. Please run `docker compose exec backend python /app/scripts/seed_db.py` first.",
         )
     itinerary = trip.itinerary_json or {}
+    try:
+        validated = TripItinerary.model_validate(itinerary)
+        itinerary_data = validated.model_dump(mode="json")
+    except Exception:
+        # Graceful degradation - return raw if validation fails
+        itinerary_data = itinerary
     return {
         "id": trip.id,
         "title": trip.title,
@@ -82,7 +89,7 @@ def get_demo_trip(db: Session = Depends(get_db)):
         "duration_days": itinerary.get("duration_days", 0),
         "thumbnail_url": _extract_thumbnail_url(itinerary),
         "created_at": trip.created_at.isoformat() if trip.created_at else None,
-        "itinerary": trip.itinerary_json,
+        "itinerary": itinerary_data,
     }
 
 

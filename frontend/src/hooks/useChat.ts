@@ -21,7 +21,7 @@ const TOOL_LABELS: Record<string, string> = {
 // Map raw tool names to completion messages (shown when tool finishes)
 const TOOL_RESULT_LABELS: Record<string, string> = {
   get_attraction: 'Attraction info retrieved',
-  get_weather: 'Weather information retrieved',
+  get_weather: 'Weather info retrieved',
   search_web: 'Web search complete',
   search_flights: 'Flights found',
   search_hotels: 'Hotels found',
