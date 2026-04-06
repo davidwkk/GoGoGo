@@ -163,7 +163,7 @@ export const chatService = {
     req: ChatRequest,
     signal?: AbortSignal
   ): AsyncGenerator<string, void, unknown> {
-    const MAX_RETRIES = 4; // 1 initial + up to 3 retries (display: 1/3, 2/3, 3/3)
+    const MAX_RETRIES = 4; // 1 initial + up to 3 retries
     const BASE_DELAY_MS = 500;
     let attempt = 0;
 
@@ -178,7 +178,6 @@ export const chatService = {
       if (attempt > 1) {
         const delay = BASE_DELAY_MS * Math.pow(2, attempt - 2);
         log(`[streamMessage] Retry ${attempt - 1}/${MAX_RETRIES - 1} after ${delay}ms backoff`);
-        yield `__STATUS__:Reconnecting (${attempt - 1}/${MAX_RETRIES - 1})...\n`;
         await new Promise(resolve => setTimeout(resolve, delay));
         // Check again after backoff — user may have started a new chat
         if (signal?.aborted) {
