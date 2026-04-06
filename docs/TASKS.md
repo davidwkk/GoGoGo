@@ -298,11 +298,16 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 > Ordered from most fundamental (blocked by nothing) to most dependent (blocked by above tasks).
 
 - [x] **Verify the return schema from tools** — Confirm the return schemas and write API testcases to test the tools.
-- [ ] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds).
-- [ ] **Fix thinking bubble display** when LLM calls tools
+- [x] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds).
+- [x] **Fix thinking bubble display** when LLM calls tools ✅ — Thinking bubbles are now collapsible per message using `expandedBubbles` state; shown persistently for every user message.
 - [x] **Agent decides when to generate trip plan** — Remove the explicit "Generate Trip Plan" button; let the agent autonomously decide when to produce a structured `TripItinerary` based on conversation context (e.g., user expresses intent to travel, provides destinations/dates). The agent should detect trip-planning intent and invoke `generate_content` with `response_json_schema` accordingly. Frontend no longer sends a `generate_plan` flag — the agent loop handles this internally.
 - [x] **Migrate trip planning to streaming** — Travel planning agent NOT yet refactored to streaming; requires migrating from waiting for full output to using SSE stream; requires adding a tool to fetch the current time/day for date-aware planning. Depends on: "Agent decides when to generate" (the streaming refactor builds on the unified agent loop).
 - [x] **Add 3x auto-retry on SSE disconnect** ✅ — Up to 3 retries with exponential backoff (500ms base) on SSE disconnect or fetch error; yields reconnecting status to UI on retry attempts
+- [x] **Explicit 'yes' confirmation** ✅ — Agent prompt updated to require explicit "yes" from user before calling `finalize_trip_plan`; presents summary and asks for confirmation first.
+- [x] **Enrichment fields in agent output** ✅ — Agent system prompt updated to instruct population of all enrichment fields: `opening_hours`, `admission_fee_hkd`, `rating`, `review_count`, `tips`, `image_url`, `thumbnail_url`, `booking_url`, `address` (Activity); `star_rating`, `guest_rating`, `image_url`, `embed_map_url` (Hotel); `duration_minutes`, `cabin_class` (Flight); `estimated_total_budget_hkd` (TripItinerary); `theme`, `notes`, `estimated_daily_budget_hkd` (DayPlan).
+- [x] **Demo trip data enrichment** ✅ — All enrichment fields populated in `seed_db.py` DEMO_ITINERARY: flights have `duration_minutes`, `cabin_class`; hotels have `image_url`, `embed_map_url`, `star_rating`, `guest_rating`; activities have all enrichment fields; day plans have `theme`, `notes`, `estimated_daily_budget_hkd`; `estimated_total_budget_hkd` with breakdown.
+- [x] **Schema misalignment fixes** ✅ — `TripSummary.created_at` changed to `DateTime | str`; `/demo` endpoint now validates itinerary via `TripItinerary.model_validate` with graceful degradation.
+- [x] **ItineraryDisplay matches TripPage** ✅ — `ItineraryDisplay` in ChatPage now includes: budget section with flights/hotels/activities breakdown, day headers with theme and daily budget badge, `HotelCard` component (with MapEmbed, ImageLightbox), icons (`Banknote`, `Bed`, `Plane`, `Ticket`).
 
 ### 🧪 Tests to Write
 
@@ -354,7 +359,7 @@ backend/tests/integration/
 - [x] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations. Backend: implement `get_active_session_by_user(user_id)` in `message_service`; wire into `chat.py` on session resume. Frontend: load previous messages when user opens an existing session.
 - [ ] **Guest access**: the chat history bar must be visible to guest users too; guest users can create new chat sessions, but cannot save trips.
 - [ ] **Chat history bar alignment** — Fix the style of the chat history bar; specifically, the border/line below it should be at the same vertical level as the main chat page when the history bar is collapsed (alignment is correct when expanded).
-- [x] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end`
+- [x] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end` ✅ (implemented in ChatPage header)
 
 #### Phase 4 — TTS Upgrades (Minqi)
 
@@ -403,9 +408,9 @@ backend/tests/integration/
 
 ## 🚨 Open Issues
 
-| #   | Severity | Area     | Issue                                                                                                                                                    |
-| --- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, "Save & Finish Trip" button, chat history on reload still open |
+| #   | Severity | Area     | Issue                                                                                                                       |
+| --- | -------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 26  | 🟡       | Frontend | ⚠️ Partial — Minqi Phase 3: auth store, authService, protected route, fake loading steps, chat history on reload still open |
 
 ---
 
