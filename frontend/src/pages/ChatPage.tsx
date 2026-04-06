@@ -952,7 +952,7 @@ export function ChatPage() {
 
             // Get thinking data for this exchange
             const hasLoadedThinkingSteps =
-              Array.isArray(userMsg.thinking_steps) && userMsg.thinking_steps.length > 0;
+              Array.isArray(assistantMsg?.thinking_steps) && assistantMsg.thinking_steps.length > 0;
             const hasLiveThinkingSteps = thinkingSteps.length > 0;
             const hasPartialThinking = partialThoughtText.length > 0;
 
@@ -962,11 +962,16 @@ export function ChatPage() {
               hasLoadedThinkingSteps || hasLiveThinkingSteps || hasPartialThinking;
             // For the last pair, show bubble while waiting for LLM response
             const isWaitingForResponse = isLastPair && isLoading && !assistantMsg;
-            const showThinkingLabel = isWaitingForResponse || hasThinkingContent;
+            // Differentiate: "Thinking..." while waiting, "Thinking process" after LLM finished, "No thinking process available" if none
+            const thinkingLabel = isWaitingForResponse
+              ? 'Thinking...'
+              : hasThinkingContent
+                ? 'Thinking process'
+                : 'No thinking process available';
 
             // Get thinking steps: prefer DB steps, fall back to live steps
             const thinkingStepsToShow =
-              userMsg.thinking_steps ?? (hasLiveThinkingSteps ? thinkingSteps : []);
+              assistantMsg?.thinking_steps ?? (hasLiveThinkingSteps ? thinkingSteps : []);
 
             return (
               <div key={userMsg.id} className="space-y-4">
@@ -994,9 +999,7 @@ export function ChatPage() {
                       }
                       className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     >
-                      <span>
-                        💭 {showThinkingLabel ? 'Thinking...' : 'No thinking process available'}
-                      </span>
+                      <span>💭 {thinkingLabel}</span>
                       <span
                         className={`transition-transform ${expandedBubbles.has(userMsg.id) ? 'rotate-90' : ''}`}
                       >
