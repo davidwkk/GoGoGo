@@ -280,6 +280,8 @@ export const chatService = {
                   yield `__ERROR__:${errorMsg}`;
                 } else if (data.message_id !== undefined) {
                   yield `__MESSAGE_ID__:${data.message_id}`;
+                } else if (data.message_type === 'itinerary' && data.itinerary) {
+                  yield `__ITINERARY__:${JSON.stringify(data.itinerary)}`;
                 } else if (data.done) {
                   log('[streamMessage] Stream done signal received');
                   return;

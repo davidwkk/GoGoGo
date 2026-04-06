@@ -196,6 +196,22 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                   addThinkingStep(formatThinkingStep(status));
                   continue;
                 }
+                if (chunk.startsWith('__ITINERARY__:')) {
+                  const raw = chunk.slice('__ITINERARY__:'.length);
+                  try {
+                    const itinerary = JSON.parse(raw) as TripItinerary;
+                    onItinerary?.(itinerary);
+                    if (msgId !== null) {
+                      useChatStore.getState().updateStreamingMessage(msgId, fullText, 'itinerary');
+                    }
+                  } catch {
+                    console.warn(
+                      '[useChat] Failed to parse itinerary JSON:',
+                      raw.substring(0, 100)
+                    );
+                  }
+                  continue;
+                }
               }
 
               // Commit any pending partial thought before text chunks
