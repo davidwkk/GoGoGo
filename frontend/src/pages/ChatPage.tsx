@@ -533,6 +533,8 @@ export function ChatPage() {
       abortController.abort();
     }
     clearMessages();
+    useChatStore.setState({ thinkingSteps: [] });
+    setExchangeTracking({});
     setDemoItinerary(null);
     setTypewriterDone(false);
     if (isLoggedIn) {
@@ -570,6 +572,7 @@ export function ChatPage() {
     useChatStore.getState().setThinking(false);
     useChatStore.getState().setPartialThoughtText('');
     useChatStore.setState({ thinkingSteps: [] });
+    setExchangeTracking({});
 
     const res = await chatSessionsService.getMessages(id);
     setSessionId(String(id));
@@ -643,6 +646,8 @@ export function ChatPage() {
 
     if (currentSessionPk === id) {
       clearMessages();
+      useChatStore.setState({ thinkingSteps: [] });
+      setExchangeTracking({});
       setSessionId(null);
       if (nextId !== null) {
         await loadSession(nextId);
@@ -989,15 +994,21 @@ export function ChatPage() {
             </div>
           )}
 
-          {messages.map((msg, idx) => {
-            const isLastAssistant = idx === messages.length - 1 && msg.role === 'assistant';
-            const isStreaming = isLastAssistant && !typewriterDone;
-            // Check if this user message has a recorded thinking exchange
-            const exchange = msg.role === 'user' ? exchangeTracking[msg.id] : null;
-            const isInProgress = currentThinkingUserMsgId === msg.id && isLoading;
-            // Has thinking steps from DB (loaded history)
+          {/* Render messages as pairs: user message, thinking bubble, assistant response */}
+          {Array.from({ length: Math.ceil(messages.length / 2) }).map((_, pairIdx) => {
+            const userMsg = messages[pairIdx * 2];
+            const assistantMsg = messages[pairIdx * 2 + 1];
+            const isLastPair = pairIdx * 2 + 1 >= messages.length;
+            const isStreamingAssistant =
+              isLastPair && assistantMsg?.role === 'assistant' && !typewriterDone;
+
+            if (!userMsg || userMsg.role !== 'user') return null;
+
+            // Get thinking data for this exchange
+            const exchange = exchangeTracking[userMsg.id] ?? null;
+            const isInProgress = currentThinkingUserMsgId === userMsg.id && isLoading;
             const hasLoadedThinkingSteps =
-              Array.isArray(msg.thinking_steps) && msg.thinking_steps.length > 0;
+              Array.isArray(userMsg.thinking_steps) && userMsg.thinking_steps.length > 0;
             const showBubble = exchange !== null || isInProgress || hasLoadedThinkingSteps;
 
             // Steps for this specific exchange
@@ -1005,99 +1016,37 @@ export function ChatPage() {
             const exchangeEnd = isInProgress
               ? thinkingSteps.length
               : (exchange?.endStep ?? exchangeStart);
-            // For loaded messages (exchangeTracking is empty), use hasLoadedThinkingSteps as the
-            // authoritative source — msg.thinking_steps from DB is more reliable than empty tracking.
-            // For live messages (hasLoadedThinkingSteps=false), fall back to exchangeTracking.
             const isZeroSteps = exchangeEnd === exchangeStart && !hasLoadedThinkingSteps;
 
+            // Get the thinking steps to display
+            const thinkingStepsToShow =
+              userMsg.thinking_steps ?? thinkingSteps.slice(exchangeStart, exchangeEnd);
+            const hasThinkingContent = !isZeroSteps || isInProgress;
+
+            // Should show bubble if we have an assistant following, OR if this is the last pair and we're waiting
+            const shouldShowBubble = showBubble && (!!assistantMsg || (isLastPair && isLoading));
+
             return (
-              <>
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
-                      msg.role === 'user'
-                        ? 'bg-black text-white rounded-br-md'
-                        : 'bg-muted text-foreground rounded-bl-md'
-                    }`}
-                  >
-                    {isLastAssistant && isStreaming ? (
-                      <StreamingMessage
-                        content={msg.content}
-                        isDone={!isLoading}
-                        onComplete={() => setTypewriterDone(true)}
-                      />
-                    ) : msg.messageType === 'error' ? (
-                      <div className="flex items-start gap-2 text-red-600">
-                        <span className="text-red-500 mt-0.5">⚠</span>
-                        <div>
-                          <p className="font-semibold text-red-600 text-xs uppercase tracking-wide mb-1">
-                            Error
-                          </p>
-                          <p className="text-red-700 text-sm">{msg.content}</p>
-                        </div>
-                      </div>
-                    ) : msg.role === 'assistant' ? (
-                      <div>
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                        </div>
-                        {ttsAvailable && msg.content.trim() && (
-                          <div className="mt-2 flex justify-end">
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={isStreaming}
-                              aria-label={
-                                speakingMsgId === msg.id && isSpeaking
-                                  ? 'Stop speaking'
-                                  : 'Play text-to-speech'
-                              }
-                              onClick={() => {
-                                if (speakingMsgId === msg.id && isSpeaking) {
-                                  stop();
-                                  setSpeakingMsgId(null);
-                                  return;
-                                }
-                                setSpeakingMsgId(msg.id);
-                                speak(msg.content);
-                              }}
-                            >
-                              {speakingMsgId === msg.id && isSpeaking ? (
-                                <>
-                                  <Square className="size-3" />
-                                  Stop
-                                </>
-                              ) : (
-                                <>
-                                  <Volume2 className="size-3" />
-                                  Play
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      msg.content
-                    )}
+              <div key={userMsg.id} className="space-y-4">
+                {/* User message */}
+                <div className="flex justify-end">
+                  <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-black text-white rounded-br-md">
+                    {userMsg.content}
                   </div>
                 </div>
 
-                {/* Thinking bubble — always shown for each exchange after recording */}
-                {showBubble && (
+                {/* Thinking bubble - AFTER user, BEFORE assistant response */}
+                {shouldShowBubble && (
                   <div className="flex justify-start">
                     <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
                       <button
                         onClick={() =>
                           setExpandedBubbles(prev => {
                             const next = new Set(prev);
-                            if (next.has(msg.id)) {
-                              next.delete(msg.id);
+                            if (next.has(userMsg.id)) {
+                              next.delete(userMsg.id);
                             } else {
-                              next.add(msg.id);
+                              next.add(userMsg.id);
                             }
                             return next;
                           })
@@ -1105,21 +1054,17 @@ export function ChatPage() {
                         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                       >
                         <span>
-                          {isZeroSteps && !isInProgress
-                            ? 'LLM directly gives the response without thinking'
-                            : '💭 Thinking...'}
+                          💭 {hasThinkingContent ? 'Thinking...' : 'No thinking process available'}
                         </span>
                         <span
-                          className={`transition-transform ${expandedBubbles.has(msg.id) ? 'rotate-90' : ''}`}
+                          className={`transition-transform ${expandedBubbles.has(userMsg.id) ? 'rotate-90' : ''}`}
                         >
                           ▶
                         </span>
                       </button>
-                      {expandedBubbles.has(msg.id) && !isZeroSteps && (
+                      {expandedBubbles.has(userMsg.id) && hasThinkingContent && (
                         <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
-                          {(
-                            msg.thinking_steps ?? thinkingSteps.slice(exchangeStart, exchangeEnd)
-                          ).map((step, i) => (
+                          {thinkingStepsToShow.map((step, i) => (
                             <div key={i} className="text-xs text-muted-foreground leading-relaxed">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
                             </div>
@@ -1134,14 +1079,80 @@ export function ChatPage() {
                     </div>
                   </div>
                 )}
-              </>
+
+                {/* Assistant response */}
+                {assistantMsg && assistantMsg.role === 'assistant' && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                      {isStreamingAssistant ? (
+                        <StreamingMessage
+                          content={assistantMsg.content}
+                          isDone={!isLoading}
+                          onComplete={() => setTypewriterDone(true)}
+                        />
+                      ) : assistantMsg.messageType === 'error' ? (
+                        <div className="flex items-start gap-2 text-red-600">
+                          <span className="text-red-500 mt-0.5">⚠</span>
+                          <div>
+                            <p className="font-semibold text-red-600 text-xs uppercase tracking-wide mb-1">
+                              Error
+                            </p>
+                            <p className="text-red-700 text-sm">{assistantMsg.content}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {assistantMsg.content}
+                            </ReactMarkdown>
+                          </div>
+                          {ttsAvailable && assistantMsg.content.trim() && (
+                            <div className="mt-2 flex justify-end">
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isStreamingAssistant}
+                                aria-label={
+                                  speakingMsgId === assistantMsg.id && isSpeaking
+                                    ? 'Stop speaking'
+                                    : 'Play text-to-speech'
+                                }
+                                onClick={() => {
+                                  if (speakingMsgId === assistantMsg.id && isSpeaking) {
+                                    stop();
+                                    setSpeakingMsgId(null);
+                                    return;
+                                  }
+                                  setSpeakingMsgId(assistantMsg.id);
+                                  speak(assistantMsg.content);
+                                }}
+                              >
+                                {speakingMsgId === assistantMsg.id && isSpeaking ? (
+                                  <>
+                                    <Square className="size-3" />
+                                    Stop
+                                  </>
+                                ) : (
+                                  <>
+                                    <Volume2 className="size-3" />
+                                    Play
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Typing indicator when waiting for assistant response */}
+                {!assistantMsg && isLoading && isLastPair && <TypingIndicator />}
+              </div>
             );
           })}
-
-          {/* Show bouncing dots if waiting on LLM text response */}
-          {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
-            <TypingIndicator />
-          )}
 
           {/* Demo trip result — shown inline after generation */}
           {showDemoLoading && <DemoLoadingSkeleton />}
