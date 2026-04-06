@@ -956,15 +956,17 @@ export function ChatPage() {
             const hasLiveThinkingSteps = thinkingSteps.length > 0;
             const hasPartialThinking = partialThoughtText.length > 0;
 
-            // Show bubble if we have thinking content OR we're waiting for response in this pair
+            // Show thinking bubble ALWAYS for every user message (persistent)
+            // Show "Thinking..." if waiting for response OR if there's thinking content
             const hasThinkingContent =
               hasLoadedThinkingSteps || hasLiveThinkingSteps || hasPartialThinking;
             // For the last pair, show bubble while waiting for LLM response
             const isWaitingForResponse = isLastPair && isLoading && !assistantMsg;
-            const shouldShowBubble = hasThinkingContent || isWaitingForResponse;
+            const showThinkingLabel = isWaitingForResponse || hasThinkingContent;
 
             // Get thinking steps: prefer DB steps, fall back to live steps
-            const thinkingStepsToShow = userMsg.thinking_steps ?? thinkingSteps;
+            const thinkingStepsToShow =
+              userMsg.thinking_steps ?? (hasLiveThinkingSteps ? thinkingSteps : []);
 
             return (
               <div key={userMsg.id} className="space-y-4">
@@ -975,57 +977,49 @@ export function ChatPage() {
                   </div>
                 </div>
 
-                {/* Thinking bubble - AFTER user, BEFORE assistant response */}
-                {shouldShowBubble && (
-                  <div className="flex justify-start">
-                    <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
-                      <button
-                        onClick={() =>
-                          setExpandedBubbles(prev => {
-                            const next = new Set(prev);
-                            if (next.has(userMsg.id)) {
-                              next.delete(userMsg.id);
-                            } else {
-                              next.add(userMsg.id);
-                            }
-                            return next;
-                          })
-                        }
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                {/* Thinking bubble - ALWAYS shown for every user message */}
+                <div className="flex justify-start">
+                  <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                    <button
+                      onClick={() =>
+                        setExpandedBubbles(prev => {
+                          const next = new Set(prev);
+                          if (next.has(userMsg.id)) {
+                            next.delete(userMsg.id);
+                          } else {
+                            next.add(userMsg.id);
+                          }
+                          return next;
+                        })
+                      }
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      <span>
+                        💭 {showThinkingLabel ? 'Thinking...' : 'No thinking process available'}
+                      </span>
+                      <span
+                        className={`transition-transform ${expandedBubbles.has(userMsg.id) ? 'rotate-90' : ''}`}
                       >
-                        <span>
-                          💭{' '}
-                          {isWaitingForResponse || hasThinkingContent
-                            ? 'Thinking...'
-                            : 'No thinking process available'}
-                        </span>
-                        <span
-                          className={`transition-transform ${expandedBubbles.has(userMsg.id) ? 'rotate-90' : ''}`}
-                        >
-                          ▶
-                        </span>
-                      </button>
-                      {expandedBubbles.has(userMsg.id) &&
-                        (hasThinkingContent || isWaitingForResponse) && (
-                          <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
-                            {thinkingStepsToShow.map((step, i) => (
-                              <div
-                                key={i}
-                                className="text-xs text-muted-foreground leading-relaxed"
-                              >
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
-                              </div>
-                            ))}
-                            {isWaitingForResponse && partialThoughtText && (
-                              <div className="text-xs text-muted-foreground leading-relaxed">
-                                <StreamingThought text={partialThoughtText} done={!isLoading} />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                    </div>
+                        ▶
+                      </span>
+                    </button>
+                    {expandedBubbles.has(userMsg.id) &&
+                      (hasThinkingContent || isWaitingForResponse) && (
+                        <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
+                          {thinkingStepsToShow.map((step, i) => (
+                            <div key={i} className="text-xs text-muted-foreground leading-relaxed">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
+                            </div>
+                          ))}
+                          {isWaitingForResponse && partialThoughtText && (
+                            <div className="text-xs text-muted-foreground leading-relaxed">
+                              <StreamingThought text={partialThoughtText} done={!isLoading} />
+                            </div>
+                          )}
+                        </div>
+                      )}
                   </div>
-                )}
+                </div>
 
                 {/* Assistant response */}
                 {assistantMsg && assistantMsg.role === 'assistant' && (
