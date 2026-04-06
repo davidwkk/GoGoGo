@@ -18,6 +18,18 @@ const TOOL_LABELS: Record<string, string> = {
   build_static_url: 'Building map',
 };
 
+// Map raw tool names to completion messages (shown when tool finishes)
+const TOOL_RESULT_LABELS: Record<string, string> = {
+  get_attraction: 'Attraction info retrieved',
+  get_weather: 'Weather information retrieved',
+  search_web: 'Web search complete',
+  search_flights: 'Flights found',
+  search_hotels: 'Hotels found',
+  get_transport: 'Transport info retrieved',
+  build_embed_url: 'Map ready',
+  build_static_url: 'Map ready',
+};
+
 function formatThinkingStep(raw: string): string {
   const s = raw.trim();
 
@@ -30,8 +42,8 @@ function formatThinkingStep(raw: string): string {
     return `🔍 ${label}...`;
   }
 
-  // Tool result
-  const label = TOOL_LABELS[s] ?? s.replace(/_/g, ' ');
+  // Tool result - use completion labels
+  const label = TOOL_RESULT_LABELS[s] ?? TOOL_LABELS[s] ?? s.replace(/_/g, ' ');
   return `✅ ${label}`;
 }
 
