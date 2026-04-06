@@ -118,7 +118,7 @@ Params: engine=google_hotels, q=Bali, check_in_date=2026-03-31,
             "description": str,                   # property description
             "image_url": str | None,             # first original image URL
             "thumbnail_url": str | None,          # first thumbnail URL
-            "map_url": str | None,                # Google Maps embed URL from GPS
+            "embed_map_url": str | None,           # Google Maps embed URL from GPS
             "nearby_places": [                    # nearby landmarks / transport
                 {
                     "name": str,
@@ -129,7 +129,7 @@ Params: engine=google_hotels, q=Bali, check_in_date=2026-03-31,
                 },
                 ...
             ],
-            "booking_url": str | None,            # property website link
+            "booking_url": str | None,            # Google Hotels booking link from property_token
             "eco_certified": bool | None,         # eco_certified flag
             "deal": str | None,                 # e.g. "27% less than usual"
             "deal_description": str | None,     # e.g. "Great Deal"
@@ -243,17 +243,25 @@ async def search_hotels(
             total_rate = h.get("total_rate") or {}
             total_price_hkd = total_rate.get("extracted_lowest")
 
-            # Build map URL from GPS coordinates
-            map_url = None
-            gps = h.get("gps_coordinates") or {}
-            lat = gps.get("latitude")
-            lon = gps.get("longitude")
-            if lat is not None and lon is not None and settings.GOOGLE_MAPS_API_KEY:
-                map_url = (
-                    f"https://www.google.com/maps/embed/v1/place"
-                    f"?key={settings.GOOGLE_MAPS_API_KEY}"
-                    f"&q={lat},{lon}"
+            # Build embed map URL — use hotel name search (no API key required for embed)
+            embed_map_url: str | None = None
+            hotel_name = h.get("name", "")
+            if hotel_name:
+                encoded_name = hotel_name.replace(" ", "+")
+                embed_map_url = (
+                    f"https://www.google.com/maps?q={encoded_name}&output=embed"
                 )
+
+            # Build booking URL from property_token
+            booking_url: str | None = None
+            property_token = h.get("property_token")
+            if property_token:
+                booking_url = (
+                    f"https://www.google.com/travel/hotels/entity/{property_token}"
+                    f"?check_in={check_in}"
+                )
+                if check_out:
+                    booking_url += f"&check_out={check_out}"
 
             # First image
             images = h.get("images") or []
@@ -292,9 +300,9 @@ async def search_hotels(
                     "description": h.get("description", ""),
                     "image_url": image_url,
                     "thumbnail_url": thumbnail_url,
-                    "map_url": map_url,
+                    "embed_map_url": embed_map_url,
                     "nearby_places": nearby,
-                    "booking_url": h.get("link"),
+                    "booking_url": booking_url,
                     "eco_certified": h.get("eco_certified"),
                     "deal": h.get("deal"),
                     "deal_description": h.get("deal_description"),

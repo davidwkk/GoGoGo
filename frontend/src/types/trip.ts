@@ -111,7 +111,7 @@ export interface Hotel {
   guest_rating?: number | null; // e.g. 8.4 out of 10
   booking_url?: string | null;
   image_url?: string | null;
-  map_url?: string | null;
+  embed_map_url?: string | null; // Google Maps embed URL for iframe
 }
 
 // ============================================================
@@ -139,9 +139,6 @@ export interface TripItinerary {
 
   // --- Budget (computed from flights + hotels + activities) ---
   estimated_total_budget_hkd?: BudgetBreakdown | null;
-
-  // --- Map ---
-  map_embed_url?: string | null;
 }
 
 // ============================================================

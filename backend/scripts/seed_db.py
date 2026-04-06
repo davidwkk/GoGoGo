@@ -48,7 +48,6 @@ DEMO_ITINERARY = {
         "Pleasant spring weather (15-22°C). Light jacket recommended for evenings. "
         "Cherry blossoms in full bloom — bring a camera!"
     ),
-    "map_embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d206884.11874974792!2d139.491206!3d35.686725!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x60188bfbd89f700b:0x277c49ba34ed38!2sTokyo!5e0!3m2!1sen!2sjp!4v1700000000000!5m2!1sen!2sjp",
     "flights": [
         {
             "direction": "outbound",
@@ -83,8 +82,9 @@ DEMO_ITINERARY = {
             "price_per_night_hkd": {"min": 2800, "max": 4500},
             "star_rating": 5,
             "guest_rating": 9.2,
-            "booking_url": "https://www.booking.com/hotel/jp/park-hyatt-tokyo.html",
+            "booking_url": "https://www.google.com/travel/hotels?q=Park+Hyatt+Tokyo&check_in=2026-04-15&check_out=2026-04-20",
             "address": "3-7-1-2 Nishi Shinjuku, Shinjuku City, Tokyo 163-1055",
+            "embed_map_url": "https://www.google.com/maps?q=Park+Hyatt+Tokyo&output=embed",
         },
     ],
     "days": [
