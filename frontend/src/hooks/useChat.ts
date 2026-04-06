@@ -106,6 +106,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
           let fullText = '';
           let chunkCount = 0;
           let msgId: string | null = null;
+          let backendMsgId: number | null = null;
 
           // Create abort controller for this stream
           const abortController = new AbortController();
@@ -116,6 +117,16 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             for await (const chunk of chatService.streamMessage(req, abortController.signal)) {
               // Handle special prefixed events from agent thought streaming
               if (typeof chunk === 'string') {
+                if (chunk.startsWith('__MESSAGE_ID__:')) {
+                  backendMsgId = parseInt(chunk.slice('__MESSAGE_ID__:'.length), 10);
+                  // Update the message with backend-assigned numeric ID for persistence
+                  if (msgId !== null && !isNaN(backendMsgId)) {
+                    useChatStore
+                      .getState()
+                      .updateStreamingMessage(msgId, fullText, undefined, undefined, backendMsgId);
+                  }
+                  continue;
+                }
                 if (chunk.startsWith('__ERROR__:')) {
                   const errorMsg = chunk.slice('__ERROR__:'.length);
                   setThinking(false);
@@ -225,15 +236,17 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
             }
 
             // Persist thinking steps to backend for retrieval after page refresh
-            if (msgId !== null) {
+            if (msgId !== null && backendMsgId !== null) {
               const allSteps = useChatStore.getState().thinkingSteps;
               // Update the assistant message with thinking steps in store
-              useChatStore.getState().updateStreamingMessage(msgId, fullText, undefined, allSteps);
+              useChatStore
+                .getState()
+                .updateStreamingMessage(msgId, fullText, undefined, allSteps, backendMsgId);
               // Fire-and-forget: persist to backend (don't await — SSE stream must not be blocked)
               // Include guest_uid for unauthenticated users
               const guestUid = localStorage.getItem('guest_uid') ?? undefined;
               chatSessionsService
-                .updateThinkingSteps(parseInt(msgId, 10), allSteps, guestUid)
+                .updateThinkingSteps(backendMsgId, allSteps, guestUid)
                 .catch(err => console.warn('[useChat] Failed to persist thinking steps:', err));
             }
           } catch (err) {

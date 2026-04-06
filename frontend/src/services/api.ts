@@ -278,6 +278,8 @@ export const chatService = {
                       ? data.error
                       : data.error?.message || JSON.stringify(data.error);
                   yield `__ERROR__:${errorMsg}`;
+                } else if (data.message_id !== undefined) {
+                  yield `__MESSAGE_ID__:${data.message_id}`;
                 } else if (data.done) {
                   log('[streamMessage] Stream done signal received');
                   return;

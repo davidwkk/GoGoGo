@@ -381,6 +381,8 @@ async def stream_agent_response(
     assistant_msg = append_message(
         db, session_id=session_id, role="assistant", content=""
     )
+    # Emit message_id so frontend can persist thinking steps with correct numeric ID
+    yield SSE({"message_id": assistant_msg.id})
     accumulated_text = ""
 
     def _flush_text() -> None:
@@ -479,7 +481,7 @@ async def stream_agent_response(
                     system_instruction=system_instruction,
                     tools=[*ALL_TOOLS, finalize_trip_plan_decl],
                     thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel.MINIMAL,
+                        thinking_level=types.ThinkingLevel.MEDIUM,
                     ),
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(
                         disable=True
@@ -523,7 +525,7 @@ async def stream_agent_response(
                         accumulated_text += chunk.text
                         yield SSE({"chunk": chunk.text})
 
-                # ── Extract consolidated function calls from drained chunks ────────
+                # ── Extract consolidated function calls and thoughts from drained chunks ────
                 # NOTE: We must use chunk.candidates[0].content.parts to get full Part
                 # objects (which include thought_signature), NOT chunk.function_calls
                 # which only extracts the FunctionCall objects and loses the signature.
@@ -534,7 +536,10 @@ async def stream_agent_response(
                         and chunk.candidates[0].content.parts
                     ):
                         for part in chunk.candidates[0].content.parts:
-                            if part.function_call:
+                            if part.thought:
+                                # Emit intermediate thought events for frontend display
+                                yield SSE({"model_thought": part.thought})
+                            elif part.function_call:
                                 # Preserve the full Part with thought_signature
                                 round_func_parts.append(part)
                             elif part.text:
