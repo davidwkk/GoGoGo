@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.user import UserPreference
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     message: str
     session_id: str | None = Field(
         default=None,
@@ -16,4 +18,4 @@ class ChatRequest(BaseModel):
         default=False,
         description="If true, backend will create a new session even when an active one exists",
     )
-    user_preferences: UserPreference | None = None  # None if guest
+    user_preferences: UserPreference = Field(default_factory=UserPreference)

@@ -2,7 +2,7 @@
 // Handles ChatResponse (text + itinerary + message_type)
 
 import { useCallback } from 'react';
-import { chatService, chatSessionsService, ChatRequest, guestPreferences } from '@/services/api';
+import { chatService, chatSessionsService, ChatRequest } from '@/services/api';
 import { useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
 
@@ -52,6 +52,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
     setThinking,
     addThinkingStep,
     setPartialThoughtText,
+    travelSettings,
   } = useChatStore();
 
   const sendMessage = useCallback(
@@ -79,11 +80,16 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
           effectiveSessionId
         );
 
-        // Always include preferences: guest preferences from localStorage
-        // (for logged-in users, the backend fetches from DB via the token)
-        const isLoggedIn = !!localStorage.getItem('access_token');
-        const prefs = isLoggedIn ? undefined : guestPreferences.get();
-        console.log('[useChat] isLoggedIn:', isLoggedIn, 'prefs:', prefs);
+        // Always include preferences from the travel settings bar (Zustand store).
+        // This applies to ALL users — guests and logged-in alike.
+        const prefs = {
+          travel_style: travelSettings.travel_style,
+          dietary_restriction: travelSettings.dietary_restriction,
+          hotel_tier: travelSettings.hotel_tier,
+          budget_min_hkd: travelSettings.budget_min_hkd,
+          budget_max_hkd: travelSettings.budget_max_hkd,
+          max_flight_stops: travelSettings.max_flight_stops,
+        };
 
         const req: ChatRequest = {
           message,
@@ -91,7 +97,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
           force_new_session: forceNewSessionNextMessage || undefined,
           generate_plan: generatePlan,
           trip_parameters: tripParams,
-          user_preferences: prefs as unknown as Record<string, unknown>,
+          user_preferences: prefs,
         };
         if (forceNewSessionNextMessage) setForceNewSessionNextMessage(false);
 
