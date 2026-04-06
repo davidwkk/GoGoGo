@@ -320,11 +320,12 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         '- Do NOT call tools just to "preview" or "gather info" upfront.\n'
         "- Do NOT call the same tool twice for the same purpose.\n\n"
         "## finalize_trip_plan\n"
-        "Call ONLY when user confirms. Before calling:\n"
+        "Call ONLY when user explicitly confirms with 'yes'. Before calling:\n"
         "  1. Present a summary (destination, dates, purpose, group, preferences).\n"
-        '  2. Ask for explicit "yes/confirm".\n'
-        "  3. Then call: search_flights, search_hotels, get_weather, get_attraction (1+ per travel day).\n"
-        "  4. finalize_trip_plan does NOT call external APIs — it formats data already fetched.\n\n"
+        '  2. Ask for explicit confirmation by replying with "yes".\n'
+        "  3. Do NOT proceed until the user replies with a clear 'yes'.\n"
+        "  4. Once confirmed, call: search_flights, search_hotels, get_weather, get_attraction (1+ per travel day).\n"
+        "  5. finalize_trip_plan does NOT call external APIs — it formats data already fetched.\n\n"
         "## Rules\n"
         "- Never invent dates, destinations, or prices.\n"
         "- Use HKD for Asian destinations.\n"
