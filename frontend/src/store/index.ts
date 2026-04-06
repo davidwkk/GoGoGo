@@ -11,6 +11,7 @@ export interface Message {
   timestamp: number;
   messageType?: string;
   thinking_steps?: string[];
+  backendId?: number;
 }
 
 export interface ChatState {
@@ -47,7 +48,8 @@ export interface ChatState {
     id: string,
     content: string,
     messageType?: string,
-    thinking_steps?: string[]
+    thinking_steps?: string[],
+    backendId?: number
   ) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
@@ -84,7 +86,7 @@ export const useChatStore = create<ChatState>(set => ({
     return id;
   },
 
-  updateStreamingMessage: (id, content, messageType, thinking_steps) =>
+  updateStreamingMessage: (id, content, messageType, thinking_steps, backendId) =>
     set(state => ({
       messages: state.messages.map(msg =>
         msg.id === id
@@ -93,6 +95,7 @@ export const useChatStore = create<ChatState>(set => ({
               content,
               ...(messageType !== undefined ? { messageType } : {}),
               ...(thinking_steps !== undefined ? { thinking_steps } : {}),
+              ...(backendId !== undefined ? { backendId } : {}),
             }
           : msg
       ),

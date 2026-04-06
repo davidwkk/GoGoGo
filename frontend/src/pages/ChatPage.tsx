@@ -479,12 +479,6 @@ export function ChatPage() {
   });
   // Set of user message IDs whose thinking bubble is expanded
   const [expandedBubbles, setExpandedBubbles] = useState<Set<string>>(new Set());
-  // Per-exchange thinking tracking: userMsgId -> { startStep, endStep }
-  const [exchangeTracking, setExchangeTracking] = useState<
-    Record<string, { startStep: number; endStep: number }>
-  >({});
-  // Track which user message initiated the current (in-progress) exchange
-  const [currentThinkingUserMsgId, setCurrentThinkingUserMsgId] = useState<string | null>(null);
 
   const dynamicThinkingMessage = useDynamicThinking(isLoading, messages.length > 0);
 
@@ -534,7 +528,6 @@ export function ChatPage() {
     }
     clearMessages();
     useChatStore.setState({ thinkingSteps: [] });
-    setExchangeTracking({});
     setDemoItinerary(null);
     setTypewriterDone(false);
     if (isLoggedIn) {
@@ -572,7 +565,6 @@ export function ChatPage() {
     useChatStore.getState().setThinking(false);
     useChatStore.getState().setPartialThoughtText('');
     useChatStore.setState({ thinkingSteps: [] });
-    setExchangeTracking({});
 
     const res = await chatSessionsService.getMessages(id);
     setSessionId(String(id));
@@ -647,7 +639,6 @@ export function ChatPage() {
     if (currentSessionPk === id) {
       clearMessages();
       useChatStore.setState({ thinkingSteps: [] });
-      setExchangeTracking({});
       setSessionId(null);
       if (nextId !== null) {
         await loadSession(nextId);
@@ -701,61 +692,16 @@ export function ChatPage() {
     }
   };
 
-  // Persist thinking steps and exchange tracking across clearMessages / session switches
-  const thinkingStepsSnapshotRef = useRef<{
-    steps: string[];
-    tracking: Record<string, { startStep: number; endStep: number }>;
-  }>({
-    steps: [],
-    tracking: {},
-  });
-  // Track thinking checkpoints and typewriter state across loading transitions
+  // Track loading state for typewriter reset
   const prevLoadingRef = useRef(isLoading);
   useEffect(() => {
     if (isLoading && !prevLoadingRef.current) {
-      // Loading started (new exchange) — record start checkpoint
+      // Loading started — reset typewriter and expanded bubbles
       setTypewriterDone(false);
       setExpandedBubbles(new Set());
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-      if (lastUserMsg) {
-        setCurrentThinkingUserMsgId(lastUserMsg.id);
-        setExchangeTracking(prev => ({
-          ...prev,
-          [lastUserMsg.id]: { startStep: thinkingSteps.length, endStep: thinkingSteps.length },
-        }));
-      }
-    } else if (isLoading && prevLoadingRef.current && currentThinkingUserMsgId) {
-      // A new message arrived while a prior exchange was in progress.
-      // Snapshot the in-progress exchange's steps before starting a new one.
-      thinkingStepsSnapshotRef.current = {
-        steps: thinkingSteps,
-        tracking: { ...exchangeTracking },
-      };
-      setTypewriterDone(false);
-      setExpandedBubbles(new Set());
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-      if (lastUserMsg) {
-        setCurrentThinkingUserMsgId(lastUserMsg.id);
-        setExchangeTracking(prev => ({
-          ...prev,
-          [lastUserMsg.id]: { startStep: thinkingSteps.length, endStep: thinkingSteps.length },
-        }));
-      }
-    } else if (!isLoading && prevLoadingRef.current) {
-      // Loading ended — record end checkpoint for the completed exchange
-      if (currentThinkingUserMsgId) {
-        setExchangeTracking(prev => ({
-          ...prev,
-          [currentThinkingUserMsgId]: {
-            ...prev[currentThinkingUserMsgId],
-            endStep: thinkingSteps.length,
-          },
-        }));
-      }
-      setCurrentThinkingUserMsgId(null);
     }
     prevLoadingRef.current = isLoading;
-  }, [isLoading, messages, thinkingSteps.length]);
+  }, [isLoading]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -1005,26 +951,20 @@ export function ChatPage() {
             if (!userMsg || userMsg.role !== 'user') return null;
 
             // Get thinking data for this exchange
-            const exchange = exchangeTracking[userMsg.id] ?? null;
-            const isInProgress = currentThinkingUserMsgId === userMsg.id && isLoading;
             const hasLoadedThinkingSteps =
               Array.isArray(userMsg.thinking_steps) && userMsg.thinking_steps.length > 0;
-            const showBubble = exchange !== null || isInProgress || hasLoadedThinkingSteps;
+            const hasLiveThinkingSteps = thinkingSteps.length > 0;
+            const hasPartialThinking = partialThoughtText.length > 0;
 
-            // Steps for this specific exchange
-            const exchangeStart = exchange?.startStep ?? thinkingSteps.length;
-            const exchangeEnd = isInProgress
-              ? thinkingSteps.length
-              : (exchange?.endStep ?? exchangeStart);
-            const isZeroSteps = exchangeEnd === exchangeStart && !hasLoadedThinkingSteps;
+            // Show bubble if we have thinking content OR we're waiting for response in this pair
+            const hasThinkingContent =
+              hasLoadedThinkingSteps || hasLiveThinkingSteps || hasPartialThinking;
+            // For the last pair, show bubble while waiting for LLM response
+            const isWaitingForResponse = isLastPair && isLoading && !assistantMsg;
+            const shouldShowBubble = hasThinkingContent || isWaitingForResponse;
 
-            // Get the thinking steps to display
-            const thinkingStepsToShow =
-              userMsg.thinking_steps ?? thinkingSteps.slice(exchangeStart, exchangeEnd);
-            const hasThinkingContent = !isZeroSteps || isInProgress;
-
-            // Should show bubble if we have an assistant following, OR if this is the last pair and we're waiting
-            const shouldShowBubble = showBubble && (!!assistantMsg || (isLastPair && isLoading));
+            // Get thinking steps: prefer DB steps, fall back to live steps
+            const thinkingStepsToShow = userMsg.thinking_steps ?? thinkingSteps;
 
             return (
               <div key={userMsg.id} className="space-y-4">
@@ -1054,7 +994,10 @@ export function ChatPage() {
                         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                       >
                         <span>
-                          💭 {hasThinkingContent ? 'Thinking...' : 'No thinking process available'}
+                          💭{' '}
+                          {isWaitingForResponse || hasThinkingContent
+                            ? 'Thinking...'
+                            : 'No thinking process available'}
                         </span>
                         <span
                           className={`transition-transform ${expandedBubbles.has(userMsg.id) ? 'rotate-90' : ''}`}
@@ -1062,20 +1005,24 @@ export function ChatPage() {
                           ▶
                         </span>
                       </button>
-                      {expandedBubbles.has(userMsg.id) && hasThinkingContent && (
-                        <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
-                          {thinkingStepsToShow.map((step, i) => (
-                            <div key={i} className="text-xs text-muted-foreground leading-relaxed">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
-                            </div>
-                          ))}
-                          {isInProgress && partialThoughtText && (
-                            <div className="text-xs text-muted-foreground leading-relaxed">
-                              <StreamingThought text={partialThoughtText} done={!isLoading} />
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      {expandedBubbles.has(userMsg.id) &&
+                        (hasThinkingContent || isWaitingForResponse) && (
+                          <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
+                            {thinkingStepsToShow.map((step, i) => (
+                              <div
+                                key={i}
+                                className="text-xs text-muted-foreground leading-relaxed"
+                              >
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
+                              </div>
+                            ))}
+                            {isWaitingForResponse && partialThoughtText && (
+                              <div className="text-xs text-muted-foreground leading-relaxed">
+                                <StreamingThought text={partialThoughtText} done={!isLoading} />
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
