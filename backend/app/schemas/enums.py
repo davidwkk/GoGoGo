@@ -33,6 +33,7 @@ class TravelStyle(str, Enum):
     FOODIE = "foodie"
     NATURE = "nature"
     SHOPPING = "shopping"
+    NO_SPECIAL_STYLE = "no_special_style"
 
 
 class FlightDirection(str, Enum):

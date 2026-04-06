@@ -20,7 +20,7 @@ from app.schemas.enums import DietaryRestriction, HotelTier, MaxStops, TravelSty
 
 
 class UserPreference(BaseModel):
-    travel_style: TravelStyle = Field(default=TravelStyle.RELAXING)
+    travel_style: TravelStyle = Field(default=TravelStyle.NO_SPECIAL_STYLE)
     dietary_restriction: DietaryRestriction = Field(
         default=DietaryRestriction.NO_RESTRICTION
     )
