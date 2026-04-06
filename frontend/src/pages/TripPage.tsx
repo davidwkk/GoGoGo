@@ -18,7 +18,6 @@ import { FlightCard } from '../components/trip/FlightCard';
 import { tripService } from '../services/tripService';
 import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
 import { HotelCard } from '../components/trip/HotelCard';
-import { MapEmbed } from '../components/trip/MapEmbed';
 
 // --- SKELETON COMPONENTS (defined after imports per ES module rules) ---
 
@@ -442,20 +441,7 @@ export function TripPage() {
                 </section>
               )}
 
-              {/* 3. MAP EMBED */}
-              {(selectedTrip.itinerary.map_embed_url || selectedTrip.itinerary.destination) && (
-                <MapEmbed
-                  url={
-                    selectedTrip.itinerary.map_embed_url ||
-                    // Fallback to a basic place map if the backend returns null
-                    `https://maps.google.com/maps?q=${encodeURIComponent(
-                      selectedTrip.itinerary.destination
-                    )}&output=embed`
-                  }
-                />
-              )}
-
-              {/* 4. ITINERARY DAYS */}
+              {/* 3. ITINERARY DAYS */}
               <section>
                 <div className="flex items-center gap-4 mb-10">
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">

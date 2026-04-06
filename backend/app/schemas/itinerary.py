@@ -85,7 +85,10 @@ class HotelInfo(BaseModel):
     guest_rating: float | None = None
     booking_url: str | None = None
     image_url: str | None = None
-    map_url: str | None = None
+    embed_map_url: str | None = Field(
+        default=None,
+        description="Google Maps embed URL for the hotel location (iframe src)",
+    )
 
 
 # ─────────────────────────────────────────
@@ -154,9 +157,6 @@ class TripItinerary(BaseModel):
 
     # --- Budget-computed ---
     estimated_total_budget_hkd: BudgetBreakdown | None = None
-
-    # --- Map ---
-    map_embed_url: str | None = None
 
     @model_validator(mode="after")
     def check_duration_matches_days(self) -> TripItinerary:

@@ -1,4 +1,5 @@
 import { Star, Building2 } from 'lucide-react';
+import { MapEmbed } from './MapEmbed';
 import { useState, useEffect } from 'react';
 import { ImageLightbox } from '../common/ImageLightbox';
 
@@ -250,6 +251,12 @@ export function HotelCard({ hotel }: { hotel: any }) {
             </div>
           </div>
 
+          {hotel.embed_map_url && (
+            <div className="mb-8 rounded-2xl overflow-hidden border border-white/10 h-48">
+              <MapEmbed url={hotel.embed_map_url} />
+            </div>
+          )}
+
           <div className="flex justify-between items-end border-t border-white/10 pt-10">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-blue-300">
@@ -262,7 +269,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
               </p>
             </div>
             <a
-              href={hotel.booking_link || '#'}
+              href={hotel.booking_url || '#'}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-xl active:scale-95 uppercase tracking-widest text-center inline-block"
