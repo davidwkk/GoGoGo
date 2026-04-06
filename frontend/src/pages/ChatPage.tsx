@@ -4,21 +4,26 @@ import { InputBar } from '@/components/chat/InputBar';
 import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
 import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
+import { HotelCard } from '@/components/trip/HotelCard';
 import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
 import { apiClient, chatSessionsService } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
 import {
+  Banknote,
+  Bed,
   Calendar,
   MapPin,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
+  Plane,
   PlusCircle,
   Sparkles,
   Square,
+  Ticket,
   Trash2,
   Volume2,
   Zap,
@@ -218,17 +223,13 @@ function StreamingMessage({
 // Inline Itinerary Display — shown after demo trip generation
 function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
   const hotel = itinerary.hotels?.[0];
-  const nights = hotel
-    ? Math.max(
-        1,
-        Math.ceil(
-          (new Date(hotel.check_out_date).getTime() - new Date(hotel.check_in_date).getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
-      )
-    : 1;
-  const minTotal = (hotel?.price_per_night_hkd?.min || 0) * nights;
-  const maxTotal = (hotel?.price_per_night_hkd?.max || 0) * nights;
+  const budget = itinerary.estimated_total_budget_hkd;
+
+  const formatRange = (range?: { min: number; max: number }) => {
+    if (!range) return 'N/A';
+    if (range.min === range.max) return `HKD ${range.min.toLocaleString()}`;
+    return `HKD ${range.min.toLocaleString()} - ${range.max.toLocaleString()}`;
+  };
 
   return (
     <div className="w-full max-w-3xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
@@ -253,7 +254,7 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
       <div className="p-8 space-y-8">
         {/* Summary */}
         {itinerary.summary && (
-          <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 italic text-slate-600">
+          <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 italic text-slate-600 text-lg">
             "{itinerary.summary}"
           </div>
         )}
@@ -268,16 +269,82 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
           </div>
         )}
 
+        {/* Budget Section */}
+        {budget && (
+          <div>
+            <div className="flex items-center gap-4 mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Estimated Budget
+              </h3>
+              <div className="h-px flex-1 bg-slate-100" />
+            </div>
+            <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
+              {/* Total */}
+              <div className="flex items-center justify-between gap-6 mb-8 border-b border-slate-50 pb-8">
+                <div className="flex items-center gap-4">
+                  <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
+                    <Banknote className="size-6" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-slate-400">
+                      Total Trip Estimate
+                    </p>
+                    <p className="text-3xl font-black text-slate-900 tracking-tighter">
+                      {formatRange(budget.total_hkd)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/* Breakdown Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                    <Plane className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Flights
+                    </p>
+                    <p className="font-bold text-slate-700">{formatRange(budget.flights_hkd)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+                    <Bed className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Hotels
+                    </p>
+                    <p className="font-bold text-slate-700">{formatRange(budget.hotels_hkd)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
+                    <Ticket className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Activities
+                    </p>
+                    <p className="font-bold text-slate-700">{formatRange(budget.activities_hkd)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Flights */}
         {itinerary.flights && itinerary.flights.length > 0 && (
           <div>
-            <div className="flex items-center gap-3 mb-5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Flights
-              </span>
+            <div className="flex items-center gap-4 mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Flight Logistics
+              </h3>
               <div className="h-px flex-1 bg-slate-100" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {itinerary.flights.map((f: Flight, i: number) => (
                 <FlightCard key={i} flight={f} />
               ))}
@@ -287,27 +354,42 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
 
         {/* Days */}
         <div>
-          <div className="flex items-center gap-3 mb-6">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Itinerary
-            </span>
+          <div className="flex items-center gap-4 mb-10">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+              Daily Schedule
+            </h3>
             <div className="h-px flex-1 bg-slate-100" />
           </div>
-          <div className="space-y-10">
+          <div className="space-y-12">
             {itinerary.days?.map((day: DayPlan) => (
               <div key={day.day_number}>
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="size-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm">
-                    {day.day_number}
+                {/* Day Header with theme and daily budget */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-lg shadow-xl shrink-0">
+                      {day.day_number}
+                    </div>
+                    <div>
+                      <h4 className="font-black text-xl text-slate-900 leading-none">
+                        Day {day.day_number}
+                        {day.theme ? `: ${day.theme}` : ''}
+                      </h4>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1.5">
+                        {day.date}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-black text-base text-slate-900">Day {day.day_number}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                      {day.date}
-                    </p>
-                  </div>
+                  {/* Daily Budget Badge */}
+                  {day.estimated_daily_budget_hkd && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-xl border border-emerald-100 shrink-0 self-start sm:self-auto">
+                      <Banknote className="size-4 text-emerald-600" />
+                      <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                        {formatRange(day.estimated_daily_budget_hkd)}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="ml-2 border-l-2 border-slate-100 pl-4 space-y-3">
+                <div className="ml-2 border-l-2 border-slate-50 pl-2">
                   <AttractionCard activity={day.morning?.[0]} label="Morning" />
                   <AttractionCard activity={day.afternoon?.[0]} label="Afternoon" />
                   <AttractionCard activity={day.evening?.[0]} label="Evening" />
@@ -317,91 +399,8 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
           </div>
         </div>
 
-        {/* Hotel */}
-        {hotel && (
-          <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
-            <div className="absolute -right-8 -top-8 size-32 bg-blue-600/10 rounded-full blur-2xl" />
-            <div className="relative">
-              <div className="flex justify-between items-start mb-4">
-                <span className="px-3 py-1 bg-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                  Stay Details
-                </span>
-                <div className="text-right">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest">Nightly</p>
-                  <p className="text-sm font-bold text-blue-400">
-                    HKD {hotel.price_per_night_hkd?.min?.toLocaleString()} –{' '}
-                    {hotel.price_per_night_hkd?.max?.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              {/* Ratings Row */}
-              <div className="flex flex-wrap items-center gap-4 mb-3">
-                {hotel.star_rating && (
-                  <div className="flex items-center gap-1 text-yellow-400">
-                    <svg className="size-4 fill-current" viewBox="0 0 24 24">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                    <span className="text-sm font-bold">{hotel.star_rating}</span>
-                  </div>
-                )}
-                {hotel.guest_rating && (
-                  <div className="flex items-center gap-1 text-emerald-400">
-                    <span className="text-sm font-bold">{hotel.guest_rating}</span>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest">
-                      Guest Score
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <h4 className="text-3xl font-black tracking-tight mb-3">{hotel.name}</h4>
-              {hotel.address && <p className="text-xs text-slate-400 mb-6">{hotel.address}</p>}
-              <div className="flex flex-wrap gap-8 mb-8">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                    Check-in
-                  </p>
-                  <p className="text-sm font-medium text-slate-200">{hotel.check_in_date}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                    Check-out
-                  </p>
-                  <p className="text-sm font-medium text-slate-200">{hotel.check_out_date}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                    Stay Duration
-                  </p>
-                  <p className="text-sm font-medium text-slate-200">
-                    {nights} {nights > 1 ? 'Nights' : 'Night'}
-                  </p>
-                </div>
-              </div>
-              <div className="pt-5 border-t border-white/10 flex justify-between items-end">
-                <div>
-                  <p className="text-[10px] text-blue-300 uppercase tracking-widest mb-1">
-                    Total Estimate
-                  </p>
-                  <p className="text-2xl font-black">
-                    HKD {minTotal.toLocaleString()} – {maxTotal.toLocaleString()}
-                  </p>
-                </div>
-                {hotel.booking_url && (
-                  <a
-                    href={hotel.booking_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-xs hover:bg-blue-50 transition-all shadow-xl active:scale-95 uppercase tracking-widest text-center"
-                  >
-                    Book Stay
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Hotel - use HotelCard for richer display */}
+        {hotel && <HotelCard hotel={hotel} />}
       </div>
     </div>
   );
