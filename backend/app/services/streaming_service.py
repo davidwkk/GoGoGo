@@ -253,7 +253,7 @@ async def finalize_trip_plan(
     )
 
     final_contents: list = (messages or []) + [
-        types.Content(role="user", parts=[types.Part.from_text(context_prompt)])  # type: ignore[reportCallIssue]
+        types.Content(role="user", parts=[types.Part.from_text(text=context_prompt)])
     ]
     response = await client.aio.models.generate_content(
         model=settings.GEMINI_MODEL,
