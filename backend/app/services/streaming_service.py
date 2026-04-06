@@ -176,33 +176,20 @@ def _save_tool_result_to_db(
 
 
 async def finalize_trip_plan(
-    destination: str,
-    start_date: str,
-    end_date: str,
-    purpose: str,
-    group_type: str,
-    group_size: int,
     preferences: dict | None = None,
     messages: list[types.Content] | None = None,
-    **kwargs,  # absorb any extra args the model sends (e.g. itinerary)
 ) -> dict:
     """
     Produces a structured TripItinerary from all information already gathered
     in the conversation. Does NOT call external APIs — all trip data was
     already fetched by the agent during the information gathering phase.
 
+    Trip parameters (destination, dates, purpose, group) are extracted from the
+    user\'s original request in the conversation history.
+
     Makes exactly ONE generate_content() call with response_json_schema=TripItinerary.
     The 'messages' parameter is the accumulated conversation state from the streaming loop.
     """
-    # ── Validation guard: required trip parameters ──────────────────────────────
-    if not all([destination, start_date, end_date, purpose, group_type]):
-        return {
-            "error": (
-                "Missing required trip parameters. "
-                "Required: destination, start_date, end_date, purpose, group_type. "
-                "Ask the user for any missing information."
-            )
-        }
 
     # ── Validation guard: required tool results in context ─────────────────────
     # Gemini SDK uses role="function" for tool responses
@@ -243,14 +230,10 @@ async def finalize_trip_plan(
     context_prompt = (
         "Based on all the information gathered in this conversation, "
         "produce a complete trip itinerary as a TripItinerary JSON object.\n\n"
-        f"Trip parameters:\n"
-        f"  Destination: {destination}\n"
-        f"  Dates: {start_date} to {end_date}\n"
-        f"  Purpose: {purpose}\n"
-        f"  Group: {group_type} ({group_size} people)\n\n"
         "All necessary data (flights, hotels, attractions, weather, transport) "
         "was already fetched by the agent and is available in the conversation history below. "
-        "Use that data to populate every field of the itinerary.\n"
+        "Extract the trip parameters (destination, dates, purpose, group details) from "
+        "the user's original request in the conversation history.\n"
         f"{prefs_section}"
     )
 
@@ -324,8 +307,9 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "  1. Present a summary (destination, dates, purpose, group, preferences).\n"
         '  2. Ask for explicit confirmation by replying with "yes".\n'
         "  3. Do NOT proceed until the user replies with a clear 'yes'.\n"
-        "  4. Once confirmed, call: search_flights, search_hotels, get_weather, get_attraction (1+ per travel day).\n"
-        "  5. finalize_trip_plan does NOT call external APIs — it formats data already fetched.\n\n"
+        "  4. Once confirmed, call ALL of: search_flights, search_hotels, get_weather, get_attraction (1+ per travel day).\n"
+        "  5. After ALL tools return, call finalize_trip_plan() with NO arguments — it reads the conversation to extract trip details.\n"
+        "     Do NOT return text instead.\n\n"
         "## Enrichment Fields\n"
         "Populate ALL of the following fields from tool results:\n"
         "- Activity: opening_hours, admission_fee_hkd, rating, review_count, tips, image_url, thumbnail_url, booking_url, address\n"
@@ -411,36 +395,15 @@ async def stream_agent_response(
     finalize_trip_plan_decl = types.FunctionDeclaration(
         name="finalize_trip_plan",
         description=(
-            "Call this when you have all required trip information (destination, dates, purpose, "
-            "group details) and the user wants a complete trip itinerary. "
+            "Call this when you have all required trip information and the user wants a complete trip itinerary. "
             "Before calling this function, ensure you have called ALL of: "
             "search_flights, search_hotels, get_weather, get_attraction (at least once each). "
-            "Do NOT call this with incomplete or invented parameters."
+            "Takes NO arguments — reads trip details from the conversation history."
         ),
         parameters_json_schema={
             "type": "object",
-            "properties": {
-                "destination": {"type": "string", "description": "Destination city"},
-                "start_date": {
-                    "type": "string",
-                    "description": "Start date (YYYY-MM-DD)",
-                },
-                "end_date": {"type": "string", "description": "End date (YYYY-MM-DD)"},
-                "purpose": {"type": "string", "description": "Purpose of the trip"},
-                "group_type": {
-                    "type": "string",
-                    "description": "Type of group (solo, couple, family, friends, business)",
-                },
-                "group_size": {"type": "integer", "description": "Number of people"},
-            },
-            "required": [
-                "destination",
-                "start_date",
-                "end_date",
-                "purpose",
-                "group_type",
-                "group_size",
-            ],
+            "properties": {},
+            "required": [],
         },
     )
 
@@ -605,9 +568,7 @@ async def stream_agent_response(
                     if model_parts:
                         messages.append(types.Content(role="model", parts=model_parts))
 
-                    fc_args: dict = dict(fc_call.args) if fc_call.args else {}
                     result = await finalize_trip_plan(
-                        **fc_args,
                         preferences=preferences,
                         messages=messages,
                     )
