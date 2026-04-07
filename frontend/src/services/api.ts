@@ -284,6 +284,8 @@ export const chatService = {
                   yield `__FINALIZING__:${data.status}`;
                 } else if (data.message_type === 'itinerary' && data.itinerary) {
                   yield `__ITINERARY__:${JSON.stringify(data.itinerary)}`;
+                } else if (data.trip_saved) {
+                  yield `__TRIP_SAVED__:true`;
                 } else if (data.done) {
                   log('[streamMessage] Stream done signal received');
                   return;

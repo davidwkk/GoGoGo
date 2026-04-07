@@ -146,6 +146,7 @@ async def chat_stream(
             db=db,
             preferences=prefs_dict,
             trace_id=trace_id,
+            user_id=user_id,
         ),
         media_type="text/event-stream",
         headers={
