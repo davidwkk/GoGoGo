@@ -17,6 +17,12 @@ class PriceRange(BaseModel):
     min: float = Field(ge=0)
     max: float = Field(ge=0)
 
+    @model_validator(mode="after")
+    def check_min_le_max(self) -> PriceRange:
+        if self.min > self.max:
+            raise ValueError("min must be less than or equal to max")
+        return self
+
 
 # ─────────────────────────────────────────
 # Activity
@@ -110,6 +116,12 @@ class FlightStop(BaseModel):
             raise ValueError(
                 "At least one of arrival_time or departure_time must be set"
             )
+        if (
+            self.arrival_time is not None
+            and self.departure_time is not None
+            and self.arrival_time > self.departure_time
+        ):
+            raise ValueError("arrival_time cannot be later than departure_time")
         return self
 
 
@@ -162,6 +174,8 @@ class TripItinerary(BaseModel):
     def check_duration_matches_days(self) -> TripItinerary:
         if len(self.days) != self.duration_days:
             raise ValueError(
-                "duration_days must match the number of DayPlan entries in days"
+                f"duration_days ({self.duration_days}) must match the number of "
+                f"DayPlan entries in days ({len(self.days)}). "
+                f"Please ensure you generate exactly {self.duration_days} day(s) of plans."
             )
         return self
