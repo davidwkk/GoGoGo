@@ -1,6 +1,7 @@
 // frontend/src/services/api.ts
 
 import axios from 'axios';
+import { toast } from 'sonner';
 
 const DEBUG = import.meta.env.DEV;
 const log = (...args: unknown[]) => {
@@ -45,10 +46,50 @@ const sanitizeHTML = (str: string): string => {
   return str.replace(/<\/?[^>]+(>|$)/g, '');
 };
 
+/**
+ * Shared auth error handler — shows a toast and optionally redirects to login.
+ * Deduplicates so only one toast shows even when multiple requests fail simultaneously.
+ * Returns true if the error was handled (to prevent retries), false otherwise.
+ */
+let authErrorToastDismissed = false;
+let authErrorTimeout: ReturnType<typeof setTimeout> | null = null;
+
+export const handleAuthError = async (status: number, _endpoint: string): Promise<boolean> => {
+  if (status === 401 || status === 403) {
+    // Clear stale token
+    localStorage.removeItem('access_token');
+
+    // Only show toast once — skip if a login redirect is already in progress
+    if (authErrorToastDismissed) {
+      return true;
+    }
+    authErrorToastDismissed = true;
+
+    // Auto-reset the flag after navigation or 10s so future auth errors can show again
+    if (authErrorTimeout) clearTimeout(authErrorTimeout);
+    authErrorTimeout = setTimeout(() => {
+      authErrorToastDismissed = false;
+    }, 10000);
+
+    const toastId = toast.error('Your session has expired. Please log in again.', {
+      action: {
+        label: 'Log in',
+        onClick: () => {
+          toast.dismiss(toastId);
+          window.location.href = '/login';
+        },
+      },
+      duration: Infinity,
+    });
+    return true;
+  }
+  return false;
+};
+
 // THE BOUNCER: Handle all errors and format them into APIError
 apiClient.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
     // Start with a default error shape
     const apiError: APIError = {
       detail: 'An unexpected error occurred. Please try again.',
@@ -65,7 +106,6 @@ apiClient.interceptors.response.use(
       apiError.code = 'NETWORK_ERROR';
       apiError.isNetworkError = true;
     }
-    // Handle Server Errors (FastAPI formatting)
     // Handle Server Errors (FastAPI formatting)
     else {
       const data = error.response.data;
@@ -89,18 +129,13 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Auth graceful fallback
+    // Auth graceful fallback — handle 401/403 globally for all user-gated endpoints
     const status = error.response?.status;
     const endpoint = error.config?.url;
-    if (endpoint?.includes('/users/me') || endpoint?.includes('/trips')) {
-      if (status === 401 || status === 404) {
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        apiError.detail =
-          status === 401
-            ? 'Your session has expired. Please login again.'
-            : 'Your account could not be found. Please login again.';
-      }
+    if (status === 401 || status === 403) {
+      await handleAuthError(status, endpoint ?? '');
+      // Toast is already shown by handleAuthError — don't also reject to avoid double error display
+      return Promise.resolve();
     }
 
     // Always reject with the clean APIError object
@@ -211,6 +246,12 @@ export const chatService = {
       log('[streamMessage] Response status:', response.status, 'ok:', response.ok);
 
       if (!response.ok) {
+        // Handle auth errors (401/403) with toast and redirect, then stop retrying
+        if (response.status === 401 || response.status === 403) {
+          await handleAuthError(response.status, '/chat/stream');
+          yield `__ERROR__:Authentication required. Please log in to continue.`;
+          return;
+        }
         const errorText = await response.text();
         error(
           '[streamMessage] Stream request failed:',

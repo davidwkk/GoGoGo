@@ -142,9 +142,12 @@ export function TripPage() {
         )
           return;
         const authErr = err as AuthError;
-        if (authErr.userMessage) {
+        // Only handle if authErr has a user-facing message — auth errors are already
+        // handled by the api interceptor's toast + redirect, so skip them here
+        if (authErr?.userMessage) {
           setError(authErr.userMessage);
           // Redirect to login immediately
+          toast.dismiss();
           navigate('/login');
         } else {
           setError('Unable to sync trips. Please check your connection.');
@@ -214,7 +217,10 @@ export function TripPage() {
                 Try Again
               </button>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => {
+                  toast.dismiss();
+                  navigate('/login');
+                }}
                 className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
               >
                 Go to Login
@@ -231,7 +237,10 @@ export function TripPage() {
               </p>
             </div>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => {
+                toast.dismiss();
+                navigate('/login');
+              }}
               className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
             >
               Sign in
