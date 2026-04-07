@@ -220,8 +220,14 @@ function StreamingMessage({
   );
 }
 
-// Inline Itinerary Display — shown after demo trip generation
-function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
+// Inline Itinerary Display — shown after demo or LLM-generated trip
+function ItineraryDisplay({
+  itinerary,
+  isGenerated,
+}: {
+  itinerary: TripItinerary;
+  isGenerated?: boolean;
+}) {
   const hotel = itinerary.hotels?.[0];
   const budget = itinerary.estimated_total_budget_hkd;
 
@@ -236,7 +242,7 @@ function ItineraryDisplay({ itinerary }: { itinerary: TripItinerary }) {
       {/* Header */}
       <div className="bg-linear-to-r from-slate-900 to-slate-800 p-8 text-white">
         <div className="flex items-center gap-2 text-blue-400 mb-4 font-black text-[10px] uppercase tracking-[0.3em]">
-          <Sparkles className="size-4" /> Demo Trip Generated
+          <Sparkles className="size-4" /> {isGenerated ? 'Your Trip Plan' : 'Demo Trip Generated'}
         </div>
         <h2 className="text-4xl font-black tracking-tight mb-4">{itinerary.destination}</h2>
         <div className="flex items-center gap-4 text-sm text-slate-400">
@@ -468,6 +474,9 @@ export function ChatPage() {
 
   const [demoItinerary, setDemoItinerary] = useState<TripItinerary | null>(null);
   const [showDemoLoading, setShowDemoLoading] = useState(false);
+  // LLM-generated plan state (separate from demo)
+  const [generatedItinerary, setGeneratedItinerary] = useState<TripItinerary | null>(null);
+  const [showGeneratedLoading, setShowGeneratedLoading] = useState(false);
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
@@ -528,6 +537,9 @@ export function ChatPage() {
     clearMessages();
     useChatStore.setState({ thinkingSteps: [] });
     setDemoItinerary(null);
+    setShowDemoLoading(false);
+    setGeneratedItinerary(null);
+    setShowGeneratedLoading(false);
     setTypewriterDone(false);
     if (isLoggedIn) {
       try {
@@ -561,6 +573,9 @@ export function ChatPage() {
     clearMessages();
     setTypewriterDone(false);
     setDemoItinerary(null);
+    setShowDemoLoading(false);
+    setGeneratedItinerary(null);
+    setShowGeneratedLoading(false);
     useChatStore.getState().setThinking(false);
     useChatStore.getState().setPartialThoughtText('');
     useChatStore.setState({ thinkingSteps: [] });
@@ -1112,11 +1127,23 @@ export function ChatPage() {
               <ItineraryDisplay itinerary={demoItinerary} />
             </div>
           )}
+
+          {/* LLM-generated trip result — shown inline after streaming */}
+          {showGeneratedLoading && !generatedItinerary && <DemoLoadingSkeleton />}
+
+          {generatedItinerary && (
+            <div className="flex justify-start">
+              <ItineraryDisplay itinerary={generatedItinerary} isGenerated />
+            </div>
+          )}
         </div>
 
         {/* Input bar */}
         <TravelSettingsBar />
-        <InputBar onItinerary={setDemoItinerary} />
+        <InputBar
+          onItinerary={setGeneratedItinerary}
+          onFinalizing={() => setShowGeneratedLoading(true)}
+        />
       </main>
     </div>
   );

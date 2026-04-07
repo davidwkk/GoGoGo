@@ -49,10 +49,11 @@ function formatThinkingStep(raw: string): string {
 
 interface UseChatOptions {
   onItinerary?: (itinerary: TripItinerary) => void;
+  onFinalizing?: () => void;
   onError?: (error: string) => void;
 }
 
-export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
+export function useChat({ onItinerary, onFinalizing, onError }: UseChatOptions = {}) {
   const {
     sessionId,
     addMessage,
@@ -194,6 +195,10 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
                   commitPartialThought();
                   const status = chunk.slice('__STATUS__:'.length);
                   addThinkingStep(formatThinkingStep(status));
+                  continue;
+                }
+                if (chunk.startsWith('__FINALIZING__:')) {
+                  onFinalizing?.();
                   continue;
                 }
                 if (chunk.startsWith('__ITINERARY__:')) {
@@ -375,6 +380,7 @@ export function useChat({ onItinerary, onError }: UseChatOptions = {}) {
       setAbortController,
       setThinking,
       onItinerary,
+      onFinalizing,
       onError,
     ]
   );
