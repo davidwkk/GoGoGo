@@ -51,9 +51,10 @@ interface UseChatOptions {
   onItinerary?: (itinerary: TripItinerary) => void;
   onFinalizing?: () => void;
   onError?: (error: string) => void;
+  onTripSaved?: () => void;
 }
 
-export function useChat({ onItinerary, onFinalizing, onError }: UseChatOptions = {}) {
+export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: UseChatOptions = {}) {
   const {
     sessionId,
     addMessage,
@@ -215,6 +216,10 @@ export function useChat({ onItinerary, onFinalizing, onError }: UseChatOptions =
                       raw.substring(0, 100)
                     );
                   }
+                  continue;
+                }
+                if (chunk.startsWith('__TRIP_SAVED__:')) {
+                  onTripSaved?.();
                   continue;
                 }
               }
@@ -382,6 +387,7 @@ export function useChat({ onItinerary, onFinalizing, onError }: UseChatOptions =
       onItinerary,
       onFinalizing,
       onError,
+      onTripSaved,
     ]
   );
 

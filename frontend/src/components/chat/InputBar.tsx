@@ -15,12 +15,13 @@ interface InputBarProps {
   disabled?: boolean;
   onItinerary?: (itinerary: TripItinerary) => void;
   onFinalizing?: () => void;
+  onTripSaved?: () => void;
 }
 
 /** Max height before the input scrolls (~10rem); grows from one line up to this. */
 const TEXTAREA_MAX_HEIGHT_PX = 160;
 
-export function InputBar({ disabled, onItinerary, onFinalizing }: InputBarProps) {
+export function InputBar({ disabled, onItinerary, onFinalizing, onTripSaved }: InputBarProps) {
   const [text, setText] = useState('');
   /** Text in the field when mic was turned on — voice replaces only the new utterance, not appended per interim chunk. */
   const textWhenVoiceStartedRef = useRef('');
@@ -37,7 +38,7 @@ export function InputBar({ disabled, onItinerary, onFinalizing }: InputBarProps)
   const addMessage = useChatStore(s => s.addMessage);
   const setThinking = useChatStore(s => s.setThinking);
   const travelSettings = useChatStore(s => s.travelSettings);
-  const { sendMessage } = useChat({ onItinerary, onFinalizing });
+  const { sendMessage } = useChat({ onItinerary, onFinalizing, onTripSaved });
   const { isListening, startListening, stopListening } = useASR({
     onTranscript: result => {
       const base = textWhenVoiceStartedRef.current.trimEnd();

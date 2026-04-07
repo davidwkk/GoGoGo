@@ -6,7 +6,7 @@ import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { HotelCard } from '@/components/trip/HotelCard';
 import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
-import { apiClient, chatSessionsService } from '@/services/api';
+import { chatSessionsService } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
@@ -26,12 +26,12 @@ import {
   Ticket,
   Trash2,
   Volume2,
-  Zap,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
 
 // Dynamic thinking placeholder that cycles based on elapsed time
 const THINKING_MESSAGES = [
@@ -660,38 +660,8 @@ export function ChatPage() {
     }
   };
 
-  const saveAndFinishTrip = async () => {
-    if (!isLoggedIn || currentSessionPk === null) return;
-    try {
-      await chatSessionsService.end(currentSessionPk);
-      alert('Saved. This chat is finished.');
-      // alert should use custom toast component instead of default alert
-      await startNewChat();
-    } catch (e) {
-      const err = e as any;
-      const status = err?.response?.status;
-      const detail = err?.response?.data?.detail;
-      console.error('Failed to end session:', { status, detail, err });
-      alert(
-        `Failed to finish this chat. ${status ? `HTTP ${status}. ` : ''}${
-          typeof detail === 'string' ? detail : 'Please try again.'
-        }`
-      );
-    }
-  };
-
-  const testLLM = async () => {
-    try {
-      const res = await apiClient.get('/chat/test-llm');
-      alert(
-        `Model: ${res.data.model}\nResponse: ${res.data.response}\nProxy: ${res.data.proxy_enabled}`
-      );
-    } catch (e) {
-      alert('LLM test failed: ' + (e instanceof Error ? e.message : String(e)));
-    }
-  };
-
-  const generateDemoTrip = async () => {
+  // @ts-expect-error — temporarily hidden with button; restore together
+  const _generateDemoTrip = async () => {
     if (showDemoLoading || isLoading) return;
     setShowDemoLoading(true);
     setDemoItinerary(null);
@@ -886,16 +856,6 @@ export function ChatPage() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {isLoggedIn && currentSessionPk !== null && (
-              <button
-                onClick={saveAndFinishTrip}
-                disabled={isLoading}
-                className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
-                title="Save this chat and finish the session"
-              >
-                Save & Finish Trip
-              </button>
-            )}
             <button
               onClick={startNewChat}
               className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -903,21 +863,15 @@ export function ChatPage() {
               <PlusCircle className="size-3" />
               New Chat
             </button>
-            <button
+            {/* TODO(temp-hidden): Demo Trip button temporarily hidden — uncomment to re-enable */}
+            {/* <button
               onClick={generateDemoTrip}
               disabled={isLoading || showDemoLoading}
               className="flex items-center gap-1.5 h-8 rounded-xl bg-linear-to-r from-blue-600 to-blue-500 text-white px-3 text-xs font-medium hover:from-blue-500 hover:to-blue-400 transition-colors disabled:opacity-50"
             >
               <Sparkles className="size-3" />
               {showDemoLoading ? 'Generating...' : 'Demo Trip'}
-            </button>
-            <button
-              onClick={testLLM}
-              className="flex items-center gap-1.5 h-8 rounded-xl bg-yellow-500 text-black px-3 text-xs font-medium hover:bg-yellow-400 transition-colors"
-            >
-              <Zap className="size-3" />
-              Test LLM
-            </button>
+            </button> */}
           </div>
         </header>
 
@@ -1143,6 +1097,7 @@ export function ChatPage() {
         <InputBar
           onItinerary={setGeneratedItinerary}
           onFinalizing={() => setShowGeneratedLoading(true)}
+          onTripSaved={() => toast.success('Trip saved!')}
         />
       </main>
     </div>

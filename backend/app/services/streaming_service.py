@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from typing import AsyncIterator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from google.genai import Client, types
 from loguru import logger
@@ -30,6 +30,7 @@ from app.services.message_service import (
     get_session_messages,
     update_message_content,
 )
+from app.services.trip_service import save_trip
 
 # Sync tool_map for the Gemini SDK
 TOOL_MAP = {
@@ -384,6 +385,7 @@ async def stream_agent_response(
     db: Session,
     preferences: dict | None = None,
     trace_id: str | None = None,
+    user_id: UUID | None = None,
 ) -> AsyncIterator[str]:
     """
     Unified streaming loop — replaces all three previous agent paths.
@@ -657,6 +659,29 @@ async def stream_agent_response(
                         ),
                         message_type="itinerary",
                     )
+
+                    # Auto-save trip if user is authenticated
+                    if user_id is not None:
+                        try:
+                            itinerary_model = TripItinerary.model_validate(
+                                result["itinerary"]
+                            )
+                            save_trip(db, user_id, session_id, itinerary_model)
+                            yield SSE({"trip_saved": True})
+                            logger.bind(
+                                event="trip_auto_saved",
+                                service="chat",
+                                trace_id=trace_id,
+                                user_id=str(user_id),
+                                session_id=session_id,
+                            ).info("Trip auto-saved")
+                        except Exception as e:
+                            logger.bind(
+                                event="trip_auto_save_error",
+                                service="chat",
+                                trace_id=trace_id,
+                                error=str(e),
+                            ).warning(f"Failed to auto-save trip: {e}")
 
                     yield SSE({"done": True})
                     return
