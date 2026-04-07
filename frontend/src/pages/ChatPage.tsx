@@ -1043,6 +1043,13 @@ export function ChatPage() {
                             <p className="text-red-700 text-sm">{assistantMsg.content}</p>
                           </div>
                         </div>
+                      ) : assistantMsg.messageType === 'itinerary' ? (
+                        // Itinerary is rendered as a card below via demoItinerary state.
+                        // Show a subtle inline indicator here instead of raw text.
+                        <div className="flex items-center gap-2 text-muted-foreground text-xs italic">
+                          <span>✨</span>
+                          <span>Your trip plan is ready below</span>
+                        </div>
                       ) : (
                         <div>
                           <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -1100,7 +1107,7 @@ export function ChatPage() {
           {/* Demo trip result — shown inline after generation */}
           {showDemoLoading && <DemoLoadingSkeleton />}
 
-          {demoItinerary && !showDemoLoading && (
+          {demoItinerary && (
             <div className="flex justify-start">
               <ItineraryDisplay itinerary={demoItinerary} />
             </div>
