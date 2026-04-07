@@ -33,7 +33,10 @@ from app.db.session import session_factory  # noqa: E402
 
 
 SEED_USERS = [
-    {"username": "testuser", "email": "user@gmail.com", "password": "user"},
+    {"username": "user", "email": "user@gmail.com", "password": "user"},
+    {"username": "user1", "email": "user1@gmail.com", "password": "user"},
+    {"username": "user2", "email": "user2@gmail.com", "password": "user"},
+    {"username": "user3", "email": "user3@gmail.com", "password": "user"},
 ]
 
 DEMO_ITINERARY = {

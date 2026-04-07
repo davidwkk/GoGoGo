@@ -2,7 +2,6 @@
 import {
   AlertCircle,
   Calendar,
-  ChevronRight,
   Map,
   MapPin,
   Banknote,
@@ -11,6 +10,7 @@ import {
   Ticket,
   Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AttractionCard } from '../components/trip/AttractionCard';
@@ -18,6 +18,7 @@ import { FlightCard } from '../components/trip/FlightCard';
 import { tripService } from '../services/tripService';
 import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
 import { HotelCard } from '../components/trip/HotelCard';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 
 // --- SKELETON COMPONENTS (defined after imports per ES module rules) ---
 
@@ -94,6 +95,7 @@ export function TripPage() {
   const [loading, setLoading] = useState(false);
   const [fetchingDetail, setFetchingDetail] = useState(false);
   const [deletingTripId, setDeletingTripId] = useState<number | null>(null);
+  const [deleteConfirmTripId, setDeleteConfirmTripId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Track auth state as React state so effects respond to changes correctly
@@ -174,8 +176,10 @@ export function TripPage() {
   };
 
   const handleDeleteTrip = async (tripId: number) => {
-    const ok = window.confirm('Delete this trip plan? This cannot be undone.');
-    if (!ok) return;
+    setDeleteConfirmTripId(tripId);
+  };
+
+  const confirmDeleteTrip = async (tripId: number) => {
     setDeletingTripId(tripId);
     try {
       await tripService.deleteTrip(tripId);
@@ -183,9 +187,10 @@ export function TripPage() {
       if (selectedTrip?.id === tripId) {
         setSelectedTrip(null);
       }
+      toast.success('Trip deleted');
     } catch (err) {
       console.error('Failed to delete trip', err);
-      alert('Failed to delete this trip. Please try again.');
+      toast.error('Failed to delete this trip. Please try again.');
     } finally {
       setDeletingTripId(null);
     }
@@ -278,11 +283,6 @@ export function TripPage() {
                   >
                     <div className="flex justify-between items-start">
                       <p className="font-bold text-sm truncate pr-2">{trip.title}</p>
-                      <ChevronRight
-                        className={`size-3 mt-1 ${
-                          selectedTrip?.id === trip.id ? 'opacity-100' : 'opacity-10'
-                        }`}
-                      />
                     </div>
                     <div className="flex items-center gap-1.5 mt-2 opacity-50">
                       <MapPin className="size-3" />
@@ -513,6 +513,23 @@ export function TripPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteConfirmTripId !== null}
+        onOpenChange={open => {
+          if (!open) setDeleteConfirmTripId(null);
+        }}
+        title="Delete this trip plan?"
+        description="This cannot be undone. All flights, hotels, and activities in this itinerary will be permanently removed."
+        confirmLabel="Delete"
+        cancelLabel="Keep"
+        destructive
+        onConfirm={() => {
+          if (deleteConfirmTripId !== null) {
+            confirmDeleteTrip(deleteConfirmTripId);
+          }
+        }}
+      />
     </div>
   );
 }
