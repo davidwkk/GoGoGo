@@ -116,8 +116,12 @@ def _messages_to_content(messages: list[Message]) -> list[types.Content]:
                         ],
                     )
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.bind(
+                    event="message_parse_skip",
+                    msg_id=msg.id,
+                    session_id=msg.session_id,
+                ).warning(f"Skipping malformed tool message {msg.id}: {e}")
             continue
 
         if msg.role not in ("user", "assistant"):
@@ -188,7 +192,10 @@ def _round_budget_values(itinerary: TripItinerary) -> TripItinerary:
 
 def _round_price_range(pr: "PriceRange") -> "PriceRange":
     """Round min and max of a PriceRange to nearest 100."""
-    return PriceRange(min=round(pr.min / 100) * 100, max=round(pr.max / 100) * 100)
+    return PriceRange(
+        min=round(pr.min / 100) * 100 if pr.min is not None else 0,
+        max=round(pr.max / 100) * 100 if pr.max is not None else 0,
+    )
 
 
 async def finalize_trip_plan(
@@ -204,7 +211,15 @@ async def finalize_trip_plan(
     user\'s original request in the conversation history.
 
     Makes exactly ONE generate_content() call with response_json_schema=TripItinerary.
-    The 'messages' parameter is the accumulated conversation state from the streaming loop.
+
+    Args:
+        preferences: Optional user preferences dict.
+        messages: Accumulated conversation state from the streaming loop (list of
+            Gemini Content objects with user/assistant/function messages).
+
+    Returns:
+        dict with "itinerary" key containing TripItinerary JSON, or "error" key
+        if validation fails or required tool results are missing.
     """
 
     # ── Validation guard: required tool results in context ─────────────────────
@@ -274,11 +289,13 @@ async def finalize_trip_plan(
     final_contents: list = (messages or []) + [
         types.Content(role="user", parts=[types.Part.from_text(text=context_prompt)])
     ]
-    response = await client.aio.models.generate_content(
-        model=settings.GEMINI_MODEL,
-        contents=final_contents,
-        config=config,
-    )
+    FINALIZE_TIMEOUT_SECONDS = 90.0
+    async with asyncio.timeout(FINALIZE_TIMEOUT_SECONDS):
+        response = await client.aio.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=final_contents,
+            config=config,
+        )
 
     text = response.text or ""
     try:

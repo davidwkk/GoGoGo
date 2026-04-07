@@ -308,6 +308,16 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] **Demo trip data enrichment** ✅ — All enrichment fields populated in `seed_db.py` DEMO_ITINERARY: flights have `duration_minutes`, `cabin_class`; hotels have `image_url`, `embed_map_url`, `star_rating`, `guest_rating`; activities have all enrichment fields; day plans have `theme`, `notes`, `estimated_daily_budget_hkd`; `estimated_total_budget_hkd` with breakdown.
 - [x] **Schema misalignment fixes** ✅ — `TripSummary.created_at` changed to `DateTime | str`; `/demo` endpoint now validates itinerary via `TripItinerary.model_validate` with graceful degradation.
 - [x] **ItineraryDisplay matches TripPage** ✅ — `ItineraryDisplay` in ChatPage now includes: budget section with flights/hotels/activities breakdown, day headers with theme and daily budget badge, `HotelCard` component (with MapEmbed, ImageLightbox), icons (`Banknote`, `Bed`, `Plane`, `Ticket`).
+- [ ] **Auto-save trip on itinerary generation** — After `finalize_trip_plan` returns a valid `TripItinerary` (no `"error"` key), the streaming loop should automatically call `trip_service.save_trip()` to persist it before yielding `done: true`. Changes required:
+  - **Backend** (`streaming_service.py`): In the `finalize_trip_plan` success path (after the itinerary SSE event is yielded), call `trip_service.save_trip(user_id, session_id, itinerary)` before yielding `done: true`. The `user_id` comes from the request context passed into `stream_agent_response`.
+  - **Frontend** (`ChatPage.tsx`): Remove the "Save & Finish Trip" button and its associated `POST /chat/sessions/{id}/end` call from the UI. No manual save needed — the backend auto-saves.
+  - **UX**: After the trip is auto-saved, show a brief toast/snackbar "Trip saved!" in the chat UI so the user knows it was persisted.
+- [ ] **Delete trip plan** — User can delete a generated trip plan. Add a "Delete trip" button in the chat UI (e.g., in the itinerary header or a context menu). Backend: `DELETE /trips/{trip_id}` already exists. Frontend: wire a delete button in `ItineraryDisplay` or `ChatPage` to call `DELETE /trips/{trip_id}` with confirmation dialog ("Delete this trip?"). On success, show "Trip deleted" toast and optionally clear the displayed itinerary from chat.
+- [ ] **Auth error UX for all user-gated buttons** — Many buttons (new chat, save trip, etc.) silently fail when the user's token is invalid/expired. Audit every button that requires an active user (e.g., "New Chat", "Save & Finish Trip" — to be removed, itinerary auto-save). For each:
+  - Catch 401/403 responses from the API.
+  - Show a **prominent error toast** (not just a console log): "Your session has expired. Please log in again." with a link/button to navigate to `/login`.
+  - If the user is a guest (no token), show a toast: "Please log in to save your trip." instead of silently failing.
+  - Apply this globally in the `apiClient` Axios interceptor — if any response returns 401 or 403, trigger a shared auth-error handler that shows the toast and optionally clears the stored token.
 
 ### 🧪 Tests to Write
 
