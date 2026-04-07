@@ -23,7 +23,7 @@ from app.agent.tools import (
 )
 from app.core.config import settings
 from app.db.models.message import Message
-from app.schemas.itinerary import TripItinerary
+from app.schemas.itinerary import PriceRange, TripItinerary
 from app.services.message_service import (
     append_message,
     append_tool_message,
@@ -175,6 +175,22 @@ def _save_tool_result_to_db(
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _round_budget_values(itinerary: TripItinerary) -> TripItinerary:
+    """Round all budget values in the itinerary to the nearest multiple of 100."""
+    budget = itinerary.estimated_total_budget_hkd
+    if budget:
+        budget.flights_hkd = _round_price_range(budget.flights_hkd)
+        budget.hotels_hkd = _round_price_range(budget.hotels_hkd)
+        budget.activities_hkd = _round_price_range(budget.activities_hkd)
+        budget.total_hkd = _round_price_range(budget.total_hkd)
+    return itinerary
+
+
+def _round_price_range(pr: "PriceRange") -> "PriceRange":
+    """Round min and max of a PriceRange to nearest 100."""
+    return PriceRange(min=round(pr.min / 100) * 100, max=round(pr.max / 100) * 100)
+
+
 async def finalize_trip_plan(
     preferences: dict | None = None,
     messages: list[types.Content] | None = None,
@@ -234,6 +250,9 @@ async def finalize_trip_plan(
         "was already fetched by the agent and is available in the conversation history below. "
         "Extract the trip parameters (destination, dates, purpose, group details) from "
         "the user's original request in the conversation history.\n"
+        "IMPORTANT: For each flight, you MUST include the booking_url from the search_flights "
+        "tool results. Round all budget values (total_hkd, flights_hkd, hotels_hkd, "
+        "activities_hkd) to the nearest multiple of 100 (e.g., 3000, 5200, 10800).\n"
         f"{prefs_section}"
     )
 
@@ -269,6 +288,9 @@ async def finalize_trip_plan(
             event="finalize_parse_error", error=str(e), response_preview=text[:500]
         ).error("Failed to parse TripItinerary from finalize_trip_plan")
         return {"error": f"Failed to generate trip plan: {e}"}
+
+    # Post-process: round budget values to nearest 100
+    itinerary = _round_budget_values(itinerary)
 
     return {"itinerary": itinerary.model_dump(mode="json")}
 

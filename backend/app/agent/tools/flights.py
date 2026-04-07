@@ -177,13 +177,6 @@ async def search_flights(
     if return_date:
         params["return_date"] = return_date
 
-    # Pre-build booking URL once (shared across all segments).
-    # Note: outbound_date is NOT a valid param for google.com/travel — the date won't
-    # be pre-filled; this is a best-effort fallback link.
-    booking_url = (
-        f"https://www.google.com/travel/flights/search?q={dep_code}+to+{arr_code}&hl=en"
-    )
-
     logger.bind(
         event="tool_api_call",
         layer="tool",
@@ -262,6 +255,20 @@ async def search_flights(
             layovers = itinerary.get("layovers") or []
             price = itinerary.get("price")
 
+            # Outbound date from first segment; return date from last segment or search param
+            outbound_date: str | None = None
+            if seg_flights:
+                first_dep = seg_flights[0].get("departure_airport", {}).get("time", "")
+                outbound_date = (
+                    _parse_iso_datetime(first_dep)[:10] if first_dep else None
+                )
+            return_date_str: str | None = return_date
+            if not return_date_str and len(seg_flights) > 1:
+                last_arr = seg_flights[-1].get("arrival_airport", {}).get("time", "")
+                return_date_str = (
+                    _parse_iso_datetime(last_arr)[:10] if last_arr else None
+                )
+
             for i, f in enumerate(seg_flights):
                 dep = f.get("departure_airport", {})
                 arr = f.get("arrival_airport", {})
@@ -277,13 +284,28 @@ async def search_flights(
                         "duration_minutes": lp.get("duration"),
                     }
 
+                seg_dep_code = dep.get("id", "")
+                seg_arr_code = arr.get("id", "")
+
+                # Embed dates in the q parameter as natural language
+                # Format: "DEP+to+ARR%2C+YYYY-MM-DD+to+YYYY-MM-DD" for round-trip
+                # or "DEP+to+ARR%2C+YYYY-MM-DD" for one-way
+                if return_date_str:
+                    query = f"{seg_dep_code}+to+{seg_arr_code}%2C+{outbound_date}+to+{return_date_str}"
+                else:
+                    query = f"{seg_dep_code}+to+{seg_arr_code}%2C+{outbound_date}"
+                booking_url = (
+                    f"https://www.google.com/travel/flights/search"
+                    f"?q={query}&hl=en&curr=HKD"
+                )
+
                 flights.append(
                     {
                         "airline": f.get("airline"),  # None if missing
                         "flight_number": f.get("flight_number", ""),
-                        "departure_airport": dep.get("id", ""),
+                        "departure_airport": seg_dep_code,
                         "departure_airport_name": dep.get("name", ""),
-                        "arrival_airport": arr.get("id", ""),
+                        "arrival_airport": seg_arr_code,
                         "arrival_airport_name": arr.get("name", ""),
                         "departure_time": _parse_iso_datetime(dep.get("time", "")),
                         "arrival_time": _parse_iso_datetime(arr.get("time", "")),
