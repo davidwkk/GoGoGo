@@ -10,6 +10,8 @@ GoGoGo is a travel agent AI app. Users chat with an AI to plan trips, getting st
 **Frontend:** React + Vite + shadcn/ui + Zustand
 **ASR/TTS:** Web Speech API (browser) + Gemini TTS
 
+**Reminder:** **ALWAYS** use context7 to get and read the latest development docs for any external library used in the code.
+
 ## Quick Start
 
 ```bash
