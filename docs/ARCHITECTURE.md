@@ -35,8 +35,8 @@ backend/
 │   ├── deps.py                  # get_db, get_current_user (JWT)
 │   └── routes/
 │       ├── auth.py              # POST /auth/register, POST /auth/login
-│       ├── chat.py              # POST /chat
-│       ├── chat_sessions.py     # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages
+│       ├── chat.py              # POST /chat/stream (SSE)
+│       ├── chat_sessions.py     # GET /chat/sessions/{id}/messages
 │       ├── health.py            # GET /health
 │       ├── trips.py             # GET/POST/DELETE /trips
 │       └── users.py             # GET/PATCH /users/me
@@ -55,16 +55,17 @@ backend/
 │   ├── trip_repo.py
 │   └── preference_repo.py
 ├── services/
-│   ├── chat_service.py          # Runs agent loop, returns ChatResponse
-│   ├── message_service.py       # Append user/agent messages
+│   ├── streaming_service.py     # SSE agent loop, stream_agent_response(), TOOL_MAP
+│   ├── message_service.py       # Append user/agent/trip messages
 │   ├── preference_service.py     # Extract preferences via Gemini Flash-Lite
 │   ├── trip_service.py          # Save/list trips
 │   └── user_service.py          # Get/update user profile
 ├── agent/
-│   ├── agent.py                 # Gemini 3 Flash agent + tool registration
-│   ├── schemas.py               # Pydantic output models
-│   ├── callbacks.py             # Logging callbacks
+│   ├── __init__.py              # Empty shim with lazy-import comment
+│   ├── schemas.py               # Lightweight Pydantic models for tool responses
+│   ├── callbacks.py             # Logging helpers (defined but unused)
 │   └── tools/
+│       ├── __init__.py          # Tool registration, _make_sync wrapper, ALL_TOOLS, TOOL_MAP
 │       ├── search.py            # Tavily + SerpAPI fallback
 │       ├── flights.py           # SerpAPI Google Flights
 │       ├── hotels.py            # SerpAPI Google Hotels
@@ -73,7 +74,7 @@ backend/
 │       ├── transport.py         # SerpAPI Google Maps (route/transport)
 │       └── attractions.py       # Wikipedia REST API
 └── schemas/
-    ├── chat.py                  # ChatRequest, ChatResponse
+    ├── chat.py                  # ChatStreamRequest, ChatMessage
     ├── user.py                  # UserCreate, UserUpdate, UserResponse, UserPreference
     ├── enums.py                 # All enums (TravelStyle, HotelTier, etc.)
     └── itinerary.py             # TripItinerary, DayPlan, FlightItem, HotelItem, etc.
@@ -131,7 +132,7 @@ frontend/src/
 ├── store/
 │   └── index.ts               # Zustand store (chat state + voice)
 ├── hooks/
-│   ├── useChat.ts             # POST /chat, handle response
+│   ├── useChat.ts             # POST /chat/stream (SSE), handle response
 │   ├── useASR.ts              # Web Speech API (mic → transcript)
 │   └── useTTS.ts              # Web Speech Synthesis (text → speech)
 ├── components/
@@ -187,19 +188,18 @@ Zustand store (`store/index.ts`) holds:
 
 ## API Endpoints
 
-| Method | Path                           | Auth | Description                                |
-| ------ | ------------------------------ | ---- | ------------------------------------------ |
-| POST   | `/auth/register`               | —    | Register with email + username + password  |
-| POST   | `/auth/login`                  | —    | Login with email + password                |
-| GET    | `/health`                      | —    | Health check                               |
-| POST   | `/chat`                        | JWT  | Send message, get response/itinerary       |
-| POST   | `/chat/sessions/{id}/end`      | JWT  | End session, trigger preference extraction |
-| GET    | `/chat/sessions/{id}/messages` | JWT  | Get session message history                |
-| GET    | `/users/me`                    | JWT  | Get current user profile                   |
-| PATCH  | `/users/me`                    | JWT  | Update username/preferences                |
-| GET    | `/trips`                       | JWT  | List user's saved trips                    |
-| GET    | `/trips/{id}`                  | JWT  | Get single trip with full itinerary        |
-| DELETE | `/trips/{id}`                  | JWT  | Delete a saved trip                        |
+| Method | Path                           | Auth | Description                                    |
+| ------ | ------------------------------ | ---- | ---------------------------------------------- |
+| POST   | `/auth/register`               | —    | Register with email + username + password      |
+| POST   | `/auth/login`                  | —    | Login with email + password                    |
+| GET    | `/health`                      | —    | Health check                                   |
+| POST   | `/chat/stream`                 | JWT  | SSE stream: text chunks, tool calls, itinerary |
+| GET    | `/chat/sessions/{id}/messages` | JWT  | Get session message history                    |
+| GET    | `/users/me`                    | JWT  | Get current user profile                       |
+| PATCH  | `/users/me`                    | JWT  | Update username/preferences                    |
+| GET    | `/trips`                       | JWT  | List user's saved trips                        |
+| GET    | `/trips/{id}`                  | JWT  | Get single trip with full itinerary            |
+| DELETE | `/trips/{id}`                  | JWT  | Delete a saved trip                            |
 
 ---
 
@@ -208,22 +208,47 @@ Zustand store (`store/index.ts`) holds:
 ```
 User message
     ↓
-POST /chat → chat_service.invoke_agent()
+POST /chat/stream → SSE streaming endpoint
     ↓
-[Loop up to MAX_ITERATIONS=10]
+stream_agent_response() in streaming_service.py
     ↓
-Gemini 3 Flash generates content + tool calls
+[Loop up to MAX_TOOL_ROUNDS=20 or 120s timeout]
     ↓
-Execute tool(s) → append result(s) to messages
+Gemini 3 Flash with automatic_function_calling=DISABLED
     ↓
-    ↓ (if function_calls empty → loop ends)
+Gemini generates content → stream chunks to client as SSE {"chunk": text}
     ↓
-Final generate_content with response_json_schema=TripItinerary
+Extract function_call parts from response
     ↓
-Return ChatResponse(text, itinerary, message_type)
+    ├─ finalize_trip_plan called:
+    │   → Intercept locally (NOT in TOOL_MAP)
+    │   → Validate all 4 required tools were called
+    │   → generate_content with response_json_schema=TripItinerary
+    │   → Yield SSE {"message_type": "itinerary", "itinerary": ...}
+    │   → Stream ends
+    │
+    └─ Regular tool (get_attraction, get_weather, search_web, etc.):
+        → Look up in TOOL_MAP
+        → await tool_fn(**args)
+        → Yield SSE {"tool_result": tool_name, "result": {...}}
+        → Append role="function" message to conversation
+        → Continue loop
     ↓
-On generate_plan=True: save trip via trip_service.save_trip()
-On session end: extract preferences via preference_service
+No function calls → Stream ends with {"done": True}
+```
+
+### SSE Event Types
+
+```
+{"message_id": id}              # Assistant message ID on stream start
+{"chunk": text}                 # Streamed text content
+{"model_thought": thought}      # Gemini reasoning thoughts
+{"tool_call": name, "args": {}} # Tool call initiated
+{"tool_result": name, "result": {}}  # Tool execution result
+{"message_type": "finalizing", "status": "generating_trip_plan"}
+{"message_type": "itinerary", "itinerary": {...}}
+{"message_type": "error", "error": "..."}
+{"done": True}                  # Stream complete
 ```
 
 ---
@@ -238,4 +263,6 @@ On session end: extract preferences via preference_service
 
 4. **Direct API calls over Vite proxy**: The `apiClient` points directly to the backend URL. The Vite proxy only handles `/auth` and `/health` (actual backend prefixes) — frontend routes like `/chat` are not proxied.
 
-5. **No SSE for streaming** (v1): `POST /chat` is a single request-response. Streaming (SSE) is descoped to v2 due to DB transaction complexity.
+5. **Manual tool dispatch over AutomaticFunctionCalling**: `automatic_function_calling` is disabled in Gemini config. Tool calls are manually extracted from the stream and dispatched via `TOOL_MAP` for full control over execution and DB persistence.
+
+6. **`finalize_trip_plan` interception**: The `finalize_trip_plan` function declaration is known to the model but is intercepted by name in the loop (not in `TOOL_MAP`). It triggers a separate `generate_content` call with `response_json_schema=TripItinerary` to produce structured output.
