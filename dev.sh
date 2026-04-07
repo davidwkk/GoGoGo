@@ -251,8 +251,8 @@ echo -e "${BOLD}${GREEN}║  ⚙️  Backend   →  http://localhost:8000       
 echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}\n"
 
 # ── 11. Seed DB ───────────────────────────────────────────────
-echo -e "${YELLOW}Seed the database with sample users?${RESET}"
-echo -e "  ${CYAN}[1]${RESET} Yes, seed sample users  ${YELLOW}(alice, bob, charlie / password123)${RESET} ${GREEN}[default]${RESET}"
+echo -e "${YELLOW}Seed the database with users and demo trips?${RESET}"
+echo -e "  ${CYAN}[1]${RESET} Yes, seed users and demo trips  ${YELLOW}(user, user1, user2, user3 / user)${RESET} ${GREEN}[default]${RESET}"
 echo -e "  ${CYAN}[2]${RESET} No, skip seeding"
 echo -e "${YELLOW}Enter choice (1-2): ${RESET}\c"
 read -r -n 1 SEED_CHOICE

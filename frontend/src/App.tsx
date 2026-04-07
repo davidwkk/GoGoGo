@@ -1,6 +1,7 @@
 // App — Root component with routing
 
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'sonner';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ChatPage } from '@/pages/ChatPage';
@@ -11,6 +12,7 @@ import { TripPage } from '@/pages/TripPage';
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-center" richColors />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<Navigate to="/chat" replace />} />
