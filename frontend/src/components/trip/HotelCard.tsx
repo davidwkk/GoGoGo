@@ -252,7 +252,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
           </div>
 
           {hotel.embed_map_url && (
-            <div className="mb-8 rounded-2xl overflow-hidden border border-white/10 h-48">
+            <div className="mb-8 rounded-2xl overflow-hidden border border-white/10 h-80">
               <MapEmbed url={hotel.embed_map_url} />
             </div>
           )}
