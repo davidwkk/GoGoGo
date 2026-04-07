@@ -50,9 +50,9 @@ DEMO_ITINERARY = {
     ),
     "estimated_total_budget_hkd": {
         "flights_hkd": {"min": 4200, "max": 4800},
-        "hotels_hkd": {"min": 14000, "max": 22500},
+        "hotels_hkd": {"min": 14000, "max": 22600},
         "activities_hkd": {"min": 1200, "max": 2500},
-        "total_hkd": {"min": 19400, "max": 29800},
+        "total_hkd": {"min": 19400, "max": 29900},
     },
     "flights": [
         {
@@ -66,7 +66,7 @@ DEMO_ITINERARY = {
             "stops": [],
             "duration_minutes": 300,
             "cabin_class": "economy",
-            "booking_url": "https://www.jal.co.jp/en/us/",
+            "booking_url": "https://www.google.com/travel/flights/search?q=HKG+to+NRT%2C+2026-04-15+to+2026-04-20&hl=en&curr=HKD",
             "price_hkd": 4200.0,
         },
         {
@@ -80,7 +80,7 @@ DEMO_ITINERARY = {
             "stops": [],
             "duration_minutes": 210,
             "cabin_class": "economy",
-            "booking_url": "https://www.jal.co.jp/en/us/",
+            "booking_url": "https://www.google.com/travel/flights/search?q=NRT+to+HKG%2C+2026-04-20+to+2026-04-15&hl=en&curr=HKD",
             "price_hkd": 4800.0,
         },
     ],
@@ -92,7 +92,7 @@ DEMO_ITINERARY = {
             "price_per_night_hkd": {"min": 2800, "max": 4500},
             "star_rating": 5,
             "guest_rating": 9.2,
-            "booking_url": "https://www.google.com/travel/hotels?q=Park+Hyatt+Tokyo&check_in=2026-04-15&check_out=2026-04-20",
+            "booking_url": "https://www.google.com/travel/hotels/entity/CgI6vIGQ17nQGxAB&check_in=2026-04-15&check_out=2026-04-20&adults=2&hl=en&curr=HKD",
             "address": "3-7-1-2 Nishi Shinjuku, Shinjuku City, Tokyo 163-1055",
             "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Park_Hyatt_Tokyo.jpg/1280px-Park_Hyatt_Tokyo.jpg",
             "embed_map_url": "https://www.google.com/maps?q=Park+Hyatt+Tokyo&output=embed",

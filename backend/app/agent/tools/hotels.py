@@ -252,16 +252,16 @@ async def search_hotels(
                     f"https://www.google.com/maps?q={encoded_name}&output=embed"
                 )
 
-            # Build booking URL from property_token
+            # Build booking URL from property_token (Chk/I/Cgo prefix → Google Hotels entity)
+            # Include check-in, check-out, adults for direct booking page
             booking_url: str | None = None
             property_token = h.get("property_token")
             if property_token:
+                adults = params.get("adults", 2)
                 booking_url = (
                     f"https://www.google.com/travel/hotels/entity/{property_token}"
-                    f"?check_in={check_in}"
+                    f"?check_in={check_in}&check_out={check_out}&adults={adults}&hl=en&curr=HKD"
                 )
-                if check_out:
-                    booking_url += f"&check_out={check_out}"
 
             # First image
             images = h.get("images") or []
