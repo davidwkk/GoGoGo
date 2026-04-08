@@ -11,23 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserProfile, userService } from '@/services/api';
 
-function getPasswordStrength(password: string): { score: number; label: string; color: string } {
-  if (!password) return { score: 0, label: '', color: '' };
-
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[a-z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-
-  if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-red-500' };
-  if (score <= 3) return { score: 2, label: 'Fair', color: 'bg-yellow-500' };
-  if (score <= 4) return { score: 3, label: 'Good', color: 'bg-blue-500' };
-  return { score: 4, label: 'Strong', color: 'bg-green-500' };
-}
-
 interface AuthError {
   userMessage?: string;
   message?: string;
@@ -275,26 +258,51 @@ export function ProfilePage() {
             </div>
             {newPassword && (
               <div className="space-y-1">
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4].map(level => (
+                <p className="text-xs text-muted-foreground">Password must have:</p>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
                     <div
-                      key={level}
-                      className={`h-1 flex-1 rounded-full transition-colors ${
-                        getPasswordStrength(newPassword).score >= level
-                          ? getPasswordStrength(newPassword).color
-                          : 'bg-muted'
-                      }`}
+                      className={`size-1.5 rounded-full ${newPassword.length >= 8 ? 'bg-green-500' : 'bg-muted'}`}
                     />
-                  ))}
+                    <span
+                      className={`text-xs ${newPassword.length >= 8 ? 'text-green-600' : 'text-muted-foreground'}`}
+                    >
+                      At least 8 characters
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`size-1.5 rounded-full ${/[A-Z]/.test(newPassword) ? 'bg-green-500' : 'bg-muted'}`}
+                    />
+                    <span
+                      className={`text-xs ${/[A-Z]/.test(newPassword) ? 'text-green-600' : 'text-muted-foreground'}`}
+                    >
+                      One uppercase letter
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`size-1.5 rounded-full ${/[a-z]/.test(newPassword) ? 'bg-green-500' : 'bg-muted'}`}
+                    />
+                    <span
+                      className={`text-xs ${/[a-z]/.test(newPassword) ? 'text-green-600' : 'text-muted-foreground'}`}
+                    >
+                      One lowercase letter
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`size-1.5 rounded-full ${/[0-9]/.test(newPassword) ? 'bg-green-500' : 'bg-muted'}`}
+                    />
+                    <span
+                      className={`text-xs ${/[0-9]/.test(newPassword) ? 'text-green-600' : 'text-muted-foreground'}`}
+                    >
+                      One number
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {getPasswordStrength(newPassword).label}
-                </p>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              At least 8 characters, one uppercase letter, one digit
-            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm-password">Confirm New Password</Label>

@@ -4,22 +4,6 @@ import { apiClient } from '@/services/api';
 import { useChatStore } from '@/store';
 import { Eye, EyeOff } from 'lucide-react';
 
-function getPasswordStrength(password: string): { score: number; label: string; color: string } {
-  if (!password) return { score: 0, label: '', color: '' };
-
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[a-z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-
-  if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-red-500' };
-  if (score <= 3) return { score: 2, label: 'Fair', color: 'bg-yellow-500' };
-  if (score <= 4) return { score: 3, label: 'Good', color: 'bg-blue-500' };
-  return { score: 4, label: 'Strong', color: 'bg-green-500' };
-}
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -36,6 +20,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('rememberMe') === 'true');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -45,6 +30,7 @@ export function LoginPage() {
   // Clear password when switching between login/signup modes
   useEffect(() => {
     setPassword('');
+    setConfirmPassword('');
     if (mode === 'login') {
       setEmail(localStorage.getItem('user_email') ?? '');
       setUsername(localStorage.getItem('user_name') ?? '');
@@ -84,6 +70,33 @@ export function LoginPage() {
         useChatStore.getState().setSessionId(null);
         navigate('/chat');
       } else {
+        // Client-side password validation
+        if (password.length < 8) {
+          toast.error('Password must be at least 8 characters');
+          setLoading(false);
+          return;
+        }
+        if (!/[A-Z]/.test(password)) {
+          toast.error('Password must contain at least one uppercase letter');
+          setLoading(false);
+          return;
+        }
+        if (!/[a-z]/.test(password)) {
+          toast.error('Password must contain at least one lowercase letter');
+          setLoading(false);
+          return;
+        }
+        if (!/[0-9]/.test(password)) {
+          toast.error('Password must contain at least one number');
+          setLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          toast.error('Passwords do not match');
+          setLoading(false);
+          return;
+        }
+
         const { data } = await apiClient.post<AuthResponse>('/auth/register', {
           email,
           username,
@@ -101,8 +114,12 @@ export function LoginPage() {
     } catch (err: unknown) {
       // Because of our interceptor, we know `err` is our APIError envelope
       const apiErr = err as import('@/services/api').APIError;
-      if (apiErr.statusCode === 401) {
+      if (apiErr.statusCode === 409) {
+        toast.error('An account with this email already exists');
+      } else if (apiErr.statusCode === 401) {
         toast.error('Invalid email or password');
+      } else {
+        toast.error(apiErr.detail || 'Something went wrong. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -204,26 +221,84 @@ export function LoginPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {mode === 'signup' && password && (
+              {mode === 'signup' && (
                 <div className="space-y-1">
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4].map(level => (
+                  <p className="text-xs text-muted-foreground">Password must have:</p>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
                       <div
-                        key={level}
-                        className={`h-1 flex-1 rounded-full transition-colors ${
-                          getPasswordStrength(password).score >= level
-                            ? getPasswordStrength(password).color
-                            : 'bg-muted-foreground/20'
-                        }`}
+                        className={`size-1.5 rounded-full ${password.length >= 8 ? 'bg-green-500' : 'bg-muted'}`}
                       />
-                    ))}
+                      <span
+                        className={`text-xs ${password.length >= 8 ? 'text-green-600' : 'text-muted-foreground'}`}
+                      >
+                        At least 8 characters
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`size-1.5 rounded-full ${/[A-Z]/.test(password) ? 'bg-green-500' : 'bg-muted'}`}
+                      />
+                      <span
+                        className={`text-xs ${/[A-Z]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}
+                      >
+                        One uppercase letter
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`size-1.5 rounded-full ${/[a-z]/.test(password) ? 'bg-green-500' : 'bg-muted'}`}
+                      />
+                      <span
+                        className={`text-xs ${/[a-z]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}
+                      >
+                        One lowercase letter
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`size-1.5 rounded-full ${/[0-9]/.test(password) ? 'bg-green-500' : 'bg-muted'}`}
+                      />
+                      <span
+                        className={`text-xs ${/[0-9]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}
+                      >
+                        One number
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {getPasswordStrength(password).label}
-                  </p>
                 </div>
               )}
             </div>
+
+            {mode === 'signup' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground" htmlFor="confirm-password">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirm-password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="h-9 w-full rounded-xl border border-input bg-background px-3 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-red-500">Passwords do not match</p>
+                )}
+              </div>
+            )}
 
             {mode === 'login' && (
               <div className="flex items-center gap-2">
