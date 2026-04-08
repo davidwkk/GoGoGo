@@ -54,7 +54,13 @@ export function Sidebar() {
 
       {/* Logout */}
       <button
-        onClick={() => setLogoutDialogOpen(true)}
+        onClick={() => {
+          if (!localStorage.getItem('access_token')) {
+            navigate('/login');
+          } else {
+            setLogoutDialogOpen(true);
+          }
+        }}
         title="Logout"
         className="flex items-center justify-center rounded-xl size-10 text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
       >
