@@ -700,53 +700,50 @@ export function ChatPage() {
     <div className="flex h-screen bg-background">
       {/* Left sidebar: Chat History */}
       <aside
-        className={`${historyCollapsed ? 'w-12' : 'w-72'} border-r bg-background flex flex-col transition-[width] duration-200`}
+        className={`${historyCollapsed ? 'w-0 border-r-0' : 'w-72 border-r'} bg-background flex flex-col transition-[width] duration-200 overflow-hidden`}
       >
-        <div
-          className={`${historyCollapsed ? 'px-2' : 'px-4'} py-4 ${historyCollapsed ? '' : 'border-b'}`}
-        >
-          <div
-            className={`flex items-center ${historyCollapsed ? 'justify-center' : 'justify-between'} gap-2`}
-          >
-            {!historyCollapsed && (
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <div className="text-sm font-semibold">Chat History</div>
-                  <div className="text-xs text-muted-foreground">
-                    {isLoggedIn ? 'Your sessions' : 'Sign in to save sessions'}
-                  </div>
-                </div>
-                {sessions.length > 0 && isLoggedIn && (
-                  <button
-                    type="button"
-                    onClick={() => setClearAllHistoryDialogOpen(true)}
-                    className="flex items-center gap-1.5 h-7 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 px-2 text-xs font-medium transition-colors"
-                    title="Clear all chat history"
-                  >
-                    <Trash2 className="size-3.5" />
-                    Clear all
-                  </button>
-                )}
+        <div className="px-4 py-4 border-b">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold">Chat History</div>
+              <div className="text-xs text-muted-foreground">
+                {isLoggedIn ? 'Your sessions' : 'Sign in to save sessions'}
               </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setHistoryCollapsed(v => !v)}
-              className="flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              aria-label={historyCollapsed ? 'Expand chat history' : 'Collapse chat history'}
-              title={historyCollapsed ? 'Expand' : 'Collapse'}
-            >
-              {historyCollapsed ? (
-                <PanelLeftOpen className="size-4" />
-              ) : (
-                <PanelLeftClose className="size-4" />
+            </div>
+            <div className="flex items-center gap-2">
+              {sessions.length > 0 && isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => setClearAllHistoryDialogOpen(true)}
+                  className="flex items-center gap-1.5 h-7 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 px-2 text-xs font-medium transition-colors"
+                  title="Clear all chat history"
+                >
+                  <Trash2 className="size-3.5" />
+                  Clear all
+                </button>
               )}
-            </button>
+              <button
+                type="button"
+                onClick={() => setHistoryCollapsed(true)}
+                className="flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                aria-label="Collapse chat history"
+                title="Collapse"
+              >
+                <PanelLeftClose className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {!historyCollapsed && (
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <button
+              onClick={startNewChat}
+              className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <PlusCircle className="size-3" />
+              New Chat
+            </button>
             {sessions.map(s => {
               const active = currentSessionPk === s.id;
               const isSidebarEditing = editingSidebarSessionId === s.id;
@@ -818,7 +815,7 @@ export function ChatPage() {
               );
             })}
             {sessions.length === 0 && (
-              <div className={`p-3 text-xs text-muted-foreground`}>
+              <div className="p-3 text-xs text-muted-foreground">
                 {isLoggedIn
                   ? 'No sessions yet. Click New Chat to start.'
                   : 'Sign in to save your chat sessions.'}
@@ -831,34 +828,58 @@ export function ChatPage() {
       {/* Main chat area */}
       <main className="flex flex-col flex-1">
         {/* Header */}
-        <header className="flex items-center gap-3 px-6 py-4 border-b">
-          <div className="flex items-center justify-center rounded-xl bg-black text-white size-8">
-            <MessageSquare className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold">GoGoGo</h1>
-            <div className="flex items-center gap-2">
-              {isLoggedIn && currentSessionPk && currentSession ? (
-                <p
-                  className={`text-xs text-muted-foreground truncate max-w-[${historyCollapsed ? '300px' : '130px'}]`}
-                >
-                  {currentSession.title}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">AI Travel Agent</p>
-              )}
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={startNewChat}
-              className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <PlusCircle className="size-3" />
-              New Chat
-            </button>
-            {/* TODO(temp-hidden): Demo Trip button temporarily hidden — uncomment to re-enable */}
-            {/* <button
+        <header
+          className={`flex items-center gap-3 px-6 py-4 ${
+            isLoggedIn && !historyCollapsed ? '' : 'border-b'
+          }`}
+        >
+          {historyCollapsed ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setHistoryCollapsed(false)}
+                className="flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                aria-label="Expand chat history"
+                title="Expand"
+              >
+                <PanelLeftOpen className="size-4" />
+              </button>
+              <button
+                onClick={startNewChat}
+                className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <PlusCircle className="size-3" />
+                New Chat
+              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {isLoggedIn && currentSessionPk && currentSession ? (
+                    <p className="text-sm font-semibold text-foreground truncate max-w-[420px]">
+                      {currentSession.title}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">AI Travel Agent</p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {isLoggedIn && currentSessionPk && currentSession ? (
+                    <p className="text-sm font-semibold text-foreground truncate max-w-[260px]">
+                      {currentSession.title}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">AI Travel Agent</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          {/* TODO(temp-hidden): Demo Trip button temporarily hidden — uncomment to re-enable */}
+          {/* <button
               onClick={generateDemoTrip}
               disabled={isLoading || showDemoLoading}
               className="flex items-center gap-1.5 h-8 rounded-xl bg-linear-to-r from-blue-600 to-blue-500 text-white px-3 text-xs font-medium hover:from-blue-500 hover:to-blue-400 transition-colors disabled:opacity-50"
@@ -866,7 +887,6 @@ export function ChatPage() {
               <Sparkles className="size-3" />
               {showDemoLoading ? 'Generating...' : 'Demo Trip'}
             </button> */}
-          </div>
         </header>
 
         {/* Message list */}
