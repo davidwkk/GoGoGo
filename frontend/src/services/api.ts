@@ -361,6 +361,7 @@ export const chatService = {
               } catch (e) {
                 if (e instanceof Error && e.message !== 'Skip malformed JSON') {
                   error('[streamMessage] JSON parse error:', e);
+                  yield `__ERROR__:Failed to parse server response`;
                 }
               }
             }

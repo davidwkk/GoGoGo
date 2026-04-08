@@ -161,7 +161,7 @@
 
 ---
 
-#### 14. Silent Error Suppression in Stream Parsing
+#### 14. Silent Error Suppression in Stream Parsing (Done)
 
 - **File:** `frontend/src/services/api.ts:361`
 - **Severity:** HIGH
