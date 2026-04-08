@@ -297,7 +297,7 @@ async def _search_serpapi(query: str) -> dict:
                 results.append(
                     {
                         "title": r.get("title", ""),
-                        "url": r.get("link", ""),
+                        "url": r.get("link") or r.get("displayed_link", ""),
                         "snippet": r.get("snippet", "")[:300],
                     }
                 )
