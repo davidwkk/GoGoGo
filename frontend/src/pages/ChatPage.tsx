@@ -505,6 +505,18 @@ export function ChatPage() {
     (async () => {
       try {
         if (!isLoggedIn) return;
+
+        // If sessionId is null (e.g., just logged in), create a new session instead of loading existing
+        if (sessionId === null) {
+          const created = await chatSessionsService.create();
+          setSessions(prev => [
+            { id: created.session_id, title: created.title, created_at: created.created_at },
+            ...prev,
+          ]);
+          setSessionId(String(created.session_id));
+          return;
+        }
+
         const listRes = await chatSessionsService.list();
         setSessions(listRes.sessions);
         const first = listRes.sessions[0];
@@ -527,7 +539,7 @@ export function ChatPage() {
         // Best-effort — don't block chat UI if history load fails.
       }
     })();
-  }, [isLoggedIn, setMessages, setSessionId]);
+  }, [isLoggedIn, sessionId, setMessages, setSessionId]);
 
   const startNewChat = async () => {
     // Cancel any in-progress stream first

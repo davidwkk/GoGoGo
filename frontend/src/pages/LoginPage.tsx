@@ -1,6 +1,7 @@
 // LoginPage — Authentication with login / sign-up tabs
 
 import { apiClient } from '@/services/api';
+import { useChatStore } from '@/store';
 import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -61,6 +62,9 @@ export function LoginPage() {
           localStorage.removeItem('user_email');
         }
         localStorage.setItem('user_name', username);
+        // Clear messages and create new session for fresh start
+        useChatStore.getState().clearMessages();
+        useChatStore.getState().setSessionId(null);
         navigate('/chat');
       } else {
         const { data } = await apiClient.post<AuthResponse>('/auth/register', {
@@ -72,6 +76,9 @@ export function LoginPage() {
         localStorage.setItem('rememberMe', String(rememberMe));
         localStorage.setItem('user_email', email);
         localStorage.setItem('user_name', username);
+        // Clear messages and create new session for fresh start
+        useChatStore.getState().clearMessages();
+        useChatStore.getState().setSessionId(null);
         navigate('/chat');
       }
     } catch (err: unknown) {
@@ -213,6 +220,9 @@ export function LoginPage() {
         <button
           type="button"
           onClick={() => {
+            // Clear existing messages and session for fresh guest experience
+            useChatStore.getState().clearMessages();
+            useChatStore.getState().setSessionId(null);
             if (!localStorage.getItem('guest_uid')) {
               localStorage.setItem('guest_uid', crypto.randomUUID());
             }
