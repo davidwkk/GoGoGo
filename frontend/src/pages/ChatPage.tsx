@@ -500,46 +500,32 @@ export function ChatPage() {
     [currentSessionPk, sessions]
   );
 
+  // Guard against StrictMode double-invoking effects
+  const initSessionRef = useRef(false);
+
   useEffect(() => {
-    // Load chat sessions list + most recent session messages on page load (auth only).
+    // Fetch chat sessions and create a new chat session on page load (auth only).
+    if (initSessionRef.current) return;
+    initSessionRef.current = true;
+
     (async () => {
       try {
         if (!isLoggedIn) return;
 
-        // If sessionId is null (e.g., just logged in), create a new session instead of loading existing
-        if (sessionId === null) {
-          const created = await chatSessionsService.create();
-          setSessions(prev => [
-            { id: created.session_id, title: created.title, created_at: created.created_at },
-            ...prev,
-          ]);
-          setSessionId(String(created.session_id));
-          return;
-        }
-
         const listRes = await chatSessionsService.list();
         setSessions(listRes.sessions);
-        const first = listRes.sessions[0];
-        if (!first) return;
-        const msgRes = await chatSessionsService.getMessages(first.id);
-        setSessionId(String(first.id));
-        setMessages(
-          msgRes.messages
-            .filter(m => m.message_type !== 'tool_result') // exclude persisted tool results (not user-visible)
-            .map(m => ({
-              id: String(m.id),
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-              timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-              messageType: m.message_type,
-              thinking_steps: m.thinking_steps,
-            }))
-        );
+
+        const created = await chatSessionsService.create();
+        setSessions(prev => [
+          { id: created.session_id, title: created.title, created_at: created.created_at },
+          ...prev,
+        ]);
+        setSessionId(String(created.session_id));
       } catch {
         // Best-effort — don't block chat UI if history load fails.
       }
     })();
-  }, [isLoggedIn, sessionId, setMessages, setSessionId]);
+  }, [isLoggedIn, setSessionId]);
 
   const startNewChat = async () => {
     // Cancel any in-progress stream first
