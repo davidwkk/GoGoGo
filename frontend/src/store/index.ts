@@ -123,3 +123,6 @@ export const useChatStore = create<ChatState>(set => ({
 
   resetTravelSettings: () => set({ travelSettings: DEFAULT_TRAVEL_SETTINGS }),
 }));
+
+// ─── Auth store re-exports ───────────────────────────────────────────────────
+export { useAuthStore, selectIsAuthenticated, selectCurrentUser, selectToken } from './authStore';

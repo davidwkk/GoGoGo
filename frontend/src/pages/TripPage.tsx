@@ -19,6 +19,7 @@ import { tripService } from '../services/tripService';
 import { DayPlan, Flight, TripDetail, TripSummary } from '../types/trip';
 import { HotelCard } from '../components/trip/HotelCard';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { useAuthStore } from '@/store';
 
 // --- SKELETON COMPONENTS (defined after imports per ES module rules) ---
 
@@ -83,10 +84,6 @@ interface AuthError {
   message?: string;
 }
 
-function getStoredToken(): string | null {
-  return localStorage.getItem('access_token');
-}
-
 export function TripPage() {
   const navigate = useNavigate();
 
@@ -98,8 +95,7 @@ export function TripPage() {
   const [deleteConfirmTripId, setDeleteConfirmTripId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Track auth state as React state so effects respond to changes correctly
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!getStoredToken());
+  const token = useAuthStore(s => s.token);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // --- DATA EXTRACTION HELPERS ---
@@ -114,14 +110,14 @@ export function TripPage() {
 
   // Sync auth state whenever localStorage changes (handles logout in other tabs/components)
   useEffect(() => {
-    const handleStorage = () => setIsLoggedIn(!!getStoredToken());
+    const handleStorage = () => useAuthStore.getState().initAuth();
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   // --- DAVID'S FIX: Extract fetch logic to a reusable function ---
   const fetchTrips = () => {
-    if (!isLoggedIn) return;
+    if (!token) return;
 
     // Cancel any in-flight request from a previous auth state
     if (abortControllerRef.current) {
@@ -164,7 +160,7 @@ export function TripPage() {
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, [isLoggedIn]);
+  }, [token]);
 
   const handleSelectTrip = async (id: number) => {
     setFetchingDetail(true);
@@ -199,7 +195,7 @@ export function TripPage() {
     }
   };
 
-  if (!isLoggedIn) {
+  if (!token) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-center">
         {error ? (

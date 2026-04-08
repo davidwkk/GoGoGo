@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, MessageSquare, Map, User } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useState } from 'react';
+import { useAuthStore } from '@/store';
 
 const navItems = [
   { icon: MessageSquare, label: 'Chat', path: '/chat' },
@@ -17,7 +18,7 @@ export function Sidebar() {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
+    useAuthStore.getState().clearAuth();
     navigate('/login');
   };
 
@@ -55,7 +56,7 @@ export function Sidebar() {
       {/* Logout */}
       <button
         onClick={() => {
-          if (!localStorage.getItem('access_token')) {
+          if (!useAuthStore.getState().token) {
             navigate('/login');
           } else {
             setLogoutDialogOpen(true);
