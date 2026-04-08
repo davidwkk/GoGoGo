@@ -500,20 +500,23 @@ export function ChatPage() {
     [currentSessionPk, sessions]
   );
 
-  // Guard against StrictMode double-invoking effects
-  const initSessionRef = useRef(false);
+  // Guard ref to prevent double-create within the same mount cycle (e.g., StrictMode)
+  const createdRef = useRef(false);
 
   useEffect(() => {
-    // Fetch chat sessions and create a new chat session on page load (auth only).
-    if (initSessionRef.current) return;
-    initSessionRef.current = true;
+    if (!isLoggedIn) return;
 
     (async () => {
       try {
-        if (!isLoggedIn) return;
-
+        // Always fetch sessions list to show in sidebar
         const listRes = await chatSessionsService.list();
         setSessions(listRes.sessions);
+
+        // Only create new session if we haven't already created one in this mount cycle
+        // (prevents double-create from StrictMode) AND sessionId is null
+        // (handles case where user navigates away and back - we fetch but don't create)
+        if (createdRef.current || sessionId !== null) return;
+        createdRef.current = true;
 
         const created = await chatSessionsService.create();
         setSessions(prev => [
@@ -525,7 +528,7 @@ export function ChatPage() {
         // Best-effort — don't block chat UI if history load fails.
       }
     })();
-  }, [isLoggedIn, setSessionId]);
+  }, [isLoggedIn]);
 
   const startNewChat = async () => {
     // Cancel any in-progress stream first
