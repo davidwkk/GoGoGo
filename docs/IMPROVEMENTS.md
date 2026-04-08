@@ -151,7 +151,7 @@
 
 ### Frontend
 
-#### 13. useCallback Dependency Array Missing Items
+#### 13. useCallback Dependency Array Missing Items (Done)
 
 - **File:** `frontend/src/hooks/useChat.ts:380`
 - **Severity:** HIGH
