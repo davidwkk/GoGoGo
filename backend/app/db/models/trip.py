@@ -16,7 +16,7 @@ class Trip(Base):
     __tablename__ = "trips"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
     session_id: Mapped[int | None] = mapped_column(
         ForeignKey("chat_sessions.id"), nullable=True
     )
@@ -24,7 +24,7 @@ class Trip(Base):
     destination: Mapped[str] = mapped_column(String(200))
     itinerary_json: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), index=True
     )
 
     user: Mapped["User"] = relationship(back_populates="trips")
