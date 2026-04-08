@@ -20,7 +20,7 @@
 
 ### Backend Security
 
-#### 1. Unauthenticated Demo Trip Endpoint
+#### 1. Unauthenticated Demo Trip Endpoint (Skipped)
 
 - **File:** `backend/app/api/routes/trips.py:57`
 - **Severity:** CRITICAL
@@ -30,7 +30,7 @@
 
 ---
 
-#### 2. Guest Session Enumeration via guest_uid
+#### 2. Guest Session Enumeration via guest_uid (Skipped)
 
 - **File:** `backend/app/api/routes/chat_sessions.py:78`
 - **Severity:** CRITICAL
@@ -40,7 +40,7 @@
 
 ---
 
-#### 3. Authorization Bypass in update_message_thinking_steps
+#### 3. Authorization Bypass in update_message_thinking_steps (Skipped)
 
 - **File:** `backend/app/api/routes/chat_sessions.py:302`
 - **Severity:** CRITICAL
@@ -50,7 +50,7 @@
 
 ---
 
-#### 4. VPN Credentials Without Security Marking
+#### 4. VPN Credentials Without Security Marking (Skipped)
 
 - **File:** `backend/app/core/config.py:29`
 - **Severity:** HIGH (reporting with critical)
@@ -62,7 +62,7 @@
 
 ### Frontend Security
 
-#### 5. JWT Token Stored in localStorage (XSS Risk)
+#### 5. JWT Token Stored in localStorage (XSS Risk) (Skipped)
 
 - **File:** `frontend/src/store/authStore.ts:19, 33-36`
 - **Severity:** CRITICAL
@@ -72,7 +72,7 @@
 
 ---
 
-#### 6. ReactMarkdown Renders Unescaped HTML from AI Responses
+#### 6. ReactMarkdown Renders Unescaped HTML from AI Responses (Skipped)
 
 - **File:** `frontend/src/pages/ChatPage.tsx:1048, 1091`
 - **Severity:** HIGH (reporting with critical)
@@ -86,7 +86,7 @@
 
 ### Backend
 
-#### 7. Missing 429 (Rate Limit) Handling
+#### 7. Missing 429 (Rate Limit) Handling (Skipped)
 
 - **Files:**
   - `backend/app/agent/tools/weather.py` - No 429 handling
@@ -98,7 +98,7 @@
 
 ---
 
-#### 8. Cache Never Expires - Memory Leak
+#### 8. Cache Never Expires - Memory Leak (Skipped)
 
 - **File:** `backend/app/agent/tools/transport.py:32`
 - **Severity:** HIGH
@@ -127,7 +127,7 @@
 
 ---
 
-#### 11. Missing Database Indexes
+#### 11. Missing Database Indexes (Skipped)
 
 - **Files:** `backend/app/db/models/*.py`
 - **Severity:** HIGH
@@ -139,7 +139,7 @@
 
 ---
 
-#### 12. N+1 Query Issues in Message Service
+#### 12. N+1 Query Issues in Message Service (Skipped)
 
 - **File:** `backend/app/services/message_service.py:203`
 - **Severity:** HIGH
@@ -193,7 +193,7 @@
 
 ---
 
-#### 17. No Rate Limiting on Auth Endpoints
+#### 17. No Rate Limiting on Auth Endpoints (Skipped)
 
 - **File:** `backend/app/api/routes/auth.py`
 - **Severity:** MEDIUM
@@ -203,7 +203,7 @@
 
 ---
 
-#### 18. Connection Pool Not Configured
+#### 18. Connection Pool Not Configured (Skipped)
 
 - **File:** `backend/app/db/session.py`
 - **Severity:** MEDIUM
@@ -255,7 +255,7 @@ engine = create_engine(
 
 ---
 
-#### 22. No React Error Boundary
+#### 22. No React Error Boundary (Skipped)
 
 - **File:** `frontend/src/App.tsx`
 - **Severity:** MEDIUM
@@ -264,7 +264,7 @@ engine = create_engine(
 
 ---
 
-#### 23. Multiple Results Potential in Demo Trip Query
+#### 23. Multiple Results Potential in Demo Trip Query (Skipped)
 
 - **File:** `backend/app/api/routes/trips.py:67`
 - **Severity:** MEDIUM
@@ -286,7 +286,7 @@ engine = create_engine(
 
 ---
 
-#### 25. CORS Hardcoded to localhost
+#### 25. CORS Hardcoded to localhost (Skipped)
 
 - **File:** `backend/app/core/middleware.py:8`
 - **Severity:** LOW
@@ -295,7 +295,7 @@ engine = create_engine(
 
 ---
 
-#### 26. Missing Request ID Middleware
+#### 26. Missing Request ID Middleware (Skipped)
 
 - **File:** `backend/app/core/middleware.py`
 - **Severity:** LOW
@@ -322,7 +322,7 @@ engine = create_engine(
 
 ---
 
-#### 29. Console.log Statements in Production
+#### 29. Console.log Statements in Production (Skipped)
 
 - **Multiple files**
 - **Severity:** LOW
@@ -351,7 +351,7 @@ engine = create_engine(
 
 ---
 
-#### 32. Wikipedia Queue System Uses Global Window
+#### 32. Wikipedia Queue System Uses Global Window (Skipped)
 
 - **File:** `frontend/src/components/trip/AttractionCard.tsx`, `HotelCard.tsx`
 - **Severity:** LOW
@@ -370,7 +370,7 @@ engine = create_engine(
 
 ---
 
-#### 34. No Offline/Connection Recovery
+#### 34. No Offline/Connection Recovery (Skipped)
 
 - **Impact:** If network drops mid-stream, no automatic reconnection.
 - **Severity:** LOW
