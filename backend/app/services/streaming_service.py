@@ -323,6 +323,11 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
 
     today = date.today().isoformat()
     prefs_section = f"User preferences: {preferences}" if preferences else ""
+    commands_section = (
+        f"User instructions: {preferences.get('trip_planning_commands', '')}"
+        if preferences and preferences.get("trip_planning_commands")
+        else ""
+    )
     return (
         f"You are a travel planning assistant. Today is {today}.\n\n"
         "## Required Info\n"
@@ -361,7 +366,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "- Never invent dates, destinations, or prices.\n"
         "- Use HKD for Asian destinations.\n"
         "- Markdown formatting.\n"
-        f"{prefs_section}"
+        f"{prefs_section}" + (f"\n{commands_section}" if commands_section else "")
     )
 
 

@@ -28,6 +28,10 @@ class UserPreference(BaseModel):
     budget_min_hkd: float = Field(default=5000.0, ge=0)
     budget_max_hkd: float = Field(default=20000.0, ge=0)
     max_flight_stops: MaxStops = Field(default=1)
+    trip_planning_commands: str = Field(
+        default="",
+        description="Custom user instructions for trip planning (e.g., 'Prioritize commercial activities')",
+    )
 
     @model_validator(mode="after")
     def check_budget_range(self) -> UserPreference:

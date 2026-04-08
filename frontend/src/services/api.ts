@@ -488,6 +488,7 @@ export interface UserPreferences {
   budget_min_hkd: number;
   budget_max_hkd: number;
   max_flight_stops: number;
+  trip_planning_commands?: string;
 }
 
 export interface UserProfile {
