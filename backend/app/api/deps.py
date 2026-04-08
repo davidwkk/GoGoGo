@@ -38,7 +38,9 @@ def get_current_user(
             detail="Token missing user_id claim",
         )
 
-    return {"user_id": UUID(user_id)}
+    uid = UUID(user_id)
+    verify_user_exists(uid, db)
+    return {"user_id": uid}
 
 
 def get_current_user_optional(
