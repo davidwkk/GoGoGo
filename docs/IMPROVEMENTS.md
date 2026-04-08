@@ -333,7 +333,7 @@ engine = create_engine(
 
 ### Frontend
 
-#### 30. window.confirm Instead of Dialog Component
+#### 30. window.confirm Instead of Dialog Component (Done)
 
 - **File:** `frontend/src/pages/ChatPage.tsx:648`
 - **Severity:** LOW
@@ -342,7 +342,7 @@ engine = create_engine(
 
 ---
 
-#### 31. alert() Instead of toast for Errors
+#### 31. alert() Instead of toast for Errors (Done)
 
 - **File:** `frontend/src/pages/ChatPage.tsx:667, 719`
 - **Severity:** LOW

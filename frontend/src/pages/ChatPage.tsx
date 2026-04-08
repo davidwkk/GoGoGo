@@ -478,6 +478,7 @@ export function ChatPage() {
   const [generatedItinerary, setGeneratedItinerary] = useState<TripItinerary | null>(null);
   const [showGeneratedLoading, setShowGeneratedLoading] = useState(false);
   const [clearAllHistoryDialogOpen, setClearAllHistoryDialogOpen] = useState(false);
+  const [deleteSessionDialogId, setDeleteSessionDialogId] = useState<number | null>(null);
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
@@ -645,8 +646,13 @@ export function ChatPage() {
   };
 
   const deleteSession = async (id: number) => {
-    const ok = window.confirm('Delete this chat? This cannot be undone.');
-    if (!ok) return;
+    setDeleteSessionDialogId(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    const id = deleteSessionDialogId;
+    if (id === null) return;
+    setDeleteSessionDialogId(null);
 
     try {
       if (isLoggedIn) {
@@ -659,12 +665,13 @@ export function ChatPage() {
         }
         await chatSessionsService.deleteGuest(id, guestUid);
       }
+      toast.success('Chat deleted');
     } catch (e) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } };
       const status = err.response?.status;
       const detail = err.response?.data?.detail;
       console.error('Failed to delete session:', { status, detail, err });
-      alert(
+      toast.error(
         `Failed to delete this chat. ${
           status ? `HTTP ${status}. ` : ''
         }${typeof detail === 'string' ? detail : 'Please try again.'}`
@@ -716,7 +723,7 @@ export function ChatPage() {
       setDemoItinerary(demo.itinerary);
     } catch (err) {
       console.error('Failed to load demo trip:', err);
-      alert('Demo trip not available. Please ensure the database is seeded.');
+      toast.error('Demo trip not available. Please ensure the database is seeded.');
     } finally {
       setShowDemoLoading(false);
     }
@@ -1164,6 +1171,18 @@ export function ChatPage() {
           onItinerary={setGeneratedItinerary}
           onFinalizing={() => setShowGeneratedLoading(true)}
           onTripSaved={() => toast.success('Trip saved!')}
+        />
+
+        {/* Delete session confirmation */}
+        <ConfirmDialog
+          open={deleteSessionDialogId !== null}
+          onOpenChange={open => !open && setDeleteSessionDialogId(null)}
+          title="Delete this chat"
+          description="Are you sure you want to delete this chat? This cannot be undone."
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          onConfirm={handleDeleteConfirm}
+          destructive
         />
 
         {/* Clear all history confirmation */}
