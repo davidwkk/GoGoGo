@@ -132,7 +132,7 @@ async def get_guest_chat_session_messages(
 
     messages = get_session_messages(db, session_id)
     return {
-        "session_id": str(guest_uid),
+        "session_id": str(session.id),
         "messages": [
             {
                 "id": msg.id,

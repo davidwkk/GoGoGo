@@ -277,7 +277,7 @@ engine = create_engine(
 
 ### Backend
 
-#### 24. Health Check Doesn't Verify Database Connection
+#### 24. Health Check Doesn't Verify Database Connection (Done)
 
 - **File:** `backend/app/api/routes/health.py:6`
 - **Severity:** LOW
@@ -304,7 +304,7 @@ engine = create_engine(
 
 ---
 
-#### 27. Session ID Return Type Inconsistency
+#### 27. Session ID Return Type Inconsistency (Done)
 
 - **File:** `backend/app/api/routes/chat_sessions.py:134`
 - **Severity:** LOW
@@ -313,7 +313,7 @@ engine = create_engine(
 
 ---
 
-#### 28. \_round_price_range None Handling
+#### 28. \_round_price_range None Handling (Done)
 
 - **File:** `backend/app/services/streaming_service.py:194`
 - **Severity:** LOW
