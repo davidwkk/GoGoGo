@@ -623,9 +623,9 @@ export function ChatPage() {
     try {
       await chatSessionsService.delete(id);
     } catch (e) {
-      const err = e as any;
-      const status = err?.response?.status;
-      const detail = err?.response?.data?.detail;
+      const err = e as { response?: { status?: number; data?: { detail?: string } } };
+      const status = err.response?.status;
+      const detail = err.response?.data?.detail;
       console.error('Failed to delete session:', { status, detail, err });
       alert(
         `Failed to delete this chat. ${
@@ -663,12 +663,13 @@ export function ChatPage() {
       setSessionId(null);
       toast.success('All chat history cleared');
     } catch (e) {
-      const err = e as any;
-      toast.error(err?.response?.data?.detail ?? 'Failed to clear chat history');
+      const err = e as { response?: { data?: { detail?: string } } };
+      toast.error(err.response?.data?.detail ?? 'Failed to clear chat history');
     }
   };
 
   // @ts-expect-error — temporarily hidden with button; restore together
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _generateDemoTrip = async () => {
     if (showDemoLoading || isLoading) return;
     setShowDemoLoading(true);
