@@ -17,13 +17,15 @@ class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
     guest_id: Mapped[UUID | None] = mapped_column(
-        Uuid, ForeignKey("guests.id"), nullable=True
+        Uuid, ForeignKey("guests.id"), nullable=True, index=True
     )
     title: Mapped[str] = mapped_column(String(200), default="New Chat")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), index=True
     )
 
     user: Mapped["User | None"] = relationship(back_populates="sessions")
