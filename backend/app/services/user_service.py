@@ -5,8 +5,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.repositories.preference_repo import get_preferences, upsert_preferences
-from app.repositories.user_repo import get_user_by_id, update_username
+from app.repositories.user_repo import get_user_by_id, update_username, update_password
 from app.schemas.user import UserPreference
+from app.core.security import verify_password, get_password_hash
 
 
 def get_user_profile(db: Session, user_id: UUID) -> dict | None:
@@ -61,3 +62,25 @@ def update_user_profile(
 
     # Return updated profile
     return get_user_profile(db, user_id)
+
+
+def change_password(
+    db: Session,
+    user_id: UUID,
+    current_password: str,
+    new_password: str,
+) -> tuple[bool, str]:
+    """
+    Change user's password.
+    Returns (success, error_message).
+    """
+    user = get_user_by_id(db, user_id)
+    if not user:
+        return (False, "User not found")
+
+    if not verify_password(current_password, user.hashed_password):
+        return (False, "Current password is incorrect")
+
+    hashed = get_password_hash(new_password)
+    update_password(db, user_id, hashed)
+    return (True, "")
