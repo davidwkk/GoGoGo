@@ -2,6 +2,8 @@
 
 POST /chat/sessions/{id}/end — end session and extract preferences
 GET /chat/sessions/{id}/messages — retrieve session message history
+DELETE /chat/sessions/{id}/messages — clear all messages in a session
+DELETE /chat/sessions — clear all chat history
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -12,6 +14,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_current_user_optional, get_db
 from app.db.models.message import Message
 from app.services.message_service import (
+    clear_session_messages,
+    delete_all_sessions,
     delete_session,
     end_session,
     get_active_session_by_user,
@@ -168,6 +172,33 @@ async def get_chat_session_messages(
             for msg in messages
         ],
     }
+
+
+@router.delete("/sessions/{session_id}/messages")
+async def clear_chat_session_messages(
+    session_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Clear all messages in a single chat session (session itself is kept)."""
+    session = get_session(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    clear_session_messages(db, session_id)
+    return {"status": "messages_cleared", "session_id": session_id}
+
+
+@router.delete("/sessions")
+async def clear_all_chat_history(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete ALL chat sessions and messages for the current user."""
+    count = delete_all_sessions(db, current_user["user_id"])
+    return {"status": "all_history_cleared", "sessions_deleted": count}
 
 
 @router.patch("/messages/{message_id}/thinking-steps")
