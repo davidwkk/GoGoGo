@@ -9,6 +9,7 @@ DELETE /chat/sessions — clear all chat history
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -236,8 +237,11 @@ async def end_chat_session(
     try:
         await extract_and_save_preferences(db, current_user["user_id"], history)
     except Exception:
-        # Log but don't fail — preference extraction is best-effort
-        pass
+        logger.warning(
+            "preference_extraction_failed",
+            user_id=str(current_user["user_id"]),
+            session_id=session_id,
+        )
 
     return {"status": "session_ended", "session_id": session_id}
 
