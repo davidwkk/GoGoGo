@@ -19,6 +19,7 @@ from app.db.models.message import Message
 from app.services.message_service import (
     clear_session_messages,
     create_session,
+    delete_all_guest_sessions,
     delete_all_sessions,
     delete_session,
     end_session,
@@ -169,6 +170,21 @@ async def delete_guest_chat_session(
     if not ok:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"status": "deleted", "session_id": session_id}
+
+
+@router.delete("/guest/sessions")
+async def delete_all_guest_chat_sessions(
+    guest_uid: str = Query(..., description="Guest UID from localStorage"),
+    db: Session = Depends(get_db),
+):
+    """Delete all guest sessions and all their messages."""
+    try:
+        guest_uuid = UUID(guest_uid)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid guest_uid")
+
+    count = delete_all_guest_sessions(db, guest_uuid)
+    return {"status": "all_history_cleared", "sessions_deleted": count}
 
 
 @router.patch("/sessions/{session_id}")
