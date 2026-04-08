@@ -505,12 +505,21 @@ export function ChatPage() {
   const createdRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
-
     (async () => {
       try {
-        // Always fetch sessions list to show in sidebar
-        const listRes = await chatSessionsService.list();
+        // Always fetch sessions list to show in sidebar (works for both users + guests)
+        let guestUid: string | null = null;
+        if (!isLoggedIn) {
+          guestUid = localStorage.getItem('guest_uid');
+          if (!guestUid) {
+            guestUid = crypto.randomUUID();
+            localStorage.setItem('guest_uid', guestUid);
+          }
+        }
+
+        const listRes = isLoggedIn
+          ? await chatSessionsService.list()
+          : await chatSessionsService.listGuest(guestUid!);
         setSessions(listRes.sessions);
 
         // Only create new session if we haven't already created one in this mount cycle
@@ -519,7 +528,9 @@ export function ChatPage() {
         if (createdRef.current || sessionId !== null) return;
         createdRef.current = true;
 
-        const created = await chatSessionsService.create();
+        const created = isLoggedIn
+          ? await chatSessionsService.create()
+          : await chatSessionsService.createGuest(guestUid!);
         setSessions(prev => [
           { id: created.session_id, title: created.title, created_at: created.created_at },
           ...prev,
@@ -543,29 +554,37 @@ export function ChatPage() {
     setGeneratedItinerary(null);
     setShowGeneratedLoading(false);
     setTypewriterDone(false);
-    if (isLoggedIn) {
-      try {
+    try {
+      if (isLoggedIn) {
         const created = await chatSessionsService.create();
         setSessions(prev => [
           { id: created.session_id, title: created.title, created_at: created.created_at },
           ...prev,
         ]);
         setSessionId(String(created.session_id));
-      } catch {
-        // Fallback: create on first message if create endpoint fails
-        setSessionId(null);
-        setForceNewSessionNextMessage(true);
+        return;
       }
-    } else {
-      // Guest history UI not implemented yet; keep existing behavior.
+
+      // Guest: create a new guest session and keep guest_uid stable.
+      let guestUid = localStorage.getItem('guest_uid');
+      if (!guestUid) {
+        guestUid = crypto.randomUUID();
+        localStorage.setItem('guest_uid', guestUid);
+      }
+      const created = await chatSessionsService.createGuest(guestUid);
+      setSessions(prev => [
+        { id: created.session_id, title: created.title, created_at: created.created_at },
+        ...prev,
+      ]);
+      setSessionId(String(created.session_id));
+    } catch {
+      // Fallback: create on first message if create endpoint fails
       setSessionId(null);
-      localStorage.removeItem('guest_uid');
+      setForceNewSessionNextMessage(true);
     }
   };
 
   const loadSession = async (id: number) => {
-    if (!isLoggedIn) return;
-
     // Cancel any in-progress stream first
     if (abortController) {
       abortController.abort();
@@ -582,7 +601,17 @@ export function ChatPage() {
     useChatStore.getState().setPartialThoughtText('');
     useChatStore.setState({ thinkingSteps: [] });
 
-    const res = await chatSessionsService.getMessages(id);
+    let guestUid: string | null = null;
+    if (!isLoggedIn) {
+      guestUid = localStorage.getItem('guest_uid');
+      if (!guestUid) {
+        guestUid = crypto.randomUUID();
+        localStorage.setItem('guest_uid', guestUid);
+      }
+    }
+    const res = isLoggedIn
+      ? await chatSessionsService.getMessages(id)
+      : await chatSessionsService.getGuestMessages(id, guestUid!);
     setSessionId(String(id));
     setMessages(
       res.messages
@@ -616,12 +645,20 @@ export function ChatPage() {
   };
 
   const deleteSession = async (id: number) => {
-    if (!isLoggedIn) return;
     const ok = window.confirm('Delete this chat? This cannot be undone.');
     if (!ok) return;
 
     try {
-      await chatSessionsService.delete(id);
+      if (isLoggedIn) {
+        await chatSessionsService.delete(id);
+      } else {
+        let guestUid = localStorage.getItem('guest_uid');
+        if (!guestUid) {
+          guestUid = crypto.randomUUID();
+          localStorage.setItem('guest_uid', guestUid);
+        }
+        await chatSessionsService.deleteGuest(id, guestUid);
+      }
     } catch (e) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } };
       const status = err.response?.status;
@@ -700,53 +737,50 @@ export function ChatPage() {
     <div className="flex h-screen bg-background">
       {/* Left sidebar: Chat History */}
       <aside
-        className={`${historyCollapsed ? 'w-12' : 'w-72'} border-r bg-background flex flex-col transition-[width] duration-200`}
+        className={`${historyCollapsed ? 'w-0 border-r-0' : 'w-72 border-r'} bg-background flex flex-col transition-[width] duration-200 overflow-hidden`}
       >
-        <div
-          className={`${historyCollapsed ? 'px-2' : 'px-4'} py-4 ${historyCollapsed ? '' : 'border-b'}`}
-        >
-          <div
-            className={`flex items-center ${historyCollapsed ? 'justify-center' : 'justify-between'} gap-2`}
-          >
-            {!historyCollapsed && (
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <div className="text-sm font-semibold">Chat History</div>
-                  <div className="text-xs text-muted-foreground">
-                    {isLoggedIn ? 'Your sessions' : 'Sign in to save sessions'}
-                  </div>
-                </div>
-                {sessions.length > 0 && isLoggedIn && (
-                  <button
-                    type="button"
-                    onClick={() => setClearAllHistoryDialogOpen(true)}
-                    className="flex items-center gap-1.5 h-7 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 px-2 text-xs font-medium transition-colors"
-                    title="Clear all chat history"
-                  >
-                    <Trash2 className="size-3.5" />
-                    Clear all
-                  </button>
-                )}
+        <div className="px-4 py-4 border-b">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold">Chat History</div>
+              <div className="text-xs text-muted-foreground">
+                {isLoggedIn ? 'Your sessions' : 'Guest sessions (not saved to your account)'}
               </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setHistoryCollapsed(v => !v)}
-              className="flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              aria-label={historyCollapsed ? 'Expand chat history' : 'Collapse chat history'}
-              title={historyCollapsed ? 'Expand' : 'Collapse'}
-            >
-              {historyCollapsed ? (
-                <PanelLeftOpen className="size-4" />
-              ) : (
-                <PanelLeftClose className="size-4" />
+            </div>
+            <div className="flex items-center gap-2">
+              {sessions.length > 0 && isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => setClearAllHistoryDialogOpen(true)}
+                  className="flex items-center gap-1.5 h-7 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 px-2 text-xs font-medium transition-colors"
+                  title="Clear all chat history"
+                >
+                  <Trash2 className="size-3.5" />
+                  Clear all
+                </button>
               )}
-            </button>
+              <button
+                type="button"
+                onClick={() => setHistoryCollapsed(true)}
+                className="flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                aria-label="Collapse chat history"
+                title="Collapse"
+              >
+                <PanelLeftClose className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {!historyCollapsed && (
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <button
+              onClick={startNewChat}
+              className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <PlusCircle className="size-3" />
+              New Chat
+            </button>
             {sessions.map(s => {
               const active = currentSessionPk === s.id;
               const isSidebarEditing = editingSidebarSessionId === s.id;
@@ -808,6 +842,21 @@ export function ChatPage() {
                         </button>
                       </div>
                     )}
+                    {!isSidebarEditing && !isLoggedIn && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={e => {
+                            e.stopPropagation();
+                            deleteSession(s.id);
+                          }}
+                          aria-label="Delete chat"
+                          type="button"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {s.created_at && (
                     <div className="mt-1 text-[11px] text-muted-foreground">
@@ -818,7 +867,7 @@ export function ChatPage() {
               );
             })}
             {sessions.length === 0 && (
-              <div className={`p-3 text-xs text-muted-foreground`}>
+              <div className="p-3 text-xs text-muted-foreground">
                 {isLoggedIn
                   ? 'No sessions yet. Click New Chat to start.'
                   : 'Sign in to save your chat sessions.'}
@@ -831,34 +880,58 @@ export function ChatPage() {
       {/* Main chat area */}
       <main className="flex flex-col flex-1">
         {/* Header */}
-        <header className="flex items-center gap-3 px-6 py-4 border-b">
-          <div className="flex items-center justify-center rounded-xl bg-black text-white size-8">
-            <MessageSquare className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold">GoGoGo</h1>
-            <div className="flex items-center gap-2">
-              {isLoggedIn && currentSessionPk && currentSession ? (
-                <p
-                  className={`text-xs text-muted-foreground truncate max-w-[${historyCollapsed ? '300px' : '130px'}]`}
-                >
-                  {currentSession.title}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">AI Travel Agent</p>
-              )}
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={startNewChat}
-              className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <PlusCircle className="size-3" />
-              New Chat
-            </button>
-            {/* TODO(temp-hidden): Demo Trip button temporarily hidden — uncomment to re-enable */}
-            {/* <button
+        <header
+          className={`flex items-center gap-3 px-6 py-4 ${
+            isLoggedIn && !historyCollapsed ? '' : 'border-b'
+          }`}
+        >
+          {historyCollapsed ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setHistoryCollapsed(false)}
+                className="flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                aria-label="Expand chat history"
+                title="Expand"
+              >
+                <PanelLeftOpen className="size-4" />
+              </button>
+              <button
+                onClick={startNewChat}
+                className="flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <PlusCircle className="size-3" />
+                New Chat
+              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {isLoggedIn && currentSessionPk && currentSession ? (
+                    <p className="text-sm font-semibold text-foreground truncate max-w-[420px]">
+                      {currentSession.title}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">AI Travel Agent</p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {isLoggedIn && currentSessionPk && currentSession ? (
+                    <p className="text-sm font-semibold text-foreground truncate max-w-[260px]">
+                      {currentSession.title}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">AI Travel Agent</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          {/* TODO(temp-hidden): Demo Trip button temporarily hidden — uncomment to re-enable */}
+          {/* <button
               onClick={generateDemoTrip}
               disabled={isLoading || showDemoLoading}
               className="flex items-center gap-1.5 h-8 rounded-xl bg-linear-to-r from-blue-600 to-blue-500 text-white px-3 text-xs font-medium hover:from-blue-500 hover:to-blue-400 transition-colors disabled:opacity-50"
@@ -866,7 +939,6 @@ export function ChatPage() {
               <Sparkles className="size-3" />
               {showDemoLoading ? 'Generating...' : 'Demo Trip'}
             </button> */}
-          </div>
         </header>
 
         {/* Message list */}

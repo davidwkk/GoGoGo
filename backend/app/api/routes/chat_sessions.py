@@ -6,6 +6,8 @@ DELETE /chat/sessions/{id}/messages — clear all messages in a session
 DELETE /chat/sessions — clear all chat history
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -15,13 +17,16 @@ from app.api.deps import get_current_user, get_current_user_optional, get_db
 from app.db.models.message import Message
 from app.services.message_service import (
     clear_session_messages,
+    create_session,
     delete_all_sessions,
     delete_session,
     end_session,
     get_active_session_by_user,
+    get_or_create_guest,
     get_session,
     get_session_messages,
     list_sessions_for_user,
+    list_sessions_for_guest,
     resolve_session,
     update_session_title,
 )
@@ -44,8 +49,6 @@ async def create_new_session(
     db: Session = Depends(get_db),
 ):
     """Create a new chat session (appears in left Chat History immediately)."""
-    from app.services.message_service import create_session
-
     session = create_session(db, user_id=current_user["user_id"])
     return {
         "session_id": session.id,
@@ -70,6 +73,101 @@ async def list_chat_sessions(
             for s in sessions
         ]
     }
+
+
+@router.get("/guest/sessions")
+async def list_guest_chat_sessions(
+    guest_uid: str = Query(..., description="Guest UID from localStorage"),
+    db: Session = Depends(get_db),
+):
+    """List chat sessions for a guest (no auth token)."""
+    guest = get_or_create_guest(db, guest_uid)
+    sessions = list_sessions_for_guest(db, guest.id)
+    return {
+        "sessions": [
+            {
+                "id": s.id,
+                "title": s.title,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+            }
+            for s in sessions
+        ]
+    }
+
+
+@router.post("/guest/sessions")
+async def create_guest_session(
+    guest_uid: str = Query(..., description="Guest UID from localStorage"),
+    db: Session = Depends(get_db),
+):
+    """Create a new guest chat session (appears in left Chat History immediately)."""
+    guest = get_or_create_guest(db, guest_uid)
+    session = create_session(db, user_id=None, guest_id=guest.id)
+    return {
+        "session_id": session.id,
+        "title": session.title,
+        "created_at": session.created_at.isoformat() if session.created_at else None,
+    }
+
+
+@router.get("/guest/sessions/{session_id}/messages")
+async def get_guest_chat_session_messages(
+    session_id: int,
+    guest_uid: str = Query(..., description="Guest UID from localStorage"),
+    db: Session = Depends(get_db),
+):
+    """Get all messages for a guest chat session."""
+    # Validate guest_uid and fetch guest
+    try:
+        guest_uuid = UUID(guest_uid)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid guest_uid")
+
+    session = get_session(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.guest_id != guest_uuid:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    messages = get_session_messages(db, session_id)
+    return {
+        "session_id": str(guest_uid),
+        "messages": [
+            {
+                "id": msg.id,
+                "role": msg.role,
+                "content": msg.content,
+                "message_type": msg.message_type,
+                "thinking_steps": msg.thinking_steps,
+                "created_at": msg.created_at.isoformat() if msg.created_at else None,
+            }
+            for msg in messages
+        ],
+    }
+
+
+@router.delete("/guest/sessions/{session_id}")
+async def delete_guest_chat_session(
+    session_id: int,
+    guest_uid: str = Query(..., description="Guest UID from localStorage"),
+    db: Session = Depends(get_db),
+):
+    """Delete a guest session and all its messages."""
+    try:
+        guest_uuid = UUID(guest_uid)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid guest_uid")
+
+    session = get_session(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.guest_id != guest_uuid:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    ok = delete_session(db, session_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"status": "deleted", "session_id": session_id}
 
 
 @router.patch("/sessions/{session_id}")
