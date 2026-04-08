@@ -295,8 +295,6 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 
 ### 🔲 Remaining Tasks
 
-> Ordered from most fundamental (blocked by nothing) to most dependent (blocked by above tasks).
-
 - [x] **Verify the return schema from tools** — Confirm the return schemas and write API testcases to test the tools.
 - [x] **Verify the map URL building method** — Audit `tools/maps.py` URL builder; confirm generated Google Maps Embed/Static URLs are correctly formatted with coordinates and place names; add unit tests for edge cases (special characters, empty values, coordinate bounds).
 - [x] **Fix thinking bubble display** when LLM calls tools ✅ — Thinking bubbles are now collapsible per message using `expandedBubbles` state; shown persistently for every user message.
@@ -313,11 +311,14 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
   - **Frontend** (`ChatPage.tsx`): Remove the "Save & Finish Trip" button and its associated `POST /chat/sessions/{id}/end` call from the UI. No manual save needed — the backend auto-saves.
   - **UX**: After the trip is auto-saved, show a brief toast/snackbar "Trip saved!" in the chat UI so the user knows it was persisted.
 - [x] **Delete trip plan** ✅ — `DELETE /trips/{trip_id}` already existed. TripPage already had the delete button fully wired with confirmation dialog. Added `sonner` toast library, replaced `alert()` with `toast.success('Trip deleted')` on success and `toast.error('Failed to delete this trip. Please try again.')` on failure. Added `Toaster` to `App.tsx`.
-- [ ] **Auth error UX for all user-gated buttons** — Many buttons (new chat, save trip, etc.) silently fail when the user's token is invalid/expired. Audit every button that requires an active user (e.g., "New Chat", "Save & Finish Trip" — to be removed, itinerary auto-save). For each:
+- [x] **Auth error UX for all user-gated buttons** — Many buttons (new chat, save trip, etc.) silently fail when the user's token is invalid/expired. Audit every button that requires an active user (e.g., "New Chat", "Save & Finish Trip" — to be removed, itinerary auto-save). For each:
   - Catch 401/403 responses from the API.
   - Show a **prominent error toast** (not just a console log): "Your session has expired. Please log in again." with a link/button to navigate to `/login`.
   - If the user is a guest (no token), show a toast: "Please log in to save your trip." instead of silently failing.
   - Apply this globally in the `apiClient` Axios interceptor — if any response returns 401 or 403, trigger a shared auth-error handler that shows the toast and optionally clears the stored token.
+- [x] **Change password feature** — Implement backend endpoint `PUT /users/me/password` (or `POST /users/change-password`) that accepts `current_password` and `new_password`, verifies the current password, hashes and stores the new one. Wire into `ProfilePage.tsx` with form validation (min 8 chars, require uppercase + digit).
+- [ ] **Clear chat history feature** — Implement `DELETE /chat/sessions/{session_id}/messages` endpoint to clear all messages in a single chat session. Add a "Clear chat" button in ChatPage UI for the current session (clears local state + calls backend). Also add `DELETE /chat/sessions` endpoint to clear all sessions/history for the current user. Show confirmation toast on success.
+- [ ] **Custom trip planning commands/rules** — Allow users to input custom commands or rules in ProfilePage (e.g., "Prioritize commercial activities", "Always suggest budget options") that are saved as part of `user_preferences`. These commands should be sent to the LLM alongside existing preference extraction in the agent system prompt (e.g., inject as `"User instructions: {commands}"` in the agent prompt). Add a text area in ProfilePage for "Trip Planning Preferences / Custom Commands" with save button. Commands are stored in `user_preferences` table and injected into the agent prompt on every trip-planning chat.
 
 ### 🧪 Tests to Write
 
@@ -396,6 +397,7 @@ backend/tests/integration/
 ### 🔲 Remaining Tasks
 
 - [x] **Image popup dialog** — Make images in trip cards clickable; show full-size image in a popup dialog when clicked (e.g., lightbox modal)
+- [ ] **Typewriter Effect** — Add typewriter effect to ChatPage for LLM's response; stream tokens as they arrive for a more natural chat feel
 
 #### Frontend E2E Tests
 
