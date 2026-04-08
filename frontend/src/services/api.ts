@@ -513,4 +513,11 @@ export const userService = {
     const { data } = await apiClient.patch<UserProfile>('/users/me', req);
     return data;
   },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await apiClient.post('/users/me/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+  },
 };

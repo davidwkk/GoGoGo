@@ -35,3 +35,14 @@ def update_username(db: Session, user_id: UUID, username: str) -> User | None:
     db.commit()
     db.refresh(user)
     return user
+
+
+def update_password(db: Session, user_id: UUID, hashed_password: str) -> User | None:
+    """Update a user's password. Returns the updated user or None if not found."""
+    user = get_user_by_id(db, user_id)
+    if not user:
+        return None
+    user.hashed_password = hashed_password
+    db.commit()
+    db.refresh(user)
+    return user

@@ -4,8 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.schemas.user import UserResponse, UserUpdate
-from app.services.user_service import get_user_profile, update_user_profile
+from app.schemas.user import PasswordChange, UserResponse, UserUpdate
+from app.services.user_service import (
+    change_password,
+    get_user_profile,
+    update_user_profile,
+)
 
 router = APIRouter()
 
@@ -48,3 +52,24 @@ def update_me(
             detail="User not found",
         )
     return profile
+
+
+@router.post("/me/change-password", status_code=status.HTTP_200_OK)
+def change_password_endpoint(
+    body: PasswordChange,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Change current user's password."""
+    success, error_msg = change_password(
+        db,
+        current_user["user_id"],
+        body.current_password,
+        body.new_password,
+    )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg,
+        )
+    return {"message": "Password changed successfully"}
