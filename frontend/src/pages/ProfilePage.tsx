@@ -30,6 +30,7 @@ export function ProfilePage() {
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
+  const [tripCommands, setTripCommands] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -54,6 +55,7 @@ export function ProfilePage() {
       const data = await userService.getProfile();
       setProfile(data);
       setUsername(data.username);
+      setTripCommands(data.preferences?.trip_planning_commands ?? '');
     } catch (err) {
       const authErr = err as AuthError;
       if (authErr.userMessage) {
@@ -81,7 +83,10 @@ export function ProfilePage() {
     setError(null);
     setSuccess(false);
     try {
-      const updated = await userService.updateProfile({ username });
+      const updated = await userService.updateProfile({
+        username,
+        preferences: { ...profile?.preferences, trip_planning_commands: tripCommands },
+      });
       setProfile(updated);
       localStorage.setItem('user_name', updated.username);
       setSuccess(true);
@@ -323,6 +328,31 @@ export function ProfilePage() {
           <Button onClick={handleChangePassword} disabled={changingPassword}>
             {changingPassword ? 'Changing...' : 'Change Password'}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Trip Planning Commands card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Trip Planning Preferences</CardTitle>
+          <CardDescription>Custom rules and instructions for trip planning</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="trip-commands">Custom Commands / Rules</Label>
+            <textarea
+              id="trip-commands"
+              value={tripCommands}
+              onChange={e => setTripCommands(e.target.value)}
+              placeholder="E.g., Prioritize commercial activities, Always suggest budget options..."
+              rows={4}
+              className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              These instructions will be sent to the AI when planning trips. E.g., &quot;Prioritize
+              shopping areas&quot;, &quot;Suggest halal food options&quot;.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
