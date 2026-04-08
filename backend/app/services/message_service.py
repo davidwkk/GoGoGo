@@ -208,13 +208,6 @@ def delete_all_sessions(db: Session, user_id: UUID) -> int:
     sessions = list_sessions_for_user(db, user_id)
     count = len(sessions)
     for session in sessions:
-        messages = (
-            db.execute(select(Message).where(Message.session_id == session.id))
-            .scalars()
-            .all()
-        )
-        for m in messages:
-            db.delete(m)
         db.delete(session)
     db.commit()
     return count
@@ -224,7 +217,7 @@ def delete_session(db: Session, session_id: int) -> bool:
     """
     Delete a session and all its messages.
 
-    We explicitly delete messages first to avoid relying on DB cascade settings.
+    Cascade delete is handled by SQLAlchemy relationship configuration.
     """
     session = db.execute(
         select(ChatSession).where(ChatSession.id == session_id)
@@ -232,13 +225,6 @@ def delete_session(db: Session, session_id: int) -> bool:
     if session is None:
         return False
 
-    messages = (
-        db.execute(select(Message).where(Message.session_id == session_id))
-        .scalars()
-        .all()
-    )
-    for m in messages:
-        db.delete(m)
     db.delete(session)
     db.commit()
     return True
