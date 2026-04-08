@@ -243,7 +243,7 @@ engine = create_engine(
 
 ### Frontend
 
-#### 21. Wikipedia Images Not Validated
+#### 21. Wikipedia Images Not Validated (Done)
 
 - **Files:**
   - `frontend/src/components/trip/AttractionCard.tsx:53`
@@ -251,7 +251,7 @@ engine = create_engine(
 - **Severity:** MEDIUM
 - **Description:** Images loaded from Wikipedia based on dynamic search queries could theoretically be manipulated via MITM.
 - **Impact:** CSP bypass risk (low probability).
-- **Fix:** Validate image MIME types or use Wikipedia's API directly.
+- **Fix:** Validate image MIME types.
 
 ---
 
