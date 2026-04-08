@@ -3,7 +3,7 @@
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.chat_session import ChatSession
@@ -120,26 +120,32 @@ def create_session(
     """Create a new chat session."""
     if title == "New Chat":
         # Number sessions per owner so sidebar shows New Chat 1, New Chat 2, ...
+        # Use the highest existing "New Chat N" number + 1 to avoid duplicates
+        def get_max_chat_number(owner_id: UUID | None, owner_field: str) -> int:
+            filter_condition = (
+                ChatSession.user_id == owner_id
+                if owner_field == "user_id"
+                else ChatSession.guest_id == owner_id
+            )
+            result = db.execute(select(ChatSession.title).where(filter_condition))
+            titles = [row[0] for row in result.fetchall()]
+            max_num = 0
+            for t in titles:
+                if t.startswith("New Chat "):
+                    try:
+                        num = int(t.split("New Chat ")[1])
+                        if num > max_num:
+                            max_num = num
+                    except ValueError:
+                        pass
+            return max_num
+
         if user_id is not None:
-            n = (
-                db.execute(
-                    select(func.count(ChatSession.id)).where(
-                        ChatSession.user_id == user_id
-                    )
-                ).scalar_one()
-                or 0
-            )
-            title = f"New Chat {n + 1}"
+            max_num = get_max_chat_number(user_id, "user_id")
+            title = f"New Chat {max_num + 1}"
         elif guest_id is not None:
-            n = (
-                db.execute(
-                    select(func.count(ChatSession.id)).where(
-                        ChatSession.guest_id == guest_id
-                    )
-                ).scalar_one()
-                or 0
-            )
-            title = f"New Chat {n + 1}"
+            max_num = get_max_chat_number(guest_id, "guest_id")
+            title = f"New Chat {max_num + 1}"
 
     session = ChatSession(
         user_id=user_id,
