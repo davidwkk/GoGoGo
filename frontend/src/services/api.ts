@@ -130,9 +130,11 @@ apiClient.interceptors.response.use(
     }
 
     // Auth graceful fallback — handle 401/403 globally for all user-gated endpoints
+    // Skip for auth endpoints (login/register) since 401 there means invalid credentials, not expired session
     const status = error.response?.status;
     const endpoint = error.config?.url;
-    if (status === 401 || status === 403) {
+    const isAuthEndpoint = endpoint === '/auth/login' || endpoint === '/auth/register';
+    if ((status === 401 || status === 403) && !isAuthEndpoint) {
       await handleAuthError(status, endpoint ?? '');
       // Toast is already shown by handleAuthError — don't also reject to avoid double error display
       return Promise.resolve();

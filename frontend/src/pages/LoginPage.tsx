@@ -1,8 +1,10 @@
 // LoginPage — Authentication with login / sign-up tabs
 
+import { apiClient } from '@/services/api';
+import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiClient } from '@/services/api';
+import { toast } from 'sonner';
 
 type AuthMode = 'login' | 'signup';
 
@@ -18,12 +20,13 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('rememberMe') === 'true');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
 
-  // Prefill from localStorage when switching to login tab
+  // Clear password when switching between login/signup modes
   useEffect(() => {
+    setPassword('');
     if (mode === 'login') {
       setEmail(localStorage.getItem('user_email') ?? '');
       setUsername(localStorage.getItem('user_name') ?? '');
@@ -42,7 +45,6 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     try {
@@ -75,7 +77,9 @@ export function LoginPage() {
     } catch (err: unknown) {
       // Because of our interceptor, we know `err` is our APIError envelope
       const apiErr = err as import('@/services/api').APIError;
-      setError(apiErr.detail || 'Something went wrong');
+      if (apiErr.statusCode === 401) {
+        toast.error('Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,7 +107,6 @@ export function LoginPage() {
                 type="button"
                 onClick={() => {
                   setMode(m);
-                  setError(null);
                 }}
                 className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition-all ${
                   mode === m
@@ -129,7 +132,7 @@ export function LoginPage() {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="your-email@example.com"
                 className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -148,7 +151,7 @@ export function LoginPage() {
                   maxLength={50}
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  placeholder="yourname"
+                  placeholder="your-username"
                   className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -158,16 +161,25 @@ export function LoginPage() {
               <label className="text-xs font-medium text-foreground" htmlFor="password">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="h-9 w-full rounded-xl border border-input bg-background px-3 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {mode === 'login' && (
@@ -187,8 +199,6 @@ export function LoginPage() {
                 </label>
               </div>
             )}
-
-            {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
             <button
               type="submit"
