@@ -397,8 +397,26 @@ export const chatSessionsService = {
     return data;
   },
 
+  async listGuest(
+    guestUid: string
+  ): Promise<{ sessions: Array<{ id: number; title: string; created_at: string | null }> }> {
+    const { data } = await apiClient.get('/chat/guest/sessions', {
+      params: { guest_uid: guestUid },
+    });
+    return data;
+  },
+
   async create(): Promise<{ session_id: number; title: string; created_at: string | null }> {
     const { data } = await apiClient.post('/chat/sessions');
+    return data;
+  },
+
+  async createGuest(
+    guestUid: string
+  ): Promise<{ session_id: number; title: string; created_at: string | null }> {
+    const { data } = await apiClient.post('/chat/guest/sessions', undefined, {
+      params: { guest_uid: guestUid },
+    });
     return data;
   },
 
@@ -415,6 +433,16 @@ export const chatSessionsService = {
     return data;
   },
 
+  async deleteGuest(
+    sessionId: number,
+    guestUid: string
+  ): Promise<{ status: string; session_id: number }> {
+    const { data } = await apiClient.delete(`/chat/guest/sessions/${sessionId}`, {
+      params: { guest_uid: guestUid },
+    });
+    return data;
+  },
+
   async end(sessionId: number): Promise<{ status: string; session_id: number }> {
     const { data } = await apiClient.post(`/chat/sessions/${sessionId}/end`);
     return data;
@@ -423,6 +451,17 @@ export const chatSessionsService = {
   async getMessages(sessionId: number): Promise<ChatSessionMessagesResponse> {
     const { data } = await apiClient.get<ChatSessionMessagesResponse>(
       `/chat/sessions/${sessionId}/messages`
+    );
+    return data;
+  },
+
+  async getGuestMessages(
+    sessionId: number,
+    guestUid: string
+  ): Promise<ChatSessionMessagesResponse> {
+    const { data } = await apiClient.get<ChatSessionMessagesResponse>(
+      `/chat/guest/sessions/${sessionId}/messages`,
+      { params: { guest_uid: guestUid } }
     );
     return data;
   },

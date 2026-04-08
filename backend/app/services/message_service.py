@@ -24,6 +24,15 @@ def get_or_create_guest(db: Session, guest_uid: str) -> Guest:
     return guest
 
 
+def list_sessions_for_guest(db: Session, guest_id: UUID) -> list[ChatSession]:
+    result = db.execute(
+        select(ChatSession)
+        .where(ChatSession.guest_id == guest_id)
+        .order_by(ChatSession.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 def append_message(
     db: Session,
     session_id: int,
