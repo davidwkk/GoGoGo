@@ -231,7 +231,7 @@ engine = create_engine(
 
 ---
 
-#### 20. Silent Failure in Preference Extraction
+#### 20. Silent Failure in Preference Extraction (Done)
 
 - **File:** `backend/app/api/routes/chat_sessions.py:236`
 - **Severity:** MEDIUM
