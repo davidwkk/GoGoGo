@@ -665,7 +665,8 @@ async def stream_agent_response(
                         message_type="itinerary",
                     )
 
-                    # Auto-save trip if user is authenticated
+                    # Auto-save trip if user is authenticated.
+                    # Guests (user_id is None) are not allowed to save trips.
                     if user_id is not None:
                         try:
                             itinerary_model = TripItinerary.model_validate(
@@ -687,6 +688,13 @@ async def stream_agent_response(
                                 trace_id=trace_id,
                                 error=str(e),
                             ).warning(f"Failed to auto-save trip: {e}")
+                    else:
+                        logger.bind(
+                            event="trip_auto_save_skipped_guest",
+                            service="chat",
+                            trace_id=trace_id,
+                            session_id=session_id,
+                        ).info("Trip auto-save skipped for guest user")
 
                     yield SSE({"done": True})
                     return

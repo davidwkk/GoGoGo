@@ -505,12 +505,21 @@ export function ChatPage() {
   const createdRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
-
     (async () => {
       try {
-        // Always fetch sessions list to show in sidebar
-        const listRes = await chatSessionsService.list();
+        // Always fetch sessions list to show in sidebar (works for both users + guests)
+        let guestUid: string | null = null;
+        if (!isLoggedIn) {
+          guestUid = localStorage.getItem('guest_uid');
+          if (!guestUid) {
+            guestUid = crypto.randomUUID();
+            localStorage.setItem('guest_uid', guestUid);
+          }
+        }
+
+        const listRes = isLoggedIn
+          ? await chatSessionsService.list()
+          : await chatSessionsService.listGuest(guestUid!);
         setSessions(listRes.sessions);
 
         // Only create new session if we haven't already created one in this mount cycle
@@ -519,7 +528,9 @@ export function ChatPage() {
         if (createdRef.current || sessionId !== null) return;
         createdRef.current = true;
 
-        const created = await chatSessionsService.create();
+        const created = isLoggedIn
+          ? await chatSessionsService.create()
+          : await chatSessionsService.createGuest(guestUid!);
         setSessions(prev => [
           { id: created.session_id, title: created.title, created_at: created.created_at },
           ...prev,
@@ -543,29 +554,37 @@ export function ChatPage() {
     setGeneratedItinerary(null);
     setShowGeneratedLoading(false);
     setTypewriterDone(false);
-    if (isLoggedIn) {
-      try {
+    try {
+      if (isLoggedIn) {
         const created = await chatSessionsService.create();
         setSessions(prev => [
           { id: created.session_id, title: created.title, created_at: created.created_at },
           ...prev,
         ]);
         setSessionId(String(created.session_id));
-      } catch {
-        // Fallback: create on first message if create endpoint fails
-        setSessionId(null);
-        setForceNewSessionNextMessage(true);
+        return;
       }
-    } else {
-      // Guest history UI not implemented yet; keep existing behavior.
+
+      // Guest: create a new guest session and keep guest_uid stable.
+      let guestUid = localStorage.getItem('guest_uid');
+      if (!guestUid) {
+        guestUid = crypto.randomUUID();
+        localStorage.setItem('guest_uid', guestUid);
+      }
+      const created = await chatSessionsService.createGuest(guestUid);
+      setSessions(prev => [
+        { id: created.session_id, title: created.title, created_at: created.created_at },
+        ...prev,
+      ]);
+      setSessionId(String(created.session_id));
+    } catch {
+      // Fallback: create on first message if create endpoint fails
       setSessionId(null);
-      localStorage.removeItem('guest_uid');
+      setForceNewSessionNextMessage(true);
     }
   };
 
   const loadSession = async (id: number) => {
-    if (!isLoggedIn) return;
-
     // Cancel any in-progress stream first
     if (abortController) {
       abortController.abort();
@@ -582,7 +601,17 @@ export function ChatPage() {
     useChatStore.getState().setPartialThoughtText('');
     useChatStore.setState({ thinkingSteps: [] });
 
-    const res = await chatSessionsService.getMessages(id);
+    let guestUid: string | null = null;
+    if (!isLoggedIn) {
+      guestUid = localStorage.getItem('guest_uid');
+      if (!guestUid) {
+        guestUid = crypto.randomUUID();
+        localStorage.setItem('guest_uid', guestUid);
+      }
+    }
+    const res = isLoggedIn
+      ? await chatSessionsService.getMessages(id)
+      : await chatSessionsService.getGuestMessages(id, guestUid!);
     setSessionId(String(id));
     setMessages(
       res.messages
@@ -616,12 +645,20 @@ export function ChatPage() {
   };
 
   const deleteSession = async (id: number) => {
-    if (!isLoggedIn) return;
     const ok = window.confirm('Delete this chat? This cannot be undone.');
     if (!ok) return;
 
     try {
-      await chatSessionsService.delete(id);
+      if (isLoggedIn) {
+        await chatSessionsService.delete(id);
+      } else {
+        let guestUid = localStorage.getItem('guest_uid');
+        if (!guestUid) {
+          guestUid = crypto.randomUUID();
+          localStorage.setItem('guest_uid', guestUid);
+        }
+        await chatSessionsService.deleteGuest(id, guestUid);
+      }
     } catch (e) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } };
       const status = err.response?.status;
@@ -707,7 +744,7 @@ export function ChatPage() {
             <div>
               <div className="text-sm font-semibold">Chat History</div>
               <div className="text-xs text-muted-foreground">
-                {isLoggedIn ? 'Your sessions' : 'Sign in to save sessions'}
+                {isLoggedIn ? 'Your sessions' : 'Guest sessions (not saved to your account)'}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -792,6 +829,21 @@ export function ChatPage() {
                         >
                           <Pencil className="size-3.5" />
                         </button>
+                        <button
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={e => {
+                            e.stopPropagation();
+                            deleteSession(s.id);
+                          }}
+                          aria-label="Delete chat"
+                          type="button"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    {!isSidebarEditing && !isLoggedIn && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           className="text-muted-foreground hover:text-destructive"
                           onClick={e => {
