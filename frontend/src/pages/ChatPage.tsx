@@ -701,6 +701,13 @@ export function ChatPage() {
     try {
       if (isLoggedIn) {
         await chatSessionsService.clearAllHistory();
+      } else {
+        let guestUid = localStorage.getItem('guest_uid');
+        if (!guestUid) {
+          guestUid = crypto.randomUUID();
+          localStorage.setItem('guest_uid', guestUid);
+        }
+        await chatSessionsService.clearAllGuestHistory(guestUid);
       }
       setSessions([]);
       clearMessages();

@@ -207,6 +207,19 @@ def delete_all_sessions(db: Session, user_id: UUID) -> int:
     return count
 
 
+def delete_all_guest_sessions(db: Session, guest_id: UUID) -> int:
+    """
+    Delete all sessions and all their messages for a guest.
+    Returns the number of sessions deleted.
+    """
+    sessions = list_sessions_for_guest(db, guest_id)
+    count = len(sessions)
+    for session in sessions:
+        db.delete(session)
+    db.commit()
+    return count
+
+
 def delete_session(db: Session, session_id: int) -> bool:
     """
     Delete a session and all its messages.

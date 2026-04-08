@@ -490,6 +490,15 @@ export const chatSessionsService = {
     const { data } = await apiClient.delete('/chat/sessions');
     return data;
   },
+
+  async clearAllGuestHistory(
+    guestUid: string
+  ): Promise<{ status: string; sessions_deleted: number }> {
+    const { data } = await apiClient.delete('/chat/guest/sessions', {
+      params: { guest_uid: guestUid },
+    });
+    return data;
+  },
 };
 
 // ─── Guest Preferences (localStorage) ─────────────────────────────────────────
