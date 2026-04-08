@@ -698,9 +698,10 @@ export function ChatPage() {
   };
 
   const handleClearAllHistory = async () => {
-    if (!isLoggedIn) return;
     try {
-      await chatSessionsService.clearAllHistory();
+      if (isLoggedIn) {
+        await chatSessionsService.clearAllHistory();
+      }
       setSessions([]);
       clearMessages();
       useChatStore.setState({ thinkingSteps: [] });
@@ -750,12 +751,9 @@ export function ChatPage() {
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="text-sm font-semibold">Chat History</div>
-              <div className="text-xs text-muted-foreground">
-                {isLoggedIn ? 'Your sessions' : 'Guest sessions (not saved to your account)'}
-              </div>
             </div>
             <div className="flex items-center gap-2">
-              {sessions.length > 0 && isLoggedIn && (
+              {sessions.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setClearAllHistoryDialogOpen(true)}
