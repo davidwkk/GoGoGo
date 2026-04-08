@@ -28,4 +28,6 @@ class ChatSession(Base):
 
     user: Mapped["User | None"] = relationship(back_populates="sessions")
     guest: Mapped["Guest | None"] = relationship(back_populates="sessions")
-    messages: Mapped[list["Message"]] = relationship(back_populates="session")
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )

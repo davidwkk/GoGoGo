@@ -170,7 +170,7 @@
 
 ---
 
-#### 15. Guest UID Persists Across Sessions
+#### 15. Guest UID Persists Across Sessions (Skipped)
 
 - **File:** `frontend/src/hooks/useChat.ts:82`
 - **Severity:** MEDIUM (reporting with high)
@@ -184,7 +184,7 @@
 
 ### Backend
 
-#### 16. Missing Cascade Delete on ChatSession.messages
+#### 16. Missing Cascade Delete on ChatSession.messages (Done)
 
 - **File:** `backend/app/db/models/chat_session.py`
 - **Severity:** MEDIUM
