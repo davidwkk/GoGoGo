@@ -2,6 +2,8 @@
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, MessageSquare, Map, User } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useState } from 'react';
 
 const navItems = [
   { icon: MessageSquare, label: 'Chat', path: '/chat' },
@@ -12,6 +14,7 @@ const navItems = [
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -51,12 +54,23 @@ export function Sidebar() {
 
       {/* Logout */}
       <button
-        onClick={handleLogout}
+        onClick={() => setLogoutDialogOpen(true)}
         title="Logout"
         className="flex items-center justify-center rounded-xl size-10 text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
       >
         <LogOut className="size-5" />
       </button>
+
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        title="Log out"
+        description="Are you sure you want to log out? You'll need to sign in again to access your trips."
+        confirmLabel="Log out"
+        cancelLabel="Cancel"
+        onConfirm={handleLogout}
+        destructive
+      />
     </aside>
   );
 }

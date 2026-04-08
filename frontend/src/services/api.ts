@@ -136,8 +136,6 @@ apiClient.interceptors.response.use(
     const isAuthEndpoint = endpoint === '/auth/login' || endpoint === '/auth/register';
     if ((status === 401 || status === 403) && !isAuthEndpoint) {
       await handleAuthError(status, endpoint ?? '');
-      // Toast is already shown by handleAuthError — don't also reject to avoid double error display
-      return Promise.resolve();
     }
 
     // Always reject with the clean APIError object
@@ -204,8 +202,6 @@ export const chatService = {
     const BASE_DELAY_MS = 500;
     let attempt = 0;
 
-    let exhaustedError: string | null = null;
-
     while (attempt <= MAX_RETRIES) {
       attempt++;
       if (signal?.aborted) {
@@ -241,7 +237,11 @@ export const chatService = {
       } catch (fetchErr) {
         warn('[streamMessage] Fetch error, retrying:', fetchErr);
         if (attempt >= MAX_RETRIES)
-          exhaustedError = 'Connection failed. Please check your network and try again.';
+          throw {
+            detail: 'Connection failed. Please check your network and try again.',
+            statusCode: 0,
+            code: 'NETWORK_ERROR',
+          };
         continue;
       }
 
@@ -251,25 +251,50 @@ export const chatService = {
         // Handle auth errors (401/403) with toast and redirect, then stop retrying
         if (response.status === 401 || response.status === 403) {
           await handleAuthError(response.status, '/chat/stream');
-          yield `__ERROR__:Authentication required. Please log in to continue.`;
-          return;
+          throw {
+            detail: 'Authentication required. Please log in to continue.',
+            statusCode: response.status,
+            code: 'AUTH_ERROR',
+          };
         }
         const errorText = await response.text();
+        let errorMessage: string | null = null;
+        // Try to extract the actual error message from JSON response (e.g., Gemini 503 errors)
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage =
+            errorJson?.error?.message ||
+            errorJson?.message ||
+            (typeof errorJson === 'string' ? errorJson : null);
+        } catch {
+          // Not JSON, use the raw text if it's not empty
+          errorMessage = errorText || null;
+        }
         error(
           '[streamMessage] Stream request failed:',
           response.status,
           response.statusText,
-          errorText
+          errorMessage
         );
-        if (attempt >= MAX_RETRIES)
-          exhaustedError = `Server error (${response.status}). Please try again later.`;
+        if (attempt >= MAX_RETRIES) {
+          throw {
+            detail: errorMessage || `Server error (${response.status}). Please try again later.`,
+            statusCode: response.status,
+            code: 'STREAM_ERROR',
+          };
+        }
         continue;
       }
 
       const reader = response.body?.getReader();
       if (!reader) {
         error('[streamMessage] No response body');
-        if (attempt >= MAX_RETRIES) exhaustedError = 'No response from server. Please try again.';
+        if (attempt >= MAX_RETRIES)
+          throw {
+            detail: 'No response from server. Please try again.',
+            statusCode: 0,
+            code: 'NETWORK_ERROR',
+          };
         continue;
       }
 
@@ -344,14 +369,15 @@ export const chatService = {
       } catch (streamErr) {
         warn('[streamMessage] Stream broken, will retry:', streamErr);
         reader.cancel().catch(() => {});
-        if (attempt >= MAX_RETRIES) exhaustedError = 'Connection lost. Please try again.';
+        if (attempt >= MAX_RETRIES) {
+          throw {
+            detail: 'Connection lost. Please try again.',
+            statusCode: 0,
+            code: 'NETWORK_ERROR',
+          };
+        }
         continue;
       }
-    }
-
-    if (exhaustedError) {
-      error('[streamMessage] All retries exhausted');
-      yield `__ERROR__:${exhaustedError}`;
     }
   },
 };

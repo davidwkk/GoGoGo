@@ -2,7 +2,7 @@
 // Handles ChatResponse (text + itinerary + message_type)
 
 import { useCallback } from 'react';
-import { chatService, chatSessionsService, ChatRequest } from '@/services/api';
+import { chatService, chatSessionsService, ChatRequest, APIError } from '@/services/api';
 import { useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
 
@@ -303,7 +303,8 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
               }
               return;
             }
-            let errorMsg = err instanceof Error ? err.message : 'Stream failed';
+            let errorMsg =
+              err instanceof Error ? err.message : (err as APIError)?.detail || 'Stream failed';
             // Make "model high demand" errors more user-friendly
             if (errorMsg.includes('high demand') || errorMsg.includes('503')) {
               errorMsg =
@@ -365,7 +366,8 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
 
         return response;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Request failed';
+        const message =
+          err instanceof Error ? err.message : (err as APIError)?.detail || 'Request failed';
         console.error('[useChat] Caught error:', message);
         onError?.(message);
         addMessage({ role: 'assistant', content: `Error: ${message}` });
