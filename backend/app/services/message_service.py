@@ -3,7 +3,7 @@
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.chat_session import ChatSession
@@ -189,13 +189,7 @@ def update_session_title(
 
 def clear_session_messages(db: Session, session_id: int) -> bool:
     """Delete all messages in a session, keeping the session itself."""
-    messages = (
-        db.execute(select(Message).where(Message.session_id == session_id))
-        .scalars()
-        .all()
-    )
-    for m in messages:
-        db.delete(m)
+    db.execute(delete(Message).where(Message.session_id == session_id))
     db.commit()
     return True
 

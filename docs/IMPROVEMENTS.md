@@ -139,7 +139,7 @@
 
 ---
 
-#### 12. N+1 Query Issues in Message Service (Skipped)
+#### 12. N+1 Query Issues in Message Service (Done)
 
 - **File:** `backend/app/services/message_service.py:203`
 - **Severity:** HIGH
