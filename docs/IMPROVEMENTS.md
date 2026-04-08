@@ -108,7 +108,7 @@
 
 ---
 
-#### 9. hotels.py - adults Parameter Always Defaults to 2
+#### 9. hotels.py - adults Parameter Always Defaults to 2 (Done)
 
 - **File:** `backend/app/agent/tools/hotels.py:260`
 - **Severity:** HIGH
@@ -118,7 +118,7 @@
 
 ---
 
-#### 10. Race Condition in upsert_preferences
+#### 10. Race Condition in upsert_preferences (Done)
 
 - **File:** `backend/app/repositories/preference_repo.py:10`
 - **Severity:** HIGH

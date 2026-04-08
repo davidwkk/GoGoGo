@@ -2,21 +2,25 @@
 
 from uuid import UUID
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.db.models.preference import UserPreference
 
 
 def upsert_preferences(db: Session, user_id: UUID, preferences: dict) -> UserPreference:
-    """Insert or update preferences for a user. Creates if not exists, updates if exists."""
-    pref = db.query(UserPreference).filter(UserPreference.user_id == user_id).first()
-    if pref:
-        pref.preferences_json = preferences
-    else:
-        pref = UserPreference(user_id=user_id, preferences_json=preferences)
-        db.add(pref)
+    """Insert or update preferences for a user. Uses upsert to avoid race conditions."""
+    stmt = pg_insert(UserPreference).values(
+        user_id=user_id, preferences_json=preferences
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[UserPreference.user_id],
+        set_={"preferences_json": preferences},
+    )
+    db.execute(stmt)
     db.commit()
-    db.refresh(pref)
+    pref = db.query(UserPreference).filter(UserPreference.user_id == user_id).first()
+    assert pref is not None, "Preference row must exist after upsert"
     return pref
 
 
