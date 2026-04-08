@@ -440,6 +440,16 @@ export const chatSessionsService = {
     );
     return data;
   },
+
+  async clearMessages(sessionId: number): Promise<{ status: string; session_id: number }> {
+    const { data } = await apiClient.delete(`/chat/sessions/${sessionId}/messages`);
+    return data;
+  },
+
+  async clearAllHistory(): Promise<{ status: string; sessions_deleted: number }> {
+    const { data } = await apiClient.delete('/chat/sessions');
+    return data;
+  },
 };
 
 // ─── Guest Preferences (localStorage) ─────────────────────────────────────────

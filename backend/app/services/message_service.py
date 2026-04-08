@@ -178,6 +178,39 @@ def update_session_title(
     return session
 
 
+def clear_session_messages(db: Session, session_id: int) -> bool:
+    """Delete all messages in a session, keeping the session itself."""
+    messages = (
+        db.execute(select(Message).where(Message.session_id == session_id))
+        .scalars()
+        .all()
+    )
+    for m in messages:
+        db.delete(m)
+    db.commit()
+    return True
+
+
+def delete_all_sessions(db: Session, user_id: UUID) -> int:
+    """
+    Delete all sessions and all their messages for a user.
+    Returns the number of sessions deleted.
+    """
+    sessions = list_sessions_for_user(db, user_id)
+    count = len(sessions)
+    for session in sessions:
+        messages = (
+            db.execute(select(Message).where(Message.session_id == session.id))
+            .scalars()
+            .all()
+        )
+        for m in messages:
+            db.delete(m)
+        db.delete(session)
+    db.commit()
+    return count
+
+
 def delete_session(db: Session, session_id: int) -> bool:
     """
     Delete a session and all its messages.

@@ -319,6 +319,9 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] **Change password feature** — Implement backend endpoint `PUT /users/me/password` (or `POST /users/change-password`) that accepts `current_password` and `new_password`, verifies the current password, hashes and stores the new one. Wire into `ProfilePage.tsx` with form validation (min 8 chars, require uppercase + digit).
 - [ ] **Clear chat history feature** — Implement `DELETE /chat/sessions/{session_id}/messages` endpoint to clear all messages in a single chat session. Add a "Clear chat" button in ChatPage UI for the current session (clears local state + calls backend). Also add `DELETE /chat/sessions` endpoint to clear all sessions/history for the current user. Show confirmation toast on success.
 - [x] **Custom trip planning commands/rules** — Allow users to input custom commands or rules in ProfilePage (e.g., "Prioritize commercial activities", "Always suggest budget options") that are saved as part of `user_preferences`. These commands should be sent to the LLM alongside existing preference extraction in the agent system prompt (e.g., inject as `"User instructions: {commands}"` in the agent prompt). Add a text area in ProfilePage for "Trip Planning Preferences / Custom Commands" with save button. Commands are stored in `user_preferences` table and injected into the agent prompt on every trip-planning chat.
+- [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
+- [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
+- [x] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
 
 ### 🧪 Tests to Write
 
@@ -364,13 +367,9 @@ backend/tests/integration/
 
 - [x] Verify STT working properly
 - [x] Increase STT duration to at least 30s (now supports up to 60s, auto-stops after 20s silence, and supports manual stop)
-- [ ] Zustand auth store — `user`, `token`, `isAuthenticated`
-- [ ] `authService.ts` — API calls with Axios (uses `apiClient` directly in `LoginPage.tsx` instead)
-- [ ] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
 - [x] **Fix chat history for sessions** — Chat is currently memoryless; each session/conversation must load and display previous messages from the database so users can resume conversations. Backend: implement `get_active_session_by_user(user_id)` in `message_service`; wire into `chat.py` on session resume. Frontend: load previous messages when user opens an existing session.
 - [ ] **Guest access**: the chat history bar must be visible to guest users too; guest users can create new chat sessions, but cannot save trips.
 - [ ] **Chat history bar alignment** — Fix the style of the chat history bar; specifically, the border/line below it should be at the same vertical level as the main chat page when the history bar is collapsed (alignment is correct when expanded).
-- [x] Add "Save & Finish Trip" button that calls `POST /chat/sessions/{id}/end` ✅ (implemented in ChatPage header)
 
 #### Phase 4 — TTS Upgrades (Minqi)
 

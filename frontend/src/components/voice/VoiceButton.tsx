@@ -27,7 +27,7 @@ export function VoiceButton({ isListening, onToggle, disabled }: VoiceButtonProp
         onClick={onToggle}
         disabled={disabled}
         aria-label={isListening ? 'Stop recording' : 'Start recording'}
-        className="relative z-10"
+        className="relative"
       >
         {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
       </Button>

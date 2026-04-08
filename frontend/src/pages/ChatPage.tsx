@@ -5,6 +5,7 @@ import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
 import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { HotelCard } from '@/components/trip/HotelCard';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
 import { chatSessionsService } from '@/services/api';
 import { tripService } from '@/services/tripService';
@@ -469,7 +470,6 @@ export function ChatPage() {
   >([]);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [editingSidebarSessionId, setEditingSidebarSessionId] = useState<number | null>(null);
-  const [editingHeaderSessionId, setEditingHeaderSessionId] = useState<number | null>(null);
   const [titleDraft, setTitleDraft] = useState('');
 
   const [demoItinerary, setDemoItinerary] = useState<TripItinerary | null>(null);
@@ -477,6 +477,7 @@ export function ChatPage() {
   // LLM-generated plan state (separate from demo)
   const [generatedItinerary, setGeneratedItinerary] = useState<TripItinerary | null>(null);
   const [showGeneratedLoading, setShowGeneratedLoading] = useState(false);
+  const [clearAllHistoryDialogOpen, setClearAllHistoryDialogOpen] = useState(false);
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
@@ -600,13 +601,6 @@ export function ChatPage() {
 
   const beginSidebarRename = (id: number, current: string) => {
     setEditingSidebarSessionId(id);
-    setEditingHeaderSessionId(null);
-    setTitleDraft(current);
-  };
-
-  const beginHeaderRename = (id: number, current: string) => {
-    setEditingHeaderSessionId(id);
-    setEditingSidebarSessionId(null);
     setTitleDraft(current);
   };
 
@@ -614,13 +608,11 @@ export function ChatPage() {
     const next = titleDraft.trim();
     if (!next) {
       setEditingSidebarSessionId(null);
-      setEditingHeaderSessionId(null);
       return;
     }
     const updated = await chatSessionsService.rename(id, next);
     setSessions(prev => prev.map(s => (s.id === id ? { ...s, title: updated.title } : s)));
     setEditingSidebarSessionId(null);
-    setEditingHeaderSessionId(null);
   };
 
   const deleteSession = async (id: number) => {
@@ -658,6 +650,21 @@ export function ChatPage() {
       if (nextId !== null) {
         await loadSession(nextId);
       }
+    }
+  };
+
+  const handleClearAllHistory = async () => {
+    if (!isLoggedIn) return;
+    try {
+      await chatSessionsService.clearAllHistory();
+      setSessions([]);
+      clearMessages();
+      useChatStore.setState({ thinkingSteps: [] });
+      setSessionId(null);
+      toast.success('All chat history cleared');
+    } catch (e) {
+      const err = e as any;
+      toast.error(err?.response?.data?.detail ?? 'Failed to clear chat history');
     }
   };
 
@@ -700,9 +707,22 @@ export function ChatPage() {
               className={`flex items-center ${historyCollapsed ? 'justify-center' : 'justify-between'} gap-2`}
             >
               {!historyCollapsed && (
-                <div>
-                  <div className="text-sm font-semibold">Chat History</div>
-                  <div className="text-xs text-muted-foreground">Your sessions</div>
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <div className="text-sm font-semibold">Chat History</div>
+                    <div className="text-xs text-muted-foreground">Your sessions</div>
+                  </div>
+                  {sessions.length > 0 && isLoggedIn && (
+                    <button
+                      type="button"
+                      onClick={() => setClearAllHistoryDialogOpen(true)}
+                      className="flex items-center gap-1.5 h-7 rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 px-2 text-xs font-medium transition-colors"
+                      title="Clear all chat history"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Clear all
+                    </button>
+                  )}
                 </div>
               )}
               <button
@@ -794,8 +814,8 @@ export function ChatPage() {
                 );
               })}
               {sessions.length === 0 && (
-                <div className="p-3 text-xs text-muted-foreground">
-                  No sessions yet. Click “New Chat” in the top bar to start.
+                <div className={`p-3 text-xs text-muted-foreground`}>
+                  No sessions yet. Click New Chat to start.
                 </div>
               )}
             </div>
@@ -814,43 +834,11 @@ export function ChatPage() {
             <h1 className="text-sm font-semibold">GoGoGo</h1>
             <div className="flex items-center gap-2">
               {isLoggedIn && currentSessionPk && currentSession ? (
-                editingHeaderSessionId === currentSessionPk ? (
-                  <input
-                    className="h-7 w-56 max-w-full rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                    value={titleDraft}
-                    maxLength={40}
-                    onChange={e => setTitleDraft(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') commitRename(currentSessionPk);
-                      if (e.key === 'Escape') setEditingHeaderSessionId(null);
-                    }}
-                    autoFocus
-                  />
-                ) : (
-                  <>
-                    <p
-                      className={`text-xs text-muted-foreground truncate max-w-[${historyCollapsed ? '300px' : '130px'}]`}
-                    >
-                      {currentSession.title}
-                    </p>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={() => beginHeaderRename(currentSessionPk, currentSession.title)}
-                      aria-label="Rename current chat"
-                    >
-                      <Pencil className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => deleteSession(currentSessionPk)}
-                      aria-label="Delete current chat"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </>
-                )
+                <p
+                  className={`text-xs text-muted-foreground truncate max-w-[${historyCollapsed ? '300px' : '130px'}]`}
+                >
+                  {currentSession.title}
+                </p>
               ) : (
                 <p className="text-xs text-muted-foreground">AI Travel Agent</p>
               )}
@@ -1099,6 +1087,18 @@ export function ChatPage() {
           onItinerary={setGeneratedItinerary}
           onFinalizing={() => setShowGeneratedLoading(true)}
           onTripSaved={() => toast.success('Trip saved!')}
+        />
+
+        {/* Clear all history confirmation */}
+        <ConfirmDialog
+          open={clearAllHistoryDialogOpen}
+          onOpenChange={setClearAllHistoryDialogOpen}
+          title="Clear all chat history"
+          description="Are you sure you want to delete all your chat sessions? This cannot be undone."
+          confirmLabel="Clear all"
+          cancelLabel="Cancel"
+          onConfirm={handleClearAllHistory}
+          destructive
         />
       </main>
     </div>
