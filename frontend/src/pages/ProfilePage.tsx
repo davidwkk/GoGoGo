@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserProfile, userService } from '@/services/api';
+import { useAuthStore } from '@/store';
 
 interface AuthError {
   userMessage?: string;
@@ -40,13 +41,13 @@ export function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
+    useAuthStore.getState().clearAuth();
     toast.dismiss();
     navigate('/login');
   };
 
   const loadProfile = useCallback(async () => {
-    if (!localStorage.getItem('access_token')) {
+    if (!useAuthStore.getState().token) {
       setLoading(false);
       return;
     }
@@ -62,7 +63,7 @@ export function ProfilePage() {
         setError(authErr.userMessage);
         // Redirect to login after showing the message
         setTimeout(() => {
-          localStorage.removeItem('access_token');
+          useAuthStore.getState().clearAuth();
           navigate('/login');
         }, 3000);
       } else {
@@ -78,7 +79,7 @@ export function ProfilePage() {
   }, [loadProfile]);
 
   const handleSave = async () => {
-    if (!localStorage.getItem('access_token')) return;
+    if (!useAuthStore.getState().token) return;
     setSaving(true);
     setError(null);
     setSuccess(false);
@@ -88,7 +89,12 @@ export function ProfilePage() {
         preferences: { ...profile?.preferences, trip_planning_commands: tripCommands },
       });
       setProfile(updated);
-      localStorage.setItem('user_name', updated.username);
+      const { token } = useAuthStore.getState();
+      if (token) {
+        useAuthStore
+          .getState()
+          .setAuth({ email: profile!.email, username: updated.username }, token);
+      }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -99,7 +105,7 @@ export function ProfilePage() {
   };
 
   const handleChangePassword = async () => {
-    if (!localStorage.getItem('access_token')) return;
+    if (!useAuthStore.getState().token) return;
     setPasswordError(null);
 
     if (newPassword.length < 8) {

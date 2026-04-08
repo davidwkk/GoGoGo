@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
 import { chatSessionsService } from '@/services/api';
 import { tripService } from '@/services/tripService';
-import { useChatStore } from '@/store';
+import { useAuthStore, useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
 import {
   Banknote,
@@ -457,7 +457,7 @@ export function ChatPage() {
   const isLoading = useChatStore(s => s.isLoading);
   const thinkingSteps = useChatStore(s => s.thinkingSteps);
   const partialThoughtText = useChatStore(s => s.partialThoughtText);
-  const isLoggedIn = !!localStorage.getItem('access_token');
+  const isLoggedIn = useAuthStore(s => !!s.token);
   const clearMessages = useChatStore(s => s.clearMessages);
   const sessionId = useChatStore(s => s.sessionId);
   const setSessionId = useChatStore(s => s.setSessionId);

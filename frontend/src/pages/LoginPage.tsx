@@ -1,19 +1,15 @@
 // LoginPage — Authentication with login / sign-up tabs
 
-import { apiClient } from '@/services/api';
-import { useChatStore } from '@/store';
+import { authService } from '@/services/authService';
 import { Eye, EyeOff } from 'lucide-react';
+import { useChatStore, useAuthStore } from '@/store';
+import { AuthResponse } from '@/types/auth';
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type AuthMode = 'login' | 'signup';
-
-interface AuthResponse {
-  access_token: string;
-  token_type: string;
-}
 
 export function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login');
@@ -42,7 +38,7 @@ export function LoginPage() {
 
   // Auto-redirect to chat if already logged in
   useEffect(() => {
-    if (localStorage.getItem('access_token')) {
+    if (useAuthStore.getState().token) {
       navigate('/chat');
     }
   }, [navigate]);
@@ -53,18 +49,13 @@ export function LoginPage() {
 
     try {
       if (mode === 'login') {
-        const { data } = await apiClient.post<AuthResponse>('/auth/login', {
-          email,
-          password,
-        });
-        localStorage.setItem('access_token', data.access_token);
+        const response: AuthResponse = await authService.login(email, password);
+        const { setAuth } = useAuthStore.getState();
+        setAuth({ email, username }, response.access_token);
         localStorage.setItem('rememberMe', String(rememberMe));
-        if (rememberMe) {
-          localStorage.setItem('user_email', email);
-        } else {
+        if (!rememberMe) {
           localStorage.removeItem('user_email');
         }
-        localStorage.setItem('user_name', username);
         // Clear messages and create new session for fresh start
         useChatStore.getState().clearMessages();
         useChatStore.getState().setSessionId(null);
@@ -97,15 +88,10 @@ export function LoginPage() {
           return;
         }
 
-        const { data } = await apiClient.post<AuthResponse>('/auth/register', {
-          email,
-          username,
-          password,
-        });
-        localStorage.setItem('access_token', data.access_token);
+        const response: AuthResponse = await authService.register(email, username, password);
+        const { setAuth } = useAuthStore.getState();
+        setAuth({ email, username }, response.access_token);
         localStorage.setItem('rememberMe', String(rememberMe));
-        localStorage.setItem('user_email', email);
-        localStorage.setItem('user_name', username);
         // Clear messages and create new session for fresh start
         useChatStore.getState().clearMessages();
         useChatStore.getState().setSessionId(null);
