@@ -505,20 +505,17 @@ export function TripPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center p-20 animate-in fade-in duration-500">
-            <div className="relative mb-10">
-              <div className="absolute inset-0 bg-blue-100 rounded-full blur-3xl opacity-20 scale-150" />
-              <div className="relative bg-white border border-slate-100 rounded-full p-12 shadow-sm">
-                <Map className="size-16 text-slate-100" />
-              </div>
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+            <div className="flex items-center justify-center rounded-full bg-muted size-12">
+              <Map className="size-5 text-muted-foreground" />
             </div>
-            <h3 className="text-slate-900 font-black text-3xl tracking-tight">
-              Your world, planned.
-            </h3>
-            <p className="text-slate-400 text-sm mt-3 max-w-xs leading-relaxed font-medium">
-              Select an itinerary from your sidebar to unlock the full logistics of your next
-              journey.
-            </p>
+            <div>
+              <p className="text-sm font-medium">Your world, planned.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Select an itinerary from your sidebar to unlock the full logistics of your next
+                journey.
+              </p>
+            </div>
           </div>
         )}
       </div>
