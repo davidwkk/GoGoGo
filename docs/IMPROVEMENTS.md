@@ -222,7 +222,7 @@ engine = create_engine(
 
 ---
 
-#### 19. SerpAPI Fallback Uses Wrong Field
+#### 19. SerpAPI Fallback Uses Wrong Field (Done)
 
 - **File:** `backend/app/agent/tools/search.py:300`
 - **Severity:** MEDIUM
