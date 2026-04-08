@@ -150,6 +150,7 @@ async def search_hotels(
     destination: str,
     check_in: str,
     check_out: str | None = None,
+    adults: int = 2,
 ) -> dict:
     """Search for hotels using SerpAPI Google Hotels."""
     logger.bind(
@@ -175,6 +176,7 @@ async def search_hotels(
         "engine": "google_hotels",
         "currency": "HKD",
         "hl": "en",
+        "adults": adults,
     }
     if check_in:
         params["check_in_date"] = check_in
@@ -257,7 +259,6 @@ async def search_hotels(
             booking_url: str | None = None
             property_token = h.get("property_token")
             if property_token:
-                adults = params.get("adults", 2)
                 booking_url = (
                     f"https://www.google.com/travel/hotels/entity/{property_token}"
                     f"?check_in={check_in}&check_out={check_out}&adults={adults}&hl=en&curr=HKD"
