@@ -290,7 +290,7 @@ async def finalize_trip_plan(
     final_contents: list = (messages or []) + [
         types.Content(role="user", parts=[types.Part.from_text(text=context_prompt)])
     ]
-    FINALIZE_TIMEOUT_SECONDS = 20.0
+    FINALIZE_TIMEOUT_SECONDS = 40.0
 
     # ── Log exact LLM request for performance analysis ───────────────────
     def _serialize_content_for_log(c: types.Content) -> dict:
