@@ -382,7 +382,7 @@ backend/tests/integration/
 > Implement TTS module in 2 phases, with a possible third phase:
 
 - [x] **Phase 1 — Browser native TTS** ✅ (implemented with per-assistant-message Play/Stop button using `window.speechSynthesis`)
-- [ ] **Phase 2 — Gemini Live API** — Single multimodal session replacing ASR + agent + TTS hooks entirely
+- [x] **Phase 2 — Gemini Live API** — Single multimodal session replacing ASR + agent + TTS hooks entirely
 
 ### 🔲 Remaining Tasks
 
