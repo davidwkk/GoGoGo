@@ -344,7 +344,9 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "## Tools\n"
         "- get_weather, search_flights, search_hotels, get_attraction, get_transport, search_web\n\n"
         "## Tool Rules\n"
-        '- FLIGHTS: default ROUND-TRIP; one-way only if user says "one-way".\n'
+        "- FLIGHTS: MUST include return_date parameter for ALL round-trip searches.\n"
+        "  ALWAYS pass return_date when the user provides an end date (e.g., search_flights departure=HKG, arrival=PEK, date=2026-05-15, return_date=2026-05-17).\n"
+        '  One-way only if user explicitly says "one-way".\n'
         "- ATTRACTIONS: at least 1 per travel day (3-day trip = 3+ attractions).\n"
         "- Only call tools when:\n"
         '  1. User confirms "generate the plan" → call ALL required tools.\n'
