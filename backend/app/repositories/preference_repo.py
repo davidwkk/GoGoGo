@@ -20,7 +20,8 @@ def upsert_preferences(db: Session, user_id: UUID, preferences: dict) -> UserPre
     db.execute(stmt)
     db.commit()
     pref = db.query(UserPreference).filter(UserPreference.user_id == user_id).first()
-    assert pref is not None, "Preference row must exist after upsert"
+    if pref is None:
+        raise RuntimeError(f"Preference row for user {user_id} not found after upsert")
     return pref
 
 

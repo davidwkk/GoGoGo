@@ -3,7 +3,7 @@
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.chat_session import ChatSession
@@ -205,10 +205,11 @@ def delete_all_sessions(db: Session, user_id: UUID) -> int:
     Delete all sessions and all their messages for a user.
     Returns the number of sessions deleted.
     """
-    sessions = list_sessions_for_user(db, user_id)
-    count = len(sessions)
-    for session in sessions:
-        db.delete(session)
+    count_result = db.execute(
+        select(func.count(ChatSession.id)).where(ChatSession.user_id == user_id)
+    )
+    count = count_result.scalar() or 0
+    db.execute(delete(ChatSession).where(ChatSession.user_id == user_id))
     db.commit()
     return count
 
@@ -218,10 +219,11 @@ def delete_all_guest_sessions(db: Session, guest_id: UUID) -> int:
     Delete all sessions and all their messages for a guest.
     Returns the number of sessions deleted.
     """
-    sessions = list_sessions_for_guest(db, guest_id)
-    count = len(sessions)
-    for session in sessions:
-        db.delete(session)
+    count_result = db.execute(
+        select(func.count(ChatSession.id)).where(ChatSession.guest_id == guest_id)
+    )
+    count = count_result.scalar() or 0
+    db.execute(delete(ChatSession).where(ChatSession.guest_id == guest_id))
     db.commit()
     return count
 
