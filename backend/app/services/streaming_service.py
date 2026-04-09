@@ -439,9 +439,14 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "## Tools\n"
         "- get_weather, search_flights, search_hotels, get_attraction, get_transport, search_web\n\n"
         "## Tool Rules\n"
-        "- FLIGHTS: MUST include return_date parameter for ALL round-trip searches.\n"
-        "  ALWAYS pass return_date when the user provides an end date (e.g., search_flights departure=HKG, arrival=PEK, date=2026-05-15, return_date=2026-05-17).\n"
-        '  One-way only if user explicitly says "one-way".\n'
+        "- FLIGHTS: For round-trips, you MUST call search_flights TWICE:\n"
+        "    1. Outbound leg: departure=<origin>, arrival=<dest>, date=< outbound_date>, return_date=<return_date>\n"
+        "    2. Return leg: departure=<dest>, arrival=<origin>, date=<return_date>, return_date=None\n"
+        "  Example (HKG→PEK May 15, return May 17):\n"
+        "    Call 1: search_flights(departure=HKG, arrival=PEK, date=2026-05-15, return_date=2026-05-17)\n"
+        "    Call 2: search_flights(departure=PEK, arrival=HKG, date=2026-05-17, return_date=None)\n"
+        '  One-way: only if user explicitly says "one-way".\n'
+        "  Each result includes a 'direction' field ('outbound' or 'return') so you know which leg it is.\n"
         "- ATTRACTIONS: at least 1 per travel day (3-day trip = 3+ attractions).\n"
         "- Only call tools when:\n"
         '  1. User confirms "generate the plan" → call ALL required tools.\n'
@@ -453,7 +458,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "  1. Present a summary (destination, dates, purpose, group, preferences).\n"
         '  2. Ask for explicit confirmation by replying with "yes".\n'
         "  3. Do NOT proceed until the user replies with a clear 'yes'.\n"
-        "  4. Once confirmed, call ALL of: search_flights, search_hotels, get_weather, get_attraction (1+ per travel day).\n"
+        "  4. Once confirmed, call ALL of: search_flights (TWICE for round-trips), search_hotels, get_weather, get_attraction (1+ per travel day).\n"
         "  5. After ALL tools return, call finalize_trip_plan() with NO arguments — it reads the conversation to extract trip details.\n"
         "     Do NOT return text instead.\n\n"
         "## Enrichment Fields\n"
@@ -553,7 +558,7 @@ async def stream_agent_response(
         description=(
             "Call this when you have all required trip information and the user wants a complete trip itinerary. "
             "Before calling this function, ensure you have called ALL of: "
-            "search_flights, search_hotels, get_weather, get_attraction (at least once each). "
+            "search_flights (TWICE for round-trips), search_hotels, get_weather, get_attraction (at least once each). "
             "Takes NO arguments — reads trip details from the conversation history."
         ),
         parameters_json_schema={

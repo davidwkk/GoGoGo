@@ -326,6 +326,7 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] **Chat history bar alignment** — Fix the style of the chat history bar; specifically, the border/line below it should be at the same vertical level as the main chat page when the history bar is collapsed (alignment is correct when expanded).
 - [ ] **Favorite Chat History** - Allow user to mark some chat history sessions as favorite, showing on the top of the history bar.
 - [ ] **Fix bug** - User should be able to read other chat sessions when an active LLM call is in progress
+- [ ] **Save the image for attractions** - Attraction images should be saved to db instead of fetching it every time.
 
 ### 🧪 Tests to Write
 
