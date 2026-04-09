@@ -187,6 +187,35 @@ async def delete_all_guest_chat_sessions(
     return {"status": "all_history_cleared", "sessions_deleted": count}
 
 
+@router.patch("/guest/sessions/{session_id}")
+async def rename_guest_chat_session(
+    session_id: int,
+    body: UpdateSessionTitleRequest,
+    guest_uid: str = Query(..., description="Guest UID from localStorage"),
+    db: Session = Depends(get_db),
+):
+    """Rename a guest chat session."""
+    try:
+        guest_uuid = UUID(guest_uid)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid guest_uid")
+
+    session = get_session(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.guest_id != guest_uuid:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    updated = update_session_title(db, session_id, body.title)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {
+        "id": updated.id,
+        "title": updated.title,
+        "created_at": updated.created_at.isoformat() if updated.created_at else None,
+    }
+
+
 @router.patch("/sessions/{session_id}")
 async def rename_chat_session(
     session_id: int,
