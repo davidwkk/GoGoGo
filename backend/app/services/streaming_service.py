@@ -292,6 +292,75 @@ async def finalize_trip_plan(
     ]
     FINALIZE_TIMEOUT_SECONDS = 20.0
 
+    # ── Log exact LLM request for performance analysis ───────────────────
+    def _serialize_content_for_log(c: types.Content) -> dict:
+        """Serialize types.Content to a dict for logging."""
+        parts_list = []
+        for p in c.parts or []:
+            if p.text:
+                parts_list.append({"text": p.text})
+            elif p.function_call:
+                parts_list.append(
+                    {
+                        "function_call": {
+                            "name": p.function_call.name,
+                            "args": dict(p.function_call.args)
+                            if p.function_call.args
+                            else {},
+                        }
+                    }
+                )
+            elif p.function_response:
+                parts_list.append(
+                    {
+                        "function_response": {
+                            "name": getattr(p.function_response, "name", None),
+                            "response": (
+                                p.function_response.response
+                                if p.function_response
+                                else None
+                            ),
+                        }
+                    }
+                )
+            elif p.thought:
+                parts_list.append({"thought": "[thought signature]"})
+        return {"role": c.role, "parts": parts_list}
+
+    finalize_messages_log = [_serialize_content_for_log(m) for m in final_contents]
+    finalize_config_log = {
+        "response_mime_type": config.response_mime_type,
+        "thinking_level": (
+            config.thinking_config.thinking_level.name
+            if config.thinking_config and config.thinking_config.thinking_level
+            else None
+        ),
+    }
+
+    logger.bind(
+        event="llm_request",
+        service="chat",
+        event_type="finalize_trip_plan",
+        model=settings.GEMINI_LITE_MODEL,
+        messages_count=len(final_contents),
+        config=finalize_config_log,
+        messages_preview=[
+            {
+                **finalize_messages_log[i],
+                "parts": [
+                    "...".join(
+                        p.get("text", p.get("function_call", {}).get("name", ""))
+                        for p in (finalize_messages_log[i].get("parts") or [])[:2]
+                    )
+                ],
+            }
+            for i in range(len(finalize_messages_log))
+        ],
+    ).debug(
+        f"🤖 LLM finalize_trip_plan request | model={settings.GEMINI_LITE_MODEL} | "
+        f"messages={len(final_contents)} | config={finalize_config_log}"
+    )
+
     def sync_generate():
         return client.models.generate_content(
             model=settings.GEMINI_LITE_MODEL,
@@ -301,6 +370,16 @@ async def finalize_trip_plan(
 
     async with asyncio.timeout(FINALIZE_TIMEOUT_SECONDS):
         response = await asyncio.to_thread(sync_generate)
+
+    logger.bind(
+        event="llm_response",
+        service="chat",
+        event_type="finalize_trip_plan",
+        model=settings.GEMINI_LITE_MODEL,
+        response_text_preview=(response.text or "")[:200],
+    ).debug(
+        f"🤖 LLM finalize_trip_plan response preview: {(response.text or '')[:200]}"
+    )
 
     text = response.text or ""
     try:
@@ -527,6 +606,85 @@ async def stream_agent_response(
                 round_func_parts: list[types.Part] = []
                 chunks: list = []
                 stream_error: Exception | None = None
+
+                # ── Log exact LLM request for performance analysis ───────────────────
+                def _serialize_content_for_log(c: types.Content) -> dict:
+                    """Serialize types.Content to a dict for logging."""
+                    parts_list = []
+                    for p in c.parts or []:
+                        if p.text:
+                            parts_list.append({"text": p.text})
+                        elif p.function_call:
+                            parts_list.append(
+                                {
+                                    "function_call": {
+                                        "name": p.function_call.name,
+                                        "args": dict(p.function_call.args)
+                                        if p.function_call.args
+                                        else {},
+                                    }
+                                }
+                            )
+                        elif p.function_response:
+                            parts_list.append(
+                                {
+                                    "function_response": {
+                                        "name": getattr(
+                                            p.function_response, "name", None
+                                        ),
+                                        "response": (
+                                            p.function_response.response
+                                            if p.function_response
+                                            else None
+                                        ),
+                                    }
+                                }
+                            )
+                        elif p.thought:
+                            parts_list.append({"thought": "[thought signature]"})
+                    return {"role": c.role, "parts": parts_list}
+
+                messages_log = [_serialize_content_for_log(m) for m in messages]
+                config_log = {
+                    "system_instruction_length": len(system_instruction)
+                    if system_instruction
+                    else 0,
+                    "tools_count": len(config.tools) if config.tools else 0,
+                    "thinking_level": (
+                        config.thinking_config.thinking_level.name
+                        if config.thinking_config
+                        and config.thinking_config.thinking_level
+                        else None
+                    ),
+                }
+
+                logger.bind(
+                    event="llm_request",
+                    service="chat",
+                    trace_id=trace_id,
+                    tool_round=tool_round + 1,
+                    model=model,
+                    messages_count=len(messages),
+                    config=config_log,
+                    messages_preview=[
+                        {
+                            **messages_log[i],
+                            "parts": [
+                                "...".join(
+                                    p.get(
+                                        "text",
+                                        p.get("function_call", {}).get("name", ""),
+                                    )
+                                    for p in (messages_log[i].get("parts") or [])[:2]
+                                )
+                            ],
+                        }
+                        for i in range(len(messages_log))
+                    ],
+                ).debug(
+                    f"🤖 LLM request round {tool_round + 1} | model={model} | "
+                    f"messages={len(messages)} | config={config_log}"
+                )
 
                 for attempt in range(STREAM_MAX_RETRIES + 1):
                     try:
