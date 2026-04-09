@@ -327,6 +327,9 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [ ] **Favorite Chat History** - Allow user to mark some chat history sessions as favorite, showing on the top of the history bar.
 - [ ] **Fix bug** - User should be able to read other chat sessions when an active LLM call is in progress
 - [ ] **Save the image for attractions** - Attraction images should be saved to db instead of fetching it every time.
+- [ ] **Fix the null fields in trip plan** - There are many null values in the generated trip plan which can be optimized.
+- [ ] **Fix return flight** - It should use the token given returned by the api call in the first call and fetch JUST 1 return flight in the round-trip flight!
+- [ ] **Limit the number of hotels returned from API** - Reduce the results to at most 5 hotels.
 
 ### 🧪 Tests to Write
 
@@ -402,6 +405,7 @@ backend/tests/integration/
 
 - [x] **Image popup dialog** — Make images in trip cards clickable; show full-size image in a popup dialog when clicked (e.g., lightbox modal)
 - [ ] **Typewriter Effect** — Add typewriter effect to ChatPage for LLM's response; stream tokens as they arrive for a more natural chat feel
+- [ ] **Fix the display bug** - '✨ Your trip plan is ready below' only appears when the user refresh the page, but not when the trip is done. It should appear directly when the trip plan is generated and rendered.
 
 #### Frontend E2E Tests
 
