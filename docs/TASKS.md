@@ -324,8 +324,6 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
 - [x] **Guest access**: the chat history bar must be visible to guest users too; guest users can create new chat sessions, but cannot save trips.
 - [x] **Chat history bar alignment** — Fix the style of the chat history bar; specifically, the border/line below it should be at the same vertical level as the main chat page when the history bar is collapsed (alignment is correct when expanded).
-- [ ] **Favorite Chat History** - Allow user to mark some chat history sessions as favorite, showing on the top of the history bar.
-- [ ] **Fix bug** - User should be able to read other chat sessions when an active LLM call is in progress
 - [ ] **Save the image for attractions** - Attraction images should be saved to db instead of fetching it every time.
 - [ ] **Fix the null fields in trip plan** - There are many null values in the generated trip plan which can be optimized.
 - [ ] **Fix return flight** - It should use the token given returned by the api call in the first call and fetch JUST 1 return flight in the round-trip flight!
@@ -387,6 +385,10 @@ backend/tests/integration/
 - [ ] **Phase 2 — Google's TTS API** — Upgrade `useTTS.ts` to use Google's TTS API (e.g., `gemini-3-flash` TTS or Cloud TTS); preserve browser fallback if API unavailable
 - [ ] **Phase 3 (last possible) — Gemini Live API** — Single multimodal session replacing ASR + agent + TTS hooks entirely
 
+### 🔲 Remaining Tasks
+
+- [ ] **Favorite Chat History** - Allow user to mark some chat history sessions as favorite, showing on the top of the history bar.
+- [ ] **Fix bug** - User should be able to read other chat sessions when an active LLM call is in progress
 ---
 
 ## 🙋 Xuan
