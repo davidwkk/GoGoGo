@@ -6,7 +6,7 @@ import { AttractionCard } from '@/components/trip/AttractionCard';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { HotelCard } from '@/components/trip/HotelCard';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { isTTSAvailable, useTTS } from '@/hooks/useTTS';
+import { useTTS } from '@/hooks/useTTS';
 import { chatSessionsService } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useAuthStore, useChatStore } from '@/store';
@@ -482,8 +482,12 @@ export function ChatPage() {
   // Track when the last streaming message has finished typing
   const [typewriterDone, setTypewriterDone] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
-  const ttsAvailable = isTTSAvailable();
-  const { isSpeaking, speak, stop } = useTTS({
+  const {
+    isSpeaking,
+    speak,
+    stop,
+    isAvailable: ttsAvailable,
+  } = useTTS({
     onEnd: () => setSpeakingMsgId(null),
     onError: () => setSpeakingMsgId(null),
   });

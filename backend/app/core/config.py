@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     GEMINI_CASUAL_MODEL: str = (
         "gemini-3.1-flash-lite-preview"  # For casual chat streaming
     )
-    GEMINI_TTS_MODEL: str = "gemini-2.5-flash-preview-tts"
+    GEMINI_LIVE_MODEL: str = "gemini-3.1-flash-live-preview"
     SERPAPI_KEY: str
     TAVILY_API_KEY: str
     OPENWEATHER_API_KEY: str

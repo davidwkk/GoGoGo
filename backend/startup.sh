@@ -18,4 +18,13 @@ echo "Checking for database migrations..."
 alembic upgrade head
 
 # Start uvicorn
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload "$@"
+# IMPORTANT: In dev, avoid watching `.venv`/site-packages for reloads. Live WS connections
+# will drop immediately if the server reloads due to dependency file timestamp churn.
+exec uvicorn app.main:app \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --reload \
+  --reload-dir app \
+  --reload-exclude ".venv/*" \
+  --reload-exclude "**/site-packages/*" \
+  "$@"
