@@ -360,7 +360,7 @@ engine = create_engine(
 
 ---
 
-#### 33. Missing Request Cancellation on Unmount
+#### 33. Missing Request Cancellation on Unmount (Skipped)
 
 - **File:** `frontend/src/pages/ChatPage.tsx`, `ProfilePage.tsx`
 - **Severity:** LOW
