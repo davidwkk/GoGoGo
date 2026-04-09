@@ -376,10 +376,8 @@ async def finalize_trip_plan(
         service="chat",
         event_type="finalize_trip_plan",
         model=settings.GEMINI_LITE_MODEL,
-        response_text_preview=(response.text or "")[:200],
-    ).debug(
-        f"🤖 LLM finalize_trip_plan response preview: {(response.text or '')[:200]}"
-    )
+        response_text=(response.text or "")[:20000],
+    ).debug(f"🤖 LLM finalize_trip_plan response: {(response.text or '')[:20000]}")
 
     text = response.text or ""
     try:
@@ -843,16 +841,13 @@ async def stream_agent_response(
                     itinerary_data = result["itinerary"]
 
                     # Detailed log of full itinerary for debugging
+                    itinerary_json = json.dumps(itinerary_data, ensure_ascii=False)
                     logger.bind(
                         event="itinerary_detail",
                         service="chat",
                         trace_id=trace_id,
-                        itinerary=json.dumps(
-                            itinerary_data, ensure_ascii=False, indent=2
-                        ),
-                    ).debug(
-                        f"📋 Full itinerary data: {json.dumps(itinerary_data, ensure_ascii=False)[:1000]}"
-                    )
+                        itinerary=itinerary_json,
+                    ).debug(f"📋 Full itinerary data: {itinerary_json}")
 
                     logger.bind(
                         event="itinerary_generated",
@@ -960,21 +955,19 @@ async def stream_agent_response(
 
                     yield SSE({"tool_result": tool_name, "result": result})
 
-                    # Detailed log of tool response for debugging
+                    # Detailed log of full tool response for debugging — no truncation
                     try:
-                        result_preview = json.dumps(result, ensure_ascii=False)
-                        if len(result_preview) > 500:
-                            result_preview = result_preview[:500] + "... [truncated]"
+                        result_json = json.dumps(result, ensure_ascii=False)
                     except Exception:
-                        result_preview = str(result)[:500]
+                        result_json = str(result)
                     logger.bind(
                         event="tool_response",
                         service="chat",
                         trace_id=trace_id,
                         tool=tool_name,
                         args=args,
-                        result_preview=result_preview,
-                    ).debug(f"📥 {tool_name} result: {result_preview}")
+                        result=result_json,
+                    ).debug(f"📥 {tool_name} result: {result_json}")
 
                     # role="function" for Gemini tool responses
                     messages.append(

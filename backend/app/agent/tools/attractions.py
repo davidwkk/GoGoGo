@@ -68,7 +68,7 @@ async def get_attraction(attraction_name: str) -> dict:
         layer="tool",
         tool="get_attraction",
         attraction_name=attraction_name,
-    ).info(f"TOOL: get_attraction start — attraction={attraction_name}")
+    ).debug(f"TOOL: get_attraction start — attraction={attraction_name}")
 
     title = attraction_name.strip().replace(" ", "_")
     url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
@@ -155,9 +155,17 @@ async def get_attraction(attraction_name: str) -> dict:
             tool="get_attraction",
             attraction_name=attraction_name,
             result_name=result["name"],
+            location=result.get("location"),
+            category=result.get("category"),
             has_coordinates=coords is not None,
             has_thumbnail=thumbnail.get("source") is not None,
-        ).info(f"TOOL: get_attraction done — fetched: {result['name']}")
+            has_map_url=bool(map_url),
+            has_wiki_url=bool(result.get("wiki_url")),
+        ).debug(
+            f"TOOL: get_attraction done — fetched: {result['name']} | "
+            f"location={result.get('location')} category={result.get('category')} | "
+            f"coords={coords} map_url={'yes' if map_url else 'no'}"
+        )
         return result
     except httpx.TimeoutException:
         logger.bind(

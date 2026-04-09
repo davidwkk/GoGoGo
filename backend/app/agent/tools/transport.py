@@ -50,18 +50,25 @@ async def get_transport(
         from_location=from_location,
         to_location=to_location,
         mode=mode,
-    ).info(f"TOOL: get_transport start — {from_location} → {to_location}")
+    ).debug(f"TOOL: get_transport start — {from_location} → {to_location}")
 
     cache_key = (from_location.strip().lower(), to_location.strip().lower())
     if cache_key in _cache:
+        cached_result = _cache[cache_key]
+        cached_count = len(cached_result.get("options", []))
         logger.bind(
             event="tool_cache_hit",
             layer="tool",
             tool="get_transport",
             from_location=from_location,
             to_location=to_location,
-        ).info(f"TOOL: Cache hit for transport: {from_location} → {to_location}")
-        result = _cache[cache_key]
+            mode=mode,
+            cached_option_count=cached_count,
+        ).debug(
+            f"TOOL: Cache hit for transport: {from_location} → {to_location} | "
+            f"mode={mode} cached_options={cached_count}"
+        )
+        result = cached_result
         if mode:
             result = {
                 "options": [
@@ -81,20 +88,21 @@ async def get_transport(
         return {"error": "SERPAPI_KEY not configured", "options": []}
 
     query = f"transport from {from_location} to {to_location}"
+    params = {
+        "q": query,
+        "api_key": settings.SERPAPI_KEY,
+        "engine": "google_maps",
+    }
     logger.bind(
         event="tool_api_call",
         layer="tool",
         tool="get_transport",
         from_location=from_location,
         to_location=to_location,
+        mode=mode,
         query=query,
-    ).info(f"TOOL: Searching transport options: {query}")
-
-    params = {
-        "q": query,
-        "api_key": settings.SERPAPI_KEY,
-        "engine": "google_maps",
-    }
+        params=params,
+    ).debug(f"TOOL: Searching transport options: {query} | mode={mode} params={params}")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -142,9 +150,12 @@ async def get_transport(
             tool="get_transport",
             from_location=from_location,
             to_location=to_location,
+            mode=mode,
             option_count=len(options),
-        ).info(
-            f"TOOL: get_transport done — found {len(options)} options: {from_location} → {to_location}"
+            option_types=[o.get("type") for o in options[:5]],
+        ).debug(
+            f"TOOL: get_transport done — found {len(options)} options for "
+            f"{from_location} → {to_location} | mode={mode}"
         )
 
         if mode:

@@ -160,7 +160,12 @@ async def search_hotels(
         destination=destination,
         check_in=check_in,
         check_out=check_out,
-    ).info(f"TOOL: search_hotels start — destination={destination}")
+        adults=adults,
+        currency="HKD",
+    ).debug(
+        f"TOOL: search_hotels start — destination={destination} | "
+        f"check_in={check_in} check_out={check_out} adults={adults}"
+    )
 
     if not settings.SERPAPI_KEY:
         logger.bind(
@@ -188,7 +193,15 @@ async def search_hotels(
         layer="tool",
         tool="search_hotels",
         destination=destination,
-    ).info(f"TOOL: Calling SerpAPI for hotels in {destination}")
+        check_in=check_in,
+        check_out=check_out,
+        adults=adults,
+        params=params,
+    ).debug(
+        f"TOOL: Calling SerpAPI for hotels — destination={destination} | "
+        f"check_in={check_in} check_out={check_out} adults={adults} | "
+        f"params={params}"
+    )
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -315,9 +328,12 @@ async def search_hotels(
             layer="tool",
             tool="search_hotels",
             destination=destination,
+            check_in=check_in,
+            check_out=check_out,
             hotel_count=len(hotels),
-        ).info(
-            f"TOOL: search_hotels done — found {len(hotels)} hotels for {destination}"
+        ).debug(
+            f"TOOL: search_hotels done — found {len(hotels)} hotels for {destination} | "
+            f"check_in={check_in} check_out={check_out}"
         )
         return {"hotels": hotels}
     except httpx.TimeoutException:

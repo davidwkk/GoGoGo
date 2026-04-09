@@ -28,7 +28,7 @@ async def get_weather(city: str) -> dict:
         layer="tool",
         tool="get_weather",
         city=city,
-    ).info(f"TOOL: get_weather start — city={city}")
+    ).debug(f"TOOL: get_weather start — city={city}")
 
     if not settings.OPENWEATHER_API_KEY:
         logger.bind(
@@ -49,7 +49,11 @@ async def get_weather(city: str) -> dict:
         layer="tool",
         tool="get_weather",
         city=city,
-    ).debug(f"TOOL: Calling OpenWeatherMap API for {city}")
+        units="metric",
+        params=params,
+    ).debug(
+        f"TOOL: Calling OpenWeatherMap API for {city} | units=metric params={params}"
+    )
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -95,8 +99,11 @@ async def get_weather(city: str) -> dict:
                 city=city,
                 temperature=result.get("temperature"),
                 condition=result.get("condition"),
-            ).info(
-                f"TOOL: get_weather done — {city}: {result.get('temperature')}, {result.get('condition')}"
+                humidity=result.get("humidity"),
+                icon=result.get("icon"),
+            ).debug(
+                f"TOOL: get_weather done — {city}: {result.get('temperature')} "
+                f"{result.get('condition')} humidity={result.get('humidity')}"
             )
             return result
     except httpx.TimeoutException:
