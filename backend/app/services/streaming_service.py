@@ -376,7 +376,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
 
 
 SSE_KEEPALIVE = ": keepalive\n\n"
-STREAM_TIMEOUT_SECONDS = 15.0  # 15s — per-chunk timeout; resets on each chunk received
+STREAM_TIMEOUT_SECONDS = 30.0  # 30s — per-chunk timeout; resets on each chunk received
 STREAM_MAX_RETRIES = 2
 
 
@@ -548,14 +548,6 @@ async def stream_agent_response(
                                 yield SSE({"chunk": chunk.text})
                         break  # Stream completed successfully
                     except Exception as call_err:
-                        stream_error = call_err
-                        if attempt < STREAM_MAX_RETRIES:
-                            yield SSE(
-                                {
-                                    "retry": f"{attempt + 1}/{STREAM_MAX_RETRIES}",
-                                    "error": f"Connection lost, retrying... ({str(call_err)[:80]})",
-                                }
-                            )
                         logger.bind(
                             event="stream_retry",
                             service="chat",
@@ -566,8 +558,16 @@ async def stream_agent_response(
                             error_message=str(call_err),
                         ).warning(f"Stream attempt {attempt + 1} failed: {call_err}")
                         if attempt < STREAM_MAX_RETRIES:
+                            yield SSE(
+                                {
+                                    "retry": f"{attempt + 1}/{STREAM_MAX_RETRIES}",
+                                    "error": f"Connection lost, retrying... ({str(call_err)[:80]})",
+                                }
+                            )
                             continue
-                        # All retries exhausted — fall through to raise
+                        # All retries exhausted — store error for outer handler
+                        stream_error = call_err
+                        break
 
                 if stream_error:
                     # Raise to outer exception handler for consistent error handling
