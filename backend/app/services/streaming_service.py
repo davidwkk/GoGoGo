@@ -681,6 +681,19 @@ async def stream_agent_response(
                         {"message_type": "itinerary", "itinerary": result["itinerary"]}
                     )
                     itinerary_data = result["itinerary"]
+
+                    # Detailed log of full itinerary for debugging
+                    logger.bind(
+                        event="itinerary_detail",
+                        service="chat",
+                        trace_id=trace_id,
+                        itinerary=json.dumps(
+                            itinerary_data, ensure_ascii=False, indent=2
+                        ),
+                    ).debug(
+                        f"📋 Full itinerary data: {json.dumps(itinerary_data, ensure_ascii=False)[:1000]}"
+                    )
+
                     logger.bind(
                         event="itinerary_generated",
                         service="chat",
@@ -786,6 +799,22 @@ async def stream_agent_response(
                         ).warning(f"❓ {tool_name}: unknown")
 
                     yield SSE({"tool_result": tool_name, "result": result})
+
+                    # Detailed log of tool response for debugging
+                    try:
+                        result_preview = json.dumps(result, ensure_ascii=False)
+                        if len(result_preview) > 500:
+                            result_preview = result_preview[:500] + "... [truncated]"
+                    except Exception:
+                        result_preview = str(result)[:500]
+                    logger.bind(
+                        event="tool_response",
+                        service="chat",
+                        trace_id=trace_id,
+                        tool=tool_name,
+                        args=args,
+                        result_preview=result_preview,
+                    ).debug(f"📥 {tool_name} result: {result_preview}")
 
                     # role="function" for Gemini tool responses
                     messages.append(
