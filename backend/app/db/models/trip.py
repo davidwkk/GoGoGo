@@ -18,7 +18,7 @@ class Trip(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
     session_id: Mapped[int | None] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=True
+        ForeignKey("chat_sessions.id", ondelete="SET NULL"), nullable=True
     )
     title: Mapped[str] = mapped_column(String(200))
     destination: Mapped[str] = mapped_column(String(200))
