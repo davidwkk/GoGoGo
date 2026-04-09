@@ -2,6 +2,7 @@
 // Handles ChatResponse (text + itinerary + message_type)
 
 import { useCallback } from 'react';
+import { toast } from 'sonner';
 import { chatService, chatSessionsService, ChatRequest, APIError } from '@/services/api';
 import { useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
@@ -139,6 +140,13 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
                       .getState()
                       .updateStreamingMessage(msgId, fullText, undefined, undefined, backendMsgId);
                   }
+                  continue;
+                }
+                if (chunk.startsWith('__RETRYINFO__:')) {
+                  const retryMsg = chunk.slice('__RETRYINFO__:'.length);
+                  console.warn('[useChat] Retry attempt:', retryMsg);
+                  // Show non-blocking toast — stream is still going
+                  toast.warning(`Retrying... ${retryMsg}`, { duration: 3000 });
                   continue;
                 }
                 if (chunk.startsWith('__ERROR__:')) {
