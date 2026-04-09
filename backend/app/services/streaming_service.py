@@ -755,9 +755,10 @@ async def stream_agent_response(
                                 f"Stream attempt {attempt + 1} failed: {call_err}"
                             )
                         if attempt < STREAM_MAX_RETRIES:
+                            # Emit retry_info (not error) so frontend knows to keep listening
                             yield SSE(
                                 {
-                                    "retry": f"{attempt + 1}/{STREAM_MAX_RETRIES}",
+                                    "retry_info": f"{attempt + 1}/{STREAM_MAX_RETRIES}",
                                     "error": f"Connection lost, retrying... ({str(call_err)[:80]})",
                                 }
                             )

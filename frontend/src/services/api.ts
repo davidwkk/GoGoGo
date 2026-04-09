@@ -339,13 +339,18 @@ export const chatService = {
                   yield `__TOOL_RESULT__:${data.tool_result}`;
                 } else if (data.status) {
                   yield `__STATUS__:${data.status}`;
-                } else if (data.error) {
+                } else if (data.error && !data.retry_info) {
+                  // Only treat as error if retry_info is NOT present (retry_info uses error field for display)
                   error('[streamMessage] Stream error:', data.error);
                   const errorMsg =
                     typeof data.error === 'string'
                       ? data.error
                       : data.error?.message || JSON.stringify(data.error);
                   yield `__ERROR__:${errorMsg}`;
+                } else if (data.retry_info) {
+                  // Retry notification — not a final error, frontend should keep listening
+                  log('[streamMessage] Retry attempt:', data.retry_info);
+                  yield `__RETRYINFO__:${data.retry_info}`;
                 } else if (data.message_id !== undefined) {
                   yield `__MESSAGE_ID__:${data.message_id}`;
                 } else if (data.message_type === 'finalizing') {
