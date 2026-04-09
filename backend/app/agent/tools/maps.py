@@ -33,7 +33,9 @@ def build_embed_url(
         lon=lon,
         place=place,
         zoom=zoom,
-    ).debug("TOOL: build_embed_url called")
+    ).debug(
+        f"TOOL: build_embed_url start — lat={lat} lon={lon} place={place} zoom={zoom}"
+    )
 
     if not settings.GOOGLE_MAPS_API_KEY:
         logger.bind(
@@ -69,8 +71,8 @@ def build_embed_url(
         event="tool_done",
         layer="tool",
         tool="build_embed_url",
-        url_preview=url[:80] + "..." if len(url) > 80 else url,
-    ).debug("TOOL: build_embed_url done")
+        url=url,
+    ).debug(f"TOOL: build_embed_url done — url={url}")
 
     return url
 
@@ -92,7 +94,10 @@ def build_static_url(
         zoom=zoom,
         size=size,
         marker_color=marker_color,
-    ).debug("TOOL: build_static_url called")
+    ).debug(
+        f"TOOL: build_static_url start — lat={lat} lon={lon} zoom={zoom} "
+        f"size={size} marker_color={marker_color}"
+    )
 
     if not settings.GOOGLE_MAPS_API_KEY:
         logger.bind(
@@ -115,8 +120,8 @@ def build_static_url(
         event="tool_done",
         layer="tool",
         tool="build_static_url",
-        url_preview=url[:80] + "..." if len(url) > 80 else url,
-    ).debug("TOOL: build_static_url done")
+        url=url,
+    ).debug(f"TOOL: build_static_url done — url={url}")
 
     return url
 
@@ -134,7 +139,9 @@ def build_directions_url(
         from_place=from_place,
         to_place=to_place,
         mode=mode,
-    ).debug("TOOL: build_directions_url called")
+    ).debug(
+        f"TOOL: build_directions_url start — from={from_place} to={to_place} mode={mode}"
+    )
 
     f = from_place.replace(" ", "+")
     t = to_place.replace(" ", "+")
@@ -150,7 +157,7 @@ def build_directions_url(
         event="tool_done",
         layer="tool",
         tool="build_directions_url",
-        url_preview=url[:80] + "..." if len(url) > 80 else url,
-    ).debug("TOOL: build_directions_url done")
+        url=url,
+    ).debug(f"TOOL: build_directions_url done — url={url}")
 
     return url

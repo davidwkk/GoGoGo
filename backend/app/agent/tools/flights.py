@@ -111,7 +111,10 @@ async def search_flights(
         arrival=arrival,
         date=date,
         return_date=return_date,
-    ).info("TOOL: search_flights start")
+    ).debug(
+        f"TOOL: search_flights start — departure={departure} arrival={arrival} "
+        f"date={date} return_date={return_date}"
+    )
 
     if not settings.SERPAPI_KEY:
         logger.bind(
@@ -185,9 +188,13 @@ async def search_flights(
         arr_code=arr_code,
         date=date,
         return_date=return_date,
-    ).info(
+        currency="HKD",
+        trip_type="round_trip" if return_date else "one_way",
+        params=params,
+    ).debug(
         f"TOOL: Searching flights: {dep_code} → {arr_code} on {date}"
         + (f", return {return_date}" if return_date else " (one-way)")
+        + f" | currency=HKD trip_type={'round_trip' if return_date else 'one_way'} params={params}"
     )
 
     try:
@@ -221,15 +228,16 @@ async def search_flights(
                 ).error("TOOL: SerpAPI rate limit exceeded")
                 return {"error": "SerpAPI rate limit exceeded", "flights": []}
             if response.status_code == 400:
+                error_body = response.text
                 logger.bind(
                     event="tool_api_error",
                     layer="tool",
                     tool="search_flights",
                     status_code=400,
-                    response_body=response.text[:500],
-                ).error(f"TOOL: HTTP error searching flights: {response.text[:500]}")
+                    response_body=error_body,
+                ).error(f"TOOL: HTTP 400 searching flights: {error_body}")
                 return {
-                    "error": f"HTTP error searching flights: {response.text[:500]}",
+                    "error": f"HTTP 400 searching flights: {error_body}",
                     "flights": [],
                 }
             if response.status_code == 422:
@@ -327,9 +335,10 @@ async def search_flights(
             arr_code=arr_code,
             flight_count=len(flights),
             itinerary_count=len(raw_itineraries),
-        ).info(
+        ).debug(
             f"TOOL: search_flights done — found {len(flights)} segments "
-            f"({len(raw_itineraries)} itineraries) for {dep_code} → {arr_code}"
+            f"({len(raw_itineraries)} itineraries) for {dep_code} → {arr_code} | "
+            f"departure={date} return={'yes' if return_date else 'no'}"
         )
         return {"flights": flights}
     except httpx.TimeoutException:

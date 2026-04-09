@@ -129,32 +129,42 @@ async def search_web(query: str) -> dict:
         layer="tool",
         tool="search_web",
         query=query,
-    ).info("TOOL: search_web start")
+    ).debug(f"TOOL: search_web start — query={query}")
 
     if settings.TAVILY_API_KEY:
         result = await _search_tavily(query)
         if "error" not in result:
-            result_count = len(result.get("results", []))
+            results_list = result.get("results", [])
+            result_count = len(results_list)
+            titles = [r.get("title") for r in results_list[:5]]
             logger.bind(
                 event="tool_done",
                 layer="tool",
                 tool="search_web",
                 provider="tavily",
                 result_count=result_count,
-            ).info(f"TOOL: search_web done — Tavily returned {result_count} results")
+                result_titles=titles,
+            ).debug(
+                f"TOOL: search_web done — Tavily returned {result_count} results | titles={titles}"
+            )
             return result
 
     # Fallback to SerpAPI
     result = await _search_serpapi(query)
     if "error" not in result:
-        result_count = len(result.get("results", []))
+        results_list = result.get("results", [])
+        result_count = len(results_list)
+        titles = [r.get("title") for r in results_list[:5]]
         logger.bind(
             event="tool_done",
             layer="tool",
             tool="search_web",
             provider="serpapi",
             result_count=result_count,
-        ).info(f"TOOL: search_web done — SerpAPI returned {result_count} results")
+            result_titles=titles,
+        ).debug(
+            f"TOOL: search_web done — SerpAPI returned {result_count} results | titles={titles}"
+        )
     else:
         logger.bind(
             event="tool_error",
@@ -167,19 +177,20 @@ async def search_web(query: str) -> dict:
 
 async def _search_tavily(query: str) -> dict:
     """Primary search via Tavily AI."""
+    payload = {
+        "query": query,
+        "search_depth": "basic",
+        "max_results": 5,
+    }
     logger.bind(
         event="tool_api_call",
         layer="tool",
         tool="search_web",
         provider="tavily",
         query=query,
-    ).debug("TOOL: Calling Tavily API")
-
-    payload = {
-        "query": query,
-        "search_depth": "basic",
-        "max_results": 5,
-    }
+        search_depth="basic",
+        max_results=5,
+    ).debug(f"TOOL: Calling Tavily API — query={query} payload={payload}")
     headers = {
         "Authorization": f"Bearer {settings.TAVILY_API_KEY}",
         "Content-Type": "application/json",
@@ -248,14 +259,6 @@ async def _search_tavily(query: str) -> dict:
 
 async def _search_serpapi(query: str) -> dict:
     """Fallback search via SerpAPI."""
-    logger.bind(
-        event="tool_api_call",
-        layer="tool",
-        tool="search_web",
-        provider="serpapi",
-        query=query,
-    ).debug("TOOL: Calling SerpAPI")
-
     if not settings.SERPAPI_KEY:
         logger.bind(
             event="tool_no_api_key",
@@ -273,6 +276,14 @@ async def _search_serpapi(query: str) -> dict:
         "api_key": settings.SERPAPI_KEY,
         "num": 5,
     }
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="search_web",
+        provider="serpapi",
+        query=query,
+        params=params,
+    ).debug(f"TOOL: Calling SerpAPI — query={query} params={params}")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
