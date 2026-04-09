@@ -382,8 +382,7 @@ backend/tests/integration/
 > Implement TTS module in 2 phases, with a possible third phase:
 
 - [x] **Phase 1 — Browser native TTS** ✅ (implemented with per-assistant-message Play/Stop button using `window.speechSynthesis`)
-- [ ] **Phase 2 — Google's TTS API** — Upgrade `useTTS.ts` to use Google's TTS API (e.g., `gemini-3-flash` TTS or Cloud TTS); preserve browser fallback if API unavailable
-- [ ] **Phase 3 (last possible) — Gemini Live API** — Single multimodal session replacing ASR + agent + TTS hooks entirely
+- [ ] **Phase 2 — Gemini Live API** — Single multimodal session replacing ASR + agent + TTS hooks entirely
 
 ### 🔲 Remaining Tasks
 
