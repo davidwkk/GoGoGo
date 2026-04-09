@@ -371,6 +371,24 @@ async def finalize_trip_plan(
     async with asyncio.timeout(FINALIZE_TIMEOUT_SECONDS):
         response = await asyncio.to_thread(sync_generate)
 
+    # Log token usage for finalize call
+    usage = getattr(response, "usage_metadata", None)
+    if usage:
+        logger.bind(
+            event="llm_tokens",
+            service="chat",
+            event_type="finalize_trip_plan",
+            model=settings.GEMINI_LITE_MODEL,
+            prompt_tokens=usage.prompt_token_count,
+            completion_tokens=usage.candidates_token_count,
+            total_tokens=usage.total_token_count,
+        ).debug(
+            f"🤖 LLM finalize_trip_plan tokens: "
+            f"prompt={usage.prompt_token_count} "
+            f"completion={usage.candidates_token_count} "
+            f"total={usage.total_token_count}"
+        )
+
     logger.bind(
         event="llm_response",
         service="chat",
@@ -706,15 +724,29 @@ async def stream_agent_response(
                                 yield SSE({"chunk": chunk.text})
                         break  # Stream completed successfully
                     except Exception as call_err:
-                        logger.bind(
-                            event="stream_retry",
+                        is_last_attempt = attempt >= STREAM_MAX_RETRIES
+                        event_name = (
+                            "stream_retry_exhausted"
+                            if is_last_attempt
+                            else "stream_retry"
+                        )
+                        log = logger.bind(
+                            event=event_name,
                             service="chat",
                             trace_id=trace_id,
                             attempt=attempt + 1,
                             max_retries=STREAM_MAX_RETRIES,
                             error_type=type(call_err).__name__,
                             error_message=str(call_err),
-                        ).warning(f"Stream attempt {attempt + 1} failed: {call_err}")
+                        )
+                        if is_last_attempt:
+                            log.error(
+                                f"Stream attempt {attempt + 1} failed: {call_err}"
+                            )
+                        else:
+                            log.warning(
+                                f"Stream attempt {attempt + 1} failed: {call_err}"
+                            )
                         if attempt < STREAM_MAX_RETRIES:
                             yield SSE(
                                 {
@@ -726,6 +758,26 @@ async def stream_agent_response(
                         # All retries exhausted — store error for outer handler
                         stream_error = call_err
                         break
+
+                # Log token usage from the last chunk of the stream
+                if chunks:
+                    last_chunk = chunks[-1]
+                    usage = getattr(last_chunk, "usage_metadata", None)
+                    if usage:
+                        logger.bind(
+                            event="llm_tokens",
+                            service="chat",
+                            trace_id=trace_id,
+                            tool_round=tool_round + 1,
+                            prompt_tokens=usage.prompt_token_count,
+                            completion_tokens=usage.candidates_token_count,
+                            total_tokens=usage.total_token_count,
+                        ).debug(
+                            f"🤖 LLM tokens round {tool_round + 1}: "
+                            f"prompt={usage.prompt_token_count} "
+                            f"completion={usage.candidates_token_count} "
+                            f"total={usage.total_token_count}"
+                        )
 
                 if stream_error:
                     # Raise to outer exception handler for consistent error handling
