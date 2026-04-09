@@ -914,9 +914,7 @@ export function ChatPage() {
       <main className="flex flex-col flex-1">
         {/* Header */}
         <header
-          className={`flex items-center gap-3 px-6 py-4 ${
-            isLoggedIn && !historyCollapsed ? '' : 'border-b'
-          }`}
+          className={`flex items-center gap-3 px-6 py-4 ${!historyCollapsed ? '' : 'border-b'}`}
         >
           {historyCollapsed ? (
             <>
