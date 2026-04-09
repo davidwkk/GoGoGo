@@ -626,6 +626,28 @@ export function ChatPage() {
           thinking_steps: m.thinking_steps,
         }))
     );
+
+    // Restore generated itinerary from loaded messages
+    const itineraryMsg = res.messages.find(m => m.message_type === 'itinerary');
+    if (itineraryMsg?.content) {
+      try {
+        const parsed = JSON.parse(itineraryMsg.content);
+        if (parsed?.__type === 'itinerary' && parsed?.data) {
+          setGeneratedItinerary(parsed.data as TripItinerary);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    // Restore thinking steps from loaded assistant message into Zustand store
+    const assistantMsgWithThinking = res.messages.find(
+      m => m.role === 'assistant' && Array.isArray(m.thinking_steps) && m.thinking_steps.length > 0
+    );
+    if (assistantMsgWithThinking) {
+      useChatStore.setState({ thinkingSteps: assistantMsgWithThinking.thinking_steps });
+    }
+
     setTypewriterDone(true);
   };
 

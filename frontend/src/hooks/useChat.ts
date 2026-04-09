@@ -282,10 +282,14 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
                 .updateStreamingMessage(msgId, fullText, undefined, allSteps, backendMsgId);
               // Fire-and-forget: persist to backend (don't await — SSE stream must not be blocked)
               // Include guest_uid for unauthenticated users
+              // Add 5s timeout so a slow/failing PATCH doesn't leak
               const guestUid = localStorage.getItem('guest_uid') ?? undefined;
-              chatSessionsService
-                .updateThinkingSteps(backendMsgId, allSteps, guestUid)
-                .catch(err => console.warn('[useChat] Failed to persist thinking steps:', err));
+              Promise.race([
+                chatSessionsService.updateThinkingSteps(backendMsgId, allSteps, guestUid),
+                new Promise<null>((_, reject) =>
+                  setTimeout(() => reject(new Error('timeout')), 5000)
+                ),
+              ]).catch(err => console.warn('[useChat] Failed to persist thinking steps:', err));
             }
           } catch (err) {
             // Ignore AbortError — user cancelled the stream
