@@ -8,6 +8,7 @@ Extracts structured preferences from conversation and saves via preference_repo.
 from __future__ import annotations
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -40,6 +41,15 @@ async def extract_and_save_preferences(
     """
     from google.genai import Client, types
 
+    logger.bind(
+        event="service_extract_preferences_start",
+        layer="service",
+        user_id=str(user_id),
+        history_len=len(conversation_history),
+    ).info(
+        f"SERVICE: Extracting preferences for user={user_id} from {len(conversation_history)} messages"
+    )
+
     client = Client(api_key=settings.GEMINI_API_KEY)
 
     # Format conversation for the model
@@ -65,11 +75,29 @@ async def extract_and_save_preferences(
             raw_text if raw_text is not None else "{}"
         )
         prefs_dict = prefs.model_dump()
-    except Exception:
+        logger.bind(
+            event="service_extract_preferences_parsed",
+            layer="service",
+            user_id=str(user_id),
+            travel_style=prefs_dict.get("travel_style"),
+            hotel_tier=prefs_dict.get("hotel_tier"),
+        ).debug(f"SERVICE: Extracted preferences for user={user_id}")
+    except Exception as e:
+        logger.bind(
+            event="service_extract_preferences_parse_error",
+            layer="service",
+            user_id=str(user_id),
+            error=str(e),
+        ).warning(f"SERVICE: Failed to parse preferences, using defaults — {e}")
         # Fallback to defaults
         prefs_dict = UserPreference().model_dump()
 
     # Save to DB
     saved = upsert_preferences(db, user_id, prefs_dict)
+    logger.bind(
+        event="service_extract_preferences_done",
+        layer="service",
+        user_id=str(user_id),
+    ).info(f"SERVICE: Preferences saved for user={user_id}")
     # Return as Pydantic schema (not the ORM model)
     return UserPreference.model_validate(saved.preferences_json)
