@@ -371,6 +371,8 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
 
 
 SSE_KEEPALIVE = ": keepalive\n\n"
+STREAM_TIMEOUT_SECONDS = 15.0  # 15s — per-chunk timeout; resets on each chunk received
+STREAM_MAX_RETRIES = 2
 
 
 def SSE(data: dict) -> str:
@@ -428,7 +430,13 @@ async def stream_agent_response(
         update_message_content(db, assistant_msg.id, accumulated_text)
 
     http_opts = (
-        types.HttpOptionsDict(client_args={"proxy": settings.SOCKS5_PROXY_URL})
+        types.HttpOptionsDict(
+            client_args={
+                "proxy": settings.SOCKS5_PROXY_URL,
+                "timeout": STREAM_TIMEOUT_SECONDS,
+            },
+            timeout=int(STREAM_TIMEOUT_SECONDS * 1000),  # HttpOptions.timeout is ms
+        )
         if settings.LLM_PROXY_ENABLED
         else None
     )
@@ -506,41 +514,59 @@ async def stream_agent_response(
                 )
 
                 # ── Step 1: Drain the full stream first ──────────────────────────
-                try:
-                    # Use sync client wrapped in asyncio.to_thread to avoid blocking the event loop
-                    # (async streaming via client.aio doesn't work with SOCKS5 proxy in some regions)
-                    def sync_stream():
-                        return client.models.generate_content_stream(
-                            model=model,
-                            contents=messages,
-                            config=config,
-                        )
-
-                    stream = await asyncio.to_thread(sync_stream)
-                except Exception as call_err:
-                    logger.bind(
-                        event="generate_content_stream_error",
-                        service="chat",
-                        trace_id=trace_id,
-                        error_type=type(call_err).__name__,
-                        error_message=str(call_err),
-                        model=model,
-                        messages_count=len(messages),
-                        messages_roles=[m.role for m in messages],
-                        system_instruction_len=len(system_instruction),
-                    ).error(f"generate_content_stream failed: {call_err}")
-                    raise
-
+                # Retry loop handles transient SOCKS5 proxy/idle timeouts (60s default).
+                # The google-genai client uses httpx which raises on server disconnect.
                 round_text_parts: list[types.Part] = []
                 round_func_parts: list[types.Part] = []
                 chunks: list = []
+                stream_error: Exception | None = None
 
-                for chunk in stream:
-                    chunks.append(chunk)
-                    if chunk.text:
-                        round_text_parts.append(types.Part.from_text(text=chunk.text))
-                        accumulated_text += chunk.text
-                        yield SSE({"chunk": chunk.text})
+                for attempt in range(STREAM_MAX_RETRIES + 1):
+                    try:
+                        # Use sync client wrapped in asyncio.to_thread to avoid blocking the event loop
+                        # (async streaming via client.aio doesn't work with SOCKS5 proxy in some regions)
+                        def sync_stream():
+                            return client.models.generate_content_stream(
+                                model=model,
+                                contents=messages,
+                                config=config,
+                            )
+
+                        stream_gen = await asyncio.to_thread(sync_stream)
+                        for chunk in stream_gen:
+                            chunks.append(chunk)
+                            if chunk.text:
+                                round_text_parts.append(
+                                    types.Part.from_text(text=chunk.text)
+                                )
+                                accumulated_text += chunk.text
+                                yield SSE({"chunk": chunk.text})
+                        break  # Stream completed successfully
+                    except Exception as call_err:
+                        stream_error = call_err
+                        if attempt < STREAM_MAX_RETRIES:
+                            yield SSE(
+                                {
+                                    "retry": f"{attempt + 1}/{STREAM_MAX_RETRIES}",
+                                    "error": f"Connection lost, retrying... ({str(call_err)[:80]})",
+                                }
+                            )
+                        logger.bind(
+                            event="stream_retry",
+                            service="chat",
+                            trace_id=trace_id,
+                            attempt=attempt + 1,
+                            max_retries=STREAM_MAX_RETRIES,
+                            error_type=type(call_err).__name__,
+                            error_message=str(call_err),
+                        ).warning(f"Stream attempt {attempt + 1} failed: {call_err}")
+                        if attempt < STREAM_MAX_RETRIES:
+                            continue
+                        # All retries exhausted — fall through to raise
+
+                if stream_error:
+                    # Raise to outer exception handler for consistent error handling
+                    raise stream_error
 
                 # ── Extract consolidated function calls and thoughts from drained chunks ────
                 # NOTE: We must use chunk.candidates[0].content.parts to get full Part
