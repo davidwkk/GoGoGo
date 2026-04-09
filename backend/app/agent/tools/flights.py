@@ -100,6 +100,15 @@ _IATA_RE = re.compile(r"^[A-Z]{3,4}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
 _MAX_FLIGHTS_PER_LEG = 10
 
+# City/metro codes that Google Maps / SerpAPI accepts but are NOT airport codes.
+# If a search returns 0 results, we retry with the corresponding airport code.
+_CITY_TO_AIRPORT: dict[str, str] = {
+    "BJS": "PEK",  # Beijing Capital
+    "SHA": "PVG",  # Shanghai Pudong
+    "NKG": "NKG",  # Nanjing (correct, keep)
+    "CAN": "CAN",  # Guangzhou (correct, keep)
+}
+
 
 async def search_flights(
     departure: str,
@@ -348,6 +357,53 @@ async def _search_single_leg(
 
         raw_itineraries = data.get("best_flights", []) + data.get("other_flights", [])
         flights = _parse_itineraries(raw_itineraries, direction, outbound_date)
+
+        # Retry with correct airport code if 0 results and code is a known city code
+        if not flights:
+            retry_dep = _CITY_TO_AIRPORT.get(dep_code)
+            retry_arr = _CITY_TO_AIRPORT.get(arr_code)
+            if retry_dep and retry_dep != dep_code:
+                logger.bind(
+                    event="tool_retry",
+                    layer="tool",
+                    tool="search_flights",
+                    reason="0 results, city code resolved",
+                    old_dep=dep_code,
+                    new_dep=retry_dep,
+                    arr=arr_code,
+                    direction=direction,
+                ).info(
+                    f"TOOL: 0 results for {dep_code}→{arr_code}, retrying with airport code {retry_dep}"
+                )
+                return await _search_single_leg(
+                    dep_code=retry_dep,
+                    arr_code=arr_code,
+                    outbound_date=outbound_date,
+                    return_date=return_date,
+                    direction=direction,
+                    trip_type=trip_type,
+                )
+            if retry_arr and retry_arr != arr_code:
+                logger.bind(
+                    event="tool_retry",
+                    layer="tool",
+                    tool="search_flights",
+                    reason="0 results, city code resolved",
+                    dep=dep_code,
+                    old_arr=arr_code,
+                    new_arr=retry_arr,
+                    direction=direction,
+                ).info(
+                    f"TOOL: 0 results for {dep_code}→{arr_code}, retrying with airport code {retry_arr}"
+                )
+                return await _search_single_leg(
+                    dep_code=dep_code,
+                    arr_code=retry_arr,
+                    outbound_date=outbound_date,
+                    return_date=return_date,
+                    direction=direction,
+                    trip_type=trip_type,
+                )
 
         logger.bind(
             event="tool_done",

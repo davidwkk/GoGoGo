@@ -442,7 +442,9 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "- FLIGHTS: For round-trips, you MUST call search_flights TWICE:\n"
         "    1. Outbound leg: departure=<origin>, arrival=<dest>, date=< outbound_date>, return_date=<return_date>\n"
         "    2. Return leg: departure=<dest>, arrival=<origin>, date=<return_date>, return_date=None\n"
-        "  Example (HKG→PEK May 15, return May 17):\n"
+        "  IMPORTANT: Use IATA AIRPORT codes only (e.g., PEK not BJS, PVG not SHA, HKG correct). "
+        "City/metro codes will return 0 results.\n"
+        "  Example (HKG→Beijing May 15, return May 17):\n"
         "    Call 1: search_flights(departure=HKG, arrival=PEK, date=2026-05-15, return_date=2026-05-17)\n"
         "    Call 2: search_flights(departure=PEK, arrival=HKG, date=2026-05-17, return_date=None)\n"
         '  One-way: only if user explicitly says "one-way".\n'
