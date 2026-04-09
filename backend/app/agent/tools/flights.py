@@ -7,15 +7,14 @@ Params: engine=google_flights, departure_id=PEK, arrival_id=AUS,
 NOTE: google_flights engine does NOT support free-text "q" param.
       It requires structured params: departure_id, arrival_id, outbound_date.
 
---- Round-trip flow ---
-For round-trips, TWO steps are needed:
-  Step 1: type=1 + return_date  →  returns outbound flights, each with a departure_token
-  Step 2: For each departure_token, call with departure_id=<return_airport>,
-           arrival_id=<outbound_departure>, outbound_date=<return_date>,
-           departure_token=<token>  →  returns the return flights for that itinerary
+--- Round-trip strategy ---
+For round-trips, we make exactly 2 API calls:
+  1. Outbound: type=1, departure_id=<origin>, arrival_id=<dest>, outbound_date=<date>, return_date=<return_date>
+  2. Return:  type=2, departure_id=<dest>, arrival_id=<origin>, outbound_date=<return_date>
 
-Each outbound flight pairs with a different set of return flights.
-Total API calls for a round-trip = 1 + N (N = number of outbound flights to consider).
+The departure_token approach (Step 1 + per-token follow-ups for return) was tried but
+proved unreliable: tokens were either all identical for this route, or returned HTTP 400.
+A simple reversed-airport one-way call for the return leg is more reliable and faster.
 
 --- SerpAPI Google Flights Full Response Schema ---
 {
@@ -50,7 +49,7 @@ Total API calls for a round-trip = 1 + N (N = number of outbound flights to cons
             "price": 2512,
             "type": "Round trip",
             "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/multi.png",
-            "departure_token": "W1siUEVLIi...",   # <-- use this to fetch return flights
+            "departure_token": "W1siUEVLIi...",
         }
     ],
     "other_flights": [
@@ -99,7 +98,7 @@ from app.core.config import settings
 
 _IATA_RE = re.compile(r"^[A-Z]{3,4}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
-_MAX_OUTBOUND_FLIGHTS = 5  # only top N outbound flights get return flight lookups
+_MAX_FLIGHTS_PER_LEG = 10
 
 
 async def search_flights(
@@ -112,7 +111,7 @@ async def search_flights(
 
     departure / arrival must be valid IATA airport codes (3-4 uppercase letters).
     SerpAPI google_flights engine does not support free-text queries.
-    Pass return_date for round-trips (makes 1 + N API calls to fetch paired return flights).
+    Pass return_date for round-trips (makes 2 API calls total).
     Omit return_date for one-way (single API call).
     """
     logger.bind(
@@ -201,8 +200,7 @@ async def _search_round_trip(
     outbound_date: str,
     return_date: str,
 ) -> dict:
-    """Search round-trip: 1 call for outbound + follow-up calls per departure_token for return."""
-    # Step 1: get outbound flights with departure_tokens
+    """Search round-trip: 1 outbound call + 1 return call (simple reversed-airport)."""
     outbound_result = await _search_single_leg(
         dep_code=dep_code,
         arr_code=arr_code,
@@ -212,176 +210,41 @@ async def _search_round_trip(
         trip_type="round_trip_outbound",
     )
 
-    outbound_flights = outbound_result.get("flights", [])
-    outbound_errors = outbound_result.get("error")
-
-    # Collect departure_tokens from itineraries (one token per itinerary, not per segment)
-    # The departure_token is at the itinerary level, not segment level.
-    # We stored itinerary-level data by reading raw_itineraries.
-    # Re-extract tokens from the raw response to do return lookups.
-    # For now, collect up to _MAX_OUTBOUND_FLIGHTS flights to pair with return flights.
-    selected_outbound = outbound_flights[:_MAX_OUTBOUND_FLIGHTS]
-
-    logger.bind(
-        event="tool_round_trip_outbound",
-        layer="tool",
-        tool="search_flights",
-        outbound_count=len(outbound_flights),
-        selected_for_return=len(selected_outbound),
-        dep_code=dep_code,
-        arr_code=arr_code,
-    ).debug(
-        f"TOOL: Round-trip step 1 done — {len(outbound_flights)} outbound flights, "
-        f"selecting top {len(selected_outbound)} for return lookup"
+    return_result = await _search_single_leg(
+        dep_code=arr_code,
+        arr_code=dep_code,
+        outbound_date=return_date,
+        return_date=None,
+        direction="return",
+        trip_type="one_way",
     )
 
-    return_flights: list[dict] = []
-    return_errors: list[str] = []
+    outbound_flights = outbound_result.get("flights", [])[:_MAX_FLIGHTS_PER_LEG]
+    return_flights = return_result.get("flights", [])[:_MAX_FLIGHTS_PER_LEG]
+    all_flights = outbound_flights + return_flights
 
-    # Step 2: for each selected outbound, fetch return flights using departure_token
-    # We need the raw departure_token from the outbound API response.
-    # Since we already parsed and lost the token, we need to re-fetch or store it.
-    # Simplest approach: re-do the outbound call and grab tokens from raw_itineraries,
-    # then do return lookups.
-    tokens = await _get_outbound_tokens(dep_code, arr_code, outbound_date, return_date)
-
-    for i, token in enumerate(tokens[:_MAX_OUTBOUND_FLIGHTS]):
-        ret_result = await _search_return_leg(
-            dep_code=arr_code,
-            arr_code=dep_code,
-            outbound_date=return_date,
-            departure_token=token,
-        )
-        if ret_result.get("flights"):
-            return_flights.extend(ret_result["flights"])
-        if ret_result.get("error"):
-            return_errors.append(f"token[{i}]: {ret_result['error']}")
-
-    all_flights = selected_outbound + return_flights[:_MAX_OUTBOUND_FLIGHTS]
-
-    combined_error: str | None = None
     errors = []
-    if outbound_errors:
-        errors.append(f"outbound: {outbound_errors}")
-    if return_errors:
-        errors.append(f"return: {'; '.join(return_errors)}")
-    if errors:
-        combined_error = "; ".join(errors)
+    if outbound_result.get("error"):
+        errors.append(f"outbound: {outbound_result['error']}")
+    if return_result.get("error"):
+        errors.append(f"return: {return_result['error']}")
+    combined_error = "; ".join(errors) if errors else None
 
     logger.bind(
         event="tool_done",
         layer="tool",
         tool="search_flights",
         is_round_trip=True,
-        outbound_count=len(selected_outbound),
+        outbound_count=len(outbound_flights),
         return_count=len(return_flights),
         total_count=len(all_flights),
     ).debug(
         f"TOOL: search_flights done — round-trip | "
-        f"outbound={dep_code}→{arr_code} ({len(selected_outbound)} flights) "
-        f"return={arr_code}→{dep_code} ({len(return_flights)} flights, capped at {_MAX_OUTBOUND_FLIGHTS}) | "
+        f"outbound={dep_code}→{arr_code} ({len(outbound_flights)} flights) "
+        f"return={arr_code}→{dep_code} ({len(return_flights)} flights) | "
         f"error={combined_error or 'none'}"
     )
     return {"flights": all_flights, "error": combined_error}
-
-
-async def _get_outbound_tokens(
-    dep_code: str,
-    arr_code: str,
-    outbound_date: str,
-    return_date: str,
-) -> list[str]:
-    """Fetch outbound flights and extract departure_tokens from raw itineraries."""
-    params = {
-        "api_key": settings.SERPAPI_KEY,
-        "engine": "google_flights",
-        "departure_id": dep_code,
-        "arrival_id": arr_code,
-        "outbound_date": outbound_date,
-        "return_date": return_date,
-        "type": "1",
-        "currency": "HKD",
-        "hl": "en",
-    }
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(
-                "https://serpapi.com/search.json", params=params
-            )
-            response.raise_for_status()
-            data = response.json()
-        raw_itineraries = data.get("best_flights", []) + data.get("other_flights", [])
-        tokens = [
-            it.get("departure_token", "")
-            for it in raw_itineraries
-            if it.get("departure_token")
-        ]
-        return tokens
-    except Exception as e:
-        logger.bind(
-            event="tool_error",
-            layer="tool",
-            tool="search_flights",
-            step="get_outbound_tokens",
-            error=str(e),
-        ).warning(f"TOOL: Could not fetch outbound tokens: {e}")
-        return []
-
-
-async def _search_return_leg(
-    dep_code: str,
-    arr_code: str,
-    outbound_date: str,
-    departure_token: str,
-) -> dict:
-    """Fetch return flights for a specific outbound departure_token."""
-    params = {
-        "api_key": settings.SERPAPI_KEY,
-        "engine": "google_flights",
-        "departure_id": dep_code,
-        "arrival_id": arr_code,
-        "outbound_date": outbound_date,
-        "departure_token": departure_token,
-        "type": "1",
-        "currency": "HKD",
-        "hl": "en",
-    }
-    logger.bind(
-        event="tool_api_call",
-        layer="tool",
-        tool="search_flights",
-        dep_code=dep_code,
-        arr_code=arr_code,
-        date=outbound_date,
-        direction="return",
-        engine="google_flights",
-    ).debug(
-        f"TOOL: Fetching return flights: {dep_code} → {arr_code} on {outbound_date} "
-        f"| direction=return token=...{departure_token[-8:] if departure_token else 'none'}..."
-    )
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(
-                "https://serpapi.com/search.json", params=params
-            )
-            if response.status_code == 401:
-                return {"flights": [], "error": "Invalid SerpAPI key"}
-            if response.status_code == 429:
-                return {"flights": [], "error": "SerpAPI rate limit exceeded"}
-            if response.status_code not in (200, 422):
-                return {"flights": [], "error": f"HTTP {response.status_code}"}
-            response.raise_for_status()
-            data = response.json()
-
-        raw_itineraries = data.get("best_flights", []) + data.get("other_flights", [])
-        flights = _parse_itineraries(raw_itineraries, "return", outbound_date=None)
-        return {"flights": flights}
-    except httpx.TimeoutException:
-        return {"flights": [], "error": f"Timeout: {dep_code} → {arr_code}"}
-    except httpx.HTTPStatusError as e:
-        return {"flights": [], "error": f"HTTP error: {e}"}
-    except Exception as e:
-        return {"flights": [], "error": f"Error: {e}"}
 
 
 async def _search_single_leg(
@@ -390,12 +253,9 @@ async def _search_single_leg(
     outbound_date: str,
     return_date: str | None,
     direction: str,
-    trip_type: str = "one_way",
+    trip_type: str,  # "one_way" | "round_trip_outbound"
 ) -> dict:
-    """Make a single-leg API call to SerpAPI and parse results.
-
-    trip_type: "one_way" | "round_trip_outbound"
-    """
+    """Make a single-leg API call to SerpAPI and return parsed results."""
     type_value = "2" if trip_type == "one_way" else "1"
 
     params: dict = {
@@ -469,8 +329,8 @@ async def _search_single_leg(
                     status_code=400,
                     response_body=error_body,
                     direction=direction,
-                ).error(f"TOOL: HTTP 400 searching flights: {error_body}")
-                return {"flights": [], "error": f"HTTP 400: {error_body}"}
+                ).error(f"TOOL: HTTP 400 searching flights: {error_body[:200]}")
+                return {"flights": [], "error": f"HTTP 400: {error_body[:200]}"}
             if response.status_code == 422:
                 logger.bind(
                     event="tool_api_error",
@@ -478,10 +338,10 @@ async def _search_single_leg(
                     tool="search_flights",
                     status_code=422,
                     direction=direction,
-                ).error(f"TOOL: Invalid SerpAPI params: {response.text}")
+                ).error(f"TOOL: Invalid SerpAPI params: {response.text[:200]}")
                 return {
                     "flights": [],
-                    "error": f"Invalid SerpAPI params: {response.text}",
+                    "error": f"Invalid SerpAPI params: {response.text[:200]}",
                 }
             response.raise_for_status()
             data = response.json()
