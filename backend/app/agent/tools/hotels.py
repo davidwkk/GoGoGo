@@ -196,11 +196,10 @@ async def search_hotels(
         check_in=check_in,
         check_out=check_out,
         adults=adults,
-        params=params,
+        engine="google_hotels",
     ).debug(
         f"TOOL: Calling SerpAPI for hotels — destination={destination} | "
-        f"check_in={check_in} check_out={check_out} adults={adults} | "
-        f"params={params}"
+        f"check_in={check_in} check_out={check_out} adults={adults} | engine=google_hotels"
     )
 
     try:

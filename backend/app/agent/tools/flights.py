@@ -190,11 +190,11 @@ async def search_flights(
         return_date=return_date,
         currency="HKD",
         trip_type="round_trip" if return_date else "one_way",
-        params=params,
+        engine="google_flights",
     ).debug(
         f"TOOL: Searching flights: {dep_code} → {arr_code} on {date}"
         + (f", return {return_date}" if return_date else " (one-way)")
-        + f" | currency=HKD trip_type={'round_trip' if return_date else 'one_way'} params={params}"
+        + f" | currency=HKD trip_type={'round_trip' if return_date else 'one_way'} engine=google_flights"
     )
 
     try:

@@ -50,10 +50,7 @@ async def get_weather(city: str) -> dict:
         tool="get_weather",
         city=city,
         units="metric",
-        params=params,
-    ).debug(
-        f"TOOL: Calling OpenWeatherMap API for {city} | units=metric params={params}"
-    )
+    ).debug(f"TOOL: Calling OpenWeatherMap API for {city} | units=metric")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
