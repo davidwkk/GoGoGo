@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -29,16 +29,23 @@ from app.services.message_service import (
     get_session_messages,
     list_sessions_for_user,
     list_sessions_for_guest,
+    patch_chat_session,
     resolve_session,
-    update_session_title,
 )
 from app.services.preference_service import extract_and_save_preferences
 
 router = APIRouter()
 
 
-class UpdateSessionTitleRequest(BaseModel):
-    title: str = Field(min_length=1, max_length=40)
+class PatchChatSessionRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=40)
+    is_favorite: bool | None = None
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "PatchChatSessionRequest":
+        if self.title is None and self.is_favorite is None:
+            raise ValueError("At least one of title or is_favorite is required")
+        return self
 
 
 class UpdateThinkingStepsRequest(BaseModel):
@@ -55,6 +62,7 @@ async def create_new_session(
     return {
         "session_id": session.id,
         "title": session.title,
+        "is_favorite": session.is_favorite,
         "created_at": session.created_at.isoformat() if session.created_at else None,
     }
 
@@ -70,6 +78,7 @@ async def list_chat_sessions(
             {
                 "id": s.id,
                 "title": s.title,
+                "is_favorite": s.is_favorite,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
             }
             for s in sessions
@@ -90,6 +99,7 @@ async def list_guest_chat_sessions(
             {
                 "id": s.id,
                 "title": s.title,
+                "is_favorite": s.is_favorite,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
             }
             for s in sessions
@@ -108,6 +118,7 @@ async def create_guest_session(
     return {
         "session_id": session.id,
         "title": session.title,
+        "is_favorite": session.is_favorite,
         "created_at": session.created_at.isoformat() if session.created_at else None,
     }
 
@@ -188,13 +199,13 @@ async def delete_all_guest_chat_sessions(
 
 
 @router.patch("/guest/sessions/{session_id}")
-async def rename_guest_chat_session(
+async def patch_guest_chat_session(
     session_id: int,
-    body: UpdateSessionTitleRequest,
+    body: PatchChatSessionRequest,
     guest_uid: str = Query(..., description="Guest UID from localStorage"),
     db: Session = Depends(get_db),
 ):
-    """Rename a guest chat session."""
+    """Update guest chat session title and/or favorite flag."""
     try:
         guest_uuid = UUID(guest_uid)
     except Exception:
@@ -206,20 +217,23 @@ async def rename_guest_chat_session(
     if session.guest_id != guest_uuid:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    updated = update_session_title(db, session_id, body.title)
+    updated = patch_chat_session(
+        db, session_id, title=body.title, is_favorite=body.is_favorite
+    )
     if updated is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return {
         "id": updated.id,
         "title": updated.title,
+        "is_favorite": updated.is_favorite,
         "created_at": updated.created_at.isoformat() if updated.created_at else None,
     }
 
 
 @router.patch("/sessions/{session_id}")
-async def rename_chat_session(
+async def patch_chat_session_route(
     session_id: int,
-    body: UpdateSessionTitleRequest,
+    body: PatchChatSessionRequest,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -229,12 +243,15 @@ async def rename_chat_session(
     if session.user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    updated = update_session_title(db, session_id, body.title)
+    updated = patch_chat_session(
+        db, session_id, title=body.title, is_favorite=body.is_favorite
+    )
     if updated is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return {
         "id": updated.id,
         "title": updated.title,
+        "is_favorite": updated.is_favorite,
         "created_at": updated.created_at.isoformat() if updated.created_at else None,
     }
 

@@ -3,7 +3,13 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { chatService, chatSessionsService, ChatRequest, APIError } from '@/services/api';
+import {
+  APIError,
+  ChatRequest,
+  chatService,
+  chatSessionsService,
+  isRequestCanceled,
+} from '@/services/api';
 import { useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
 
@@ -347,37 +353,48 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
           return;
         }
 
-        // Non-streaming path for generate_plan requests
+        // Non-streaming path for generate_plan requests (cancellable when user switches session)
         console.log('[useChat] Using non-streaming path for generate_plan');
-        const response = await chatService.sendMessage(req);
-        console.log(
-          '[useChat] Non-streaming response:',
-          JSON.stringify(response).substring(0, 200)
-        );
+        const planAbort = new AbortController();
+        setAbortController(planAbort);
+        try {
+          const response = await chatService.sendMessage(req, planAbort.signal);
+          console.log(
+            '[useChat] Non-streaming response:',
+            JSON.stringify(response).substring(0, 200)
+          );
 
-        // Update session ID if returned
-        if (response.session_id) {
-          setSessionId(response.session_id);
+          if (response.session_id) {
+            setSessionId(response.session_id);
+          }
+
+          addMessage({
+            role: 'assistant',
+            content: response.text || JSON.stringify(response.itinerary || ''),
+          });
+
+          if (response.itinerary && onItinerary) {
+            onItinerary(response.itinerary as TripItinerary);
+          }
+
+          if (response.message_type === 'error' && onError) {
+            onError(response.text || 'An error occurred');
+          }
+
+          return response;
+        } catch (e) {
+          if (isRequestCanceled(e)) {
+            console.log('[useChat] Plan generation cancelled by user');
+            return;
+          }
+          throw e;
+        } finally {
+          setAbortController(null);
         }
-
-        // Add assistant message
-        addMessage({
-          role: 'assistant',
-          content: response.text || JSON.stringify(response.itinerary || ''),
-        });
-
-        // If itinerary returned, notify caller
-        if (response.itinerary && onItinerary) {
-          onItinerary(response.itinerary as TripItinerary);
-        }
-
-        // If error, notify caller
-        if (response.message_type === 'error' && onError) {
-          onError(response.text || 'An error occurred');
-        }
-
-        return response;
       } catch (err) {
+        if (isRequestCanceled(err)) {
+          return;
+        }
         const message =
           err instanceof Error ? err.message : (err as APIError)?.detail || 'Request failed';
         console.error('[useChat] Caught error:', message);

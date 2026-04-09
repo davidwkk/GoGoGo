@@ -1,6 +1,6 @@
 // frontend/src/services/api.ts
 
-import axios from 'axios';
+import axios, { CanceledError } from 'axios';
 import { toast } from 'sonner';
 
 const DEBUG = import.meta.env.DEV;
@@ -15,6 +15,15 @@ const error = (...args: unknown[]) => {
 };
 
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
+/** True when the request was aborted (user switched chat / cancelled). */
+export function isRequestCanceled(e: unknown): boolean {
+  if (e instanceof CanceledError) return true;
+  if (axios.isCancel(e)) return true;
+  if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'ERR_CANCELED')
+    return true;
+  return false;
+}
 
 // 1. Define the Standardized Error Envelope
 export interface APIError {
@@ -180,11 +189,12 @@ export interface ChatSessionMessagesResponse {
 }
 
 export const chatService = {
-  async sendMessage(req: ChatRequest): Promise<ChatResponse> {
+  async sendMessage(req: ChatRequest, signal?: AbortSignal): Promise<ChatResponse> {
     const { data } = await apiClient.post<ChatResponse>('/chat', req, {
       // Keep the 180s override here because the AI can definitely
       // take longer than a minute to plan a full 7-day trip!
       timeout: 180000,
+      signal,
     });
     return data;
   },
@@ -388,6 +398,13 @@ export const chatService = {
   },
 };
 
+export type ChatSessionListItem = {
+  id: number;
+  title: string;
+  is_favorite: boolean;
+  created_at: string | null;
+};
+
 export const chatSessionsService = {
   async getActive(guest_uid?: string): Promise<ChatSessionMessagesResponse> {
     const { data } = await apiClient.get<ChatSessionMessagesResponse>('/chat/sessions/active', {
@@ -396,57 +413,69 @@ export const chatSessionsService = {
     return data;
   },
 
-  async list(): Promise<{
-    sessions: Array<{ id: number; title: string; created_at: string | null }>;
-  }> {
+  async list(): Promise<{ sessions: ChatSessionListItem[] }> {
     const { data } = await apiClient.get('/chat/sessions');
     return data;
   },
 
-  async listGuest(
-    guestUid: string
-  ): Promise<{ sessions: Array<{ id: number; title: string; created_at: string | null }> }> {
+  async listGuest(guestUid: string): Promise<{ sessions: ChatSessionListItem[] }> {
     const { data } = await apiClient.get('/chat/guest/sessions', {
       params: { guest_uid: guestUid },
     });
     return data;
   },
 
-  async create(): Promise<{ session_id: number; title: string; created_at: string | null }> {
+  async create(): Promise<{
+    session_id: number;
+    title: string;
+    is_favorite: boolean;
+    created_at: string | null;
+  }> {
     const { data } = await apiClient.post('/chat/sessions');
     return data;
   },
 
-  async createGuest(
-    guestUid: string
-  ): Promise<{ session_id: number; title: string; created_at: string | null }> {
+  async createGuest(guestUid: string): Promise<{
+    session_id: number;
+    title: string;
+    is_favorite: boolean;
+    created_at: string | null;
+  }> {
     const { data } = await apiClient.post('/chat/guest/sessions', undefined, {
       params: { guest_uid: guestUid },
     });
     return data;
   },
 
-  async rename(
+  async patchSession(
     sessionId: number,
-    title: string
-  ): Promise<{ id: number; title: string; created_at: string | null }> {
-    const { data } = await apiClient.patch(`/chat/sessions/${sessionId}`, { title });
+    body: { title?: string; is_favorite?: boolean }
+  ): Promise<ChatSessionListItem> {
+    const { data } = await apiClient.patch(`/chat/sessions/${sessionId}`, body);
     return data;
+  },
+
+  async patchGuestSession(
+    sessionId: number,
+    body: { title?: string; is_favorite?: boolean },
+    guestUid: string
+  ): Promise<ChatSessionListItem> {
+    const { data } = await apiClient.patch(`/chat/guest/sessions/${sessionId}`, body, {
+      params: { guest_uid: guestUid },
+    });
+    return data;
+  },
+
+  async rename(sessionId: number, title: string): Promise<ChatSessionListItem> {
+    return chatSessionsService.patchSession(sessionId, { title });
   },
 
   async renameGuest(
     sessionId: number,
     title: string,
     guestUid: string
-  ): Promise<{ id: number; title: string; created_at: string | null }> {
-    const { data } = await apiClient.patch(
-      `/chat/guest/sessions/${sessionId}`,
-      { title },
-      {
-        params: { guest_uid: guestUid },
-      }
-    );
-    return data;
+  ): Promise<ChatSessionListItem> {
+    return chatSessionsService.patchGuestSession(sessionId, { title }, guestUid);
   },
 
   async delete(sessionId: number): Promise<{ status: string; session_id: number }> {
