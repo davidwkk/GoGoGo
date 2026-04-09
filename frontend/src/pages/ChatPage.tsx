@@ -640,7 +640,17 @@ export function ChatPage() {
       setEditingSidebarSessionId(null);
       return;
     }
-    const updated = await chatSessionsService.rename(id, next);
+    let updated;
+    if (isLoggedIn) {
+      updated = await chatSessionsService.rename(id, next);
+    } else {
+      let guestUid = localStorage.getItem('guest_uid');
+      if (!guestUid) {
+        guestUid = crypto.randomUUID();
+        localStorage.setItem('guest_uid', guestUid);
+      }
+      updated = await chatSessionsService.renameGuest(id, next, guestUid);
+    }
     setSessions(prev => prev.map(s => (s.id === id ? { ...s, title: updated.title } : s)));
     setEditingSidebarSessionId(null);
   };
@@ -857,6 +867,17 @@ export function ChatPage() {
                     {!isSidebarEditing && !isLoggedIn && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={e => {
+                            e.stopPropagation();
+                            beginSidebarRename(s.id, s.title);
+                          }}
+                          aria-label="Rename chat"
+                          type="button"
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                        <button
                           className="text-muted-foreground hover:text-destructive"
                           onClick={e => {
                             e.stopPropagation();
@@ -917,7 +938,7 @@ export function ChatPage() {
               </button>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  {isLoggedIn && currentSessionPk && currentSession ? (
+                  {currentSessionPk && currentSession ? (
                     <p className="text-sm font-semibold text-foreground truncate max-w-[420px]">
                       {currentSession.title}
                     </p>
@@ -931,7 +952,7 @@ export function ChatPage() {
             <>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  {isLoggedIn && currentSessionPk && currentSession ? (
+                  {currentSessionPk && currentSession ? (
                     <p className="text-sm font-semibold text-foreground truncate max-w-[260px]">
                       {currentSession.title}
                     </p>

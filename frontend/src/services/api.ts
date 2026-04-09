@@ -429,6 +429,21 @@ export const chatSessionsService = {
     return data;
   },
 
+  async renameGuest(
+    sessionId: number,
+    title: string,
+    guestUid: string
+  ): Promise<{ id: number; title: string; created_at: string | null }> {
+    const { data } = await apiClient.patch(
+      `/chat/guest/sessions/${sessionId}`,
+      { title },
+      {
+        params: { guest_uid: guestUid },
+      }
+    );
+    return data;
+  },
+
   async delete(sessionId: number): Promise<{ status: string; session_id: number }> {
     const { data } = await apiClient.delete(`/chat/sessions/${sessionId}`);
     return data;
