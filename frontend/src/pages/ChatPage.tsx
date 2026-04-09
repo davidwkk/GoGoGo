@@ -7,7 +7,7 @@ import { FlightCard } from '@/components/trip/FlightCard';
 import { HotelCard } from '@/components/trip/HotelCard';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useTTS } from '@/hooks/useTTS';
-import { chatSessionsService } from '@/services/api';
+import { chatSessionsService, type ChatSessionListItem } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useAuthStore, useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
@@ -23,6 +23,7 @@ import {
   Plane,
   PlusCircle,
   Sparkles,
+  Star,
   Square,
   Ticket,
   Trash2,
@@ -33,6 +34,22 @@ import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
+
+function normalizeSessions(list: ChatSessionListItem[]): ChatSessionListItem[] {
+  return list.map(s => ({ ...s, is_favorite: s.is_favorite ?? false }));
+}
+
+/** Favorites first, then newest by created_at. */
+function sortSessionsForSidebar(sessions: ChatSessionListItem[]): ChatSessionListItem[] {
+  return [...sessions].sort((a, b) => {
+    const fa = a.is_favorite ? 1 : 0;
+    const fb = b.is_favorite ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tb - ta;
+  });
+}
 
 // Dynamic thinking placeholder that cycles based on elapsed time
 const THINKING_MESSAGES = [
@@ -465,9 +482,7 @@ export function ChatPage() {
   const setForceNewSessionNextMessage = useChatStore(s => s.setForceNewSessionNextMessage);
   const abortController = useChatStore(s => s.abortController);
 
-  const [sessions, setSessions] = useState<
-    Array<{ id: number; title: string; created_at: string | null }>
-  >([]);
+  const [sessions, setSessions] = useState<ChatSessionListItem[]>([]);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [editingSidebarSessionId, setEditingSidebarSessionId] = useState<number | null>(null);
   const [titleDraft, setTitleDraft] = useState('');
@@ -525,7 +540,7 @@ export function ChatPage() {
         const listRes = isLoggedIn
           ? await chatSessionsService.list()
           : await chatSessionsService.listGuest(guestUid!);
-        setSessions(listRes.sessions);
+        setSessions(sortSessionsForSidebar(normalizeSessions(listRes.sessions)));
 
         // Only create new session if we haven't already created one in this mount cycle
         // (prevents double-create from StrictMode) AND sessionId is null
@@ -536,10 +551,17 @@ export function ChatPage() {
         const created = isLoggedIn
           ? await chatSessionsService.create()
           : await chatSessionsService.createGuest(guestUid!);
-        setSessions(prev => [
-          { id: created.session_id, title: created.title, created_at: created.created_at },
-          ...prev,
-        ]);
+        setSessions(prev =>
+          sortSessionsForSidebar([
+            {
+              id: created.session_id,
+              title: created.title,
+              is_favorite: created.is_favorite ?? false,
+              created_at: created.created_at,
+            },
+            ...prev,
+          ])
+        );
         setSessionId(String(created.session_id));
       } catch {
         // Best-effort — don't block chat UI if history load fails.
@@ -548,10 +570,14 @@ export function ChatPage() {
   }, [isLoggedIn]);
 
   const startNewChat = async () => {
-    // Cancel any in-progress stream first
+    // Cancel any in-progress stream / plan request first
     if (abortController) {
       abortController.abort();
     }
+    useChatStore.getState().setLoading(false);
+    useChatStore.getState().setThinking(false);
+    useChatStore.getState().setPartialThoughtText('');
+    useChatStore.getState().setAbortController(null);
     clearMessages();
     useChatStore.setState({ thinkingSteps: [] });
     setDemoItinerary(null);
@@ -562,10 +588,17 @@ export function ChatPage() {
     try {
       if (isLoggedIn) {
         const created = await chatSessionsService.create();
-        setSessions(prev => [
-          { id: created.session_id, title: created.title, created_at: created.created_at },
-          ...prev,
-        ]);
+        setSessions(prev =>
+          sortSessionsForSidebar([
+            {
+              id: created.session_id,
+              title: created.title,
+              is_favorite: created.is_favorite ?? false,
+              created_at: created.created_at,
+            },
+            ...prev,
+          ])
+        );
         setSessionId(String(created.session_id));
         return;
       }
@@ -577,10 +610,17 @@ export function ChatPage() {
         localStorage.setItem('guest_uid', guestUid);
       }
       const created = await chatSessionsService.createGuest(guestUid);
-      setSessions(prev => [
-        { id: created.session_id, title: created.title, created_at: created.created_at },
-        ...prev,
-      ]);
+      setSessions(prev =>
+        sortSessionsForSidebar([
+          {
+            id: created.session_id,
+            title: created.title,
+            is_favorite: created.is_favorite ?? false,
+            created_at: created.created_at,
+          },
+          ...prev,
+        ])
+      );
       setSessionId(String(created.session_id));
     } catch {
       // Fallback: create on first message if create endpoint fails
@@ -590,10 +630,14 @@ export function ChatPage() {
   };
 
   const loadSession = async (id: number) => {
-    // Cancel any in-progress stream first
+    // Cancel any in-progress stream / plan request first
     if (abortController) {
       abortController.abort();
     }
+    useChatStore.getState().setLoading(false);
+    useChatStore.getState().setThinking(false);
+    useChatStore.getState().setPartialThoughtText('');
+    useChatStore.getState().setAbortController(null);
 
     // Immediately reset UI state before async ops to prevent stale render
     clearMessages();
@@ -677,8 +721,46 @@ export function ChatPage() {
       }
       updated = await chatSessionsService.renameGuest(id, next, guestUid);
     }
-    setSessions(prev => prev.map(s => (s.id === id ? { ...s, title: updated.title } : s)));
+    setSessions(prev =>
+      sortSessionsForSidebar(
+        prev.map(s =>
+          s.id === id
+            ? { ...s, title: updated.title, is_favorite: updated.is_favorite ?? s.is_favorite }
+            : s
+        )
+      )
+    );
     setEditingSidebarSessionId(null);
+  };
+
+  const toggleSessionFavorite = async (sessionPk: number, currentlyFavorite: boolean) => {
+    const next = !currentlyFavorite;
+    try {
+      let updated: ChatSessionListItem;
+      if (isLoggedIn) {
+        updated = await chatSessionsService.patchSession(sessionPk, { is_favorite: next });
+      } else {
+        let guestUid = localStorage.getItem('guest_uid');
+        if (!guestUid) {
+          guestUid = crypto.randomUUID();
+          localStorage.setItem('guest_uid', guestUid);
+        }
+        updated = await chatSessionsService.patchGuestSession(
+          sessionPk,
+          { is_favorite: next },
+          guestUid
+        );
+      }
+      setSessions(prev =>
+        sortSessionsForSidebar(
+          prev.map(s =>
+            s.id === sessionPk ? { ...s, is_favorite: updated.is_favorite ?? next } : s
+          )
+        )
+      );
+    } catch {
+      toast.error('Could not update favorite');
+    }
   };
 
   const deleteSession = async (id: number) => {
@@ -847,6 +929,24 @@ export function ChatPage() {
                   }}
                 >
                   <div className="flex items-center gap-2">
+                    {!isSidebarEditing && (
+                      <button
+                        type="button"
+                        className={`shrink-0 rounded-md p-0.5 transition-colors hover:bg-muted/80 ${
+                          s.is_favorite
+                            ? 'text-amber-500'
+                            : 'text-muted-foreground opacity-70 group-hover:opacity-100'
+                        }`}
+                        onClick={e => {
+                          e.stopPropagation();
+                          void toggleSessionFavorite(s.id, s.is_favorite);
+                        }}
+                        aria-label={s.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                        title={s.is_favorite ? 'Remove from favorites' : 'Favorite'}
+                      >
+                        <Star className={`size-3.5 ${s.is_favorite ? 'fill-amber-400' : ''}`} />
+                      </button>
+                    )}
                     {isSidebarEditing ? (
                       <input
                         className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"

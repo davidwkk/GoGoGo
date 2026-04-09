@@ -40,7 +40,7 @@ def list_sessions_for_guest(db: Session, guest_id: UUID) -> list[ChatSession]:
     result = db.execute(
         select(ChatSession)
         .where(ChatSession.guest_id == guest_id)
-        .order_by(ChatSession.created_at.desc())
+        .order_by(ChatSession.is_favorite.desc(), ChatSession.created_at.desc())
     )
     sessions = list(result.scalars().all())
     logger.bind(
@@ -245,7 +245,7 @@ def list_sessions_for_user(db: Session, user_id: UUID) -> list[ChatSession]:
     result = db.execute(
         select(ChatSession)
         .where(ChatSession.user_id == user_id)
-        .order_by(ChatSession.created_at.desc())
+        .order_by(ChatSession.is_favorite.desc(), ChatSession.created_at.desc())
     )
     sessions = list(result.scalars().all())
     logger.bind(
@@ -257,28 +257,45 @@ def list_sessions_for_user(db: Session, user_id: UUID) -> list[ChatSession]:
     return sessions
 
 
-def update_session_title(
-    db: Session, session_id: int, title: str
+def patch_chat_session(
+    db: Session,
+    session_id: int,
+    *,
+    title: str | None = None,
+    is_favorite: bool | None = None,
 ) -> ChatSession | None:
+    if title is None and is_favorite is None:
+        return None
     result = db.execute(select(ChatSession).where(ChatSession.id == session_id))
     session = result.scalar_one_or_none()
     if session is None:
         logger.bind(
-            event="db_session_update_title_not_found",
+            event="db_session_patch_not_found",
             layer="service",
             session_id=session_id,
-        ).warning(f"DB: Session {session_id} not found for title update")
+        ).warning(f"DB: Session {session_id} not found for patch")
         return None
-    session.title = title
+    if title is not None:
+        session.title = title
+    if is_favorite is not None:
+        session.is_favorite = is_favorite
     db.commit()
     db.refresh(session)
     logger.bind(
-        event="db_session_title_updated",
+        event="db_session_patched",
         layer="service",
         session_id=session_id,
-        title=title,
-    ).debug(f"DB: Session title updated — id={session_id} title={title}")
+        title_set=title is not None,
+        favorite_set=is_favorite is not None,
+    ).debug(f"DB: Session patched — id={session_id}")
     return session
+
+
+def update_session_title(
+    db: Session, session_id: int, title: str
+) -> ChatSession | None:
+    """Rename session title (convenience wrapper)."""
+    return patch_chat_session(db, session_id, title=title)
 
 
 def clear_session_messages(db: Session, session_id: int) -> bool:

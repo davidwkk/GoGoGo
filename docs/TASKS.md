@@ -386,8 +386,9 @@ backend/tests/integration/
 
 ### 🔲 Remaining Tasks
 
-- [ ] **Favorite Chat History** - Allow user to mark some chat history sessions as favorite, showing on the top of the history bar.
-- [ ] **Fix bug** - User should be able to read other chat sessions when an active LLM call is in progress
+- [x] **Favorite Chat History** - Allow user to mark some chat history sessions as favorite, showing on the top of the history bar. ✅ (`is_favorite` + star in sidebar; API `PATCH` with `is_favorite`; list ordered favorites-first)
+- [x] **Fix bug** - User should be able to read other chat sessions when an active LLM call is in progress ✅ (abort + clear loading state on session switch; cancelable `generate_plan` POST via `AbortSignal`)
+
 ---
 
 ## 🙋 Xuan
