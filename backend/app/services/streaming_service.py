@@ -290,13 +290,17 @@ async def finalize_trip_plan(
     final_contents: list = (messages or []) + [
         types.Content(role="user", parts=[types.Part.from_text(text=context_prompt)])
     ]
-    FINALIZE_TIMEOUT_SECONDS = 90.0
-    async with asyncio.timeout(FINALIZE_TIMEOUT_SECONDS):
-        response = await client.aio.models.generate_content(
-            model=settings.GEMINI_MODEL,
+    FINALIZE_TIMEOUT_SECONDS = 20.0
+
+    def sync_generate():
+        return client.models.generate_content(
+            model=settings.GEMINI_LITE_MODEL,
             contents=final_contents,
             config=config,
         )
+
+    async with asyncio.timeout(FINALIZE_TIMEOUT_SECONDS):
+        response = await asyncio.to_thread(sync_generate)
 
     text = response.text or ""
     try:
@@ -366,6 +370,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "- Never invent dates, destinations, or prices.\n"
         "- Use HKD for Asian destinations.\n"
         "- Markdown formatting.\n"
+        "- If the user does not specify a departure country/city, assume HONG KONG (HKG) as the default departure.\n"
         f"{prefs_section}" + (f"\n{commands_section}" if commands_section else "")
     )
 
@@ -609,6 +614,14 @@ async def stream_agent_response(
                         )
                         yield SSE({"done": True})
                         return
+                    logger.bind(
+                        event="stream_complete",
+                        service="chat",
+                        trace_id=trace_id,
+                        session_id=session_id,
+                        total_rounds=tool_round + 1,
+                        accumulated_text_len=len(accumulated_text),
+                    ).info("LLM stream completed — text response only")
                     yield SSE({"done": True})
                     return
 
@@ -722,6 +735,13 @@ async def stream_agent_response(
                             session_id=session_id,
                         ).info("Trip auto-save skipped for guest user")
 
+                    logger.bind(
+                        event="stream_complete",
+                        service="chat",
+                        trace_id=trace_id,
+                        session_id=session_id,
+                        total_rounds=tool_round + 1,
+                    ).info("LLM stream completed — itinerary generated")
                     yield SSE({"done": True})
                     return
 
