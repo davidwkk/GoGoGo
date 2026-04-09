@@ -14,7 +14,7 @@ const error = (...args: unknown[]) => {
   if (DEBUG) console.error(...args);
 };
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 // 1. Define the Standardized Error Envelope
 export interface APIError {
