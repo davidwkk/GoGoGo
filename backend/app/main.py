@@ -6,7 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from app.api.routes import auth, chat, chat_sessions, health, trips, users
+from app.api.routes import auth, chat, chat_sessions, health, live, trips, users
 from app.core.logging import setup_logging
 from app.core.middleware import setup_middleware
 
@@ -40,5 +40,6 @@ app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(chat_sessions.router, prefix="/api/v1/chat", tags=["chat-sessions"])
+app.include_router(live.router, prefix="/api/v1/live", tags=["live"])
 app.include_router(trips.router, prefix="/api/v1/trips", tags=["trips"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
