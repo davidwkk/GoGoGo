@@ -101,8 +101,10 @@ async def get_transport(
         to_location=to_location,
         mode=mode,
         query=query,
-        params=params,
-    ).debug(f"TOOL: Searching transport options: {query} | mode={mode} params={params}")
+        engine="google_maps",
+    ).debug(
+        f"TOOL: Searching transport options: {query} | mode={mode} engine=google_maps"
+    )
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:

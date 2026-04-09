@@ -282,8 +282,8 @@ async def _search_serpapi(query: str) -> dict:
         tool="search_web",
         provider="serpapi",
         query=query,
-        params=params,
-    ).debug(f"TOOL: Calling SerpAPI — query={query} params={params}")
+        engine="google",
+    ).debug(f"TOOL: Calling SerpAPI — query={query} engine=google")
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
