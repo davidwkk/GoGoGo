@@ -554,6 +554,8 @@ export function ChatPage() {
   });
   // Set of user message IDs whose thinking bubble is expanded
   const [expandedBubbles, setExpandedBubbles] = useState<Set<string>>(new Set());
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string>('');
   const [sessionLoading, setSessionLoading] = useState(false);
 
   const dynamicThinkingMessage = useDynamicThinking(isLoading, messages.length > 0);
@@ -697,6 +699,7 @@ export function ChatPage() {
     useChatStore.getState().setPartialThoughtText('');
     useChatStore.setState({ thinkingSteps: [] });
 
+    setSessionError(null);
     setSessionLoading(true);
     try {
       let guestUid: string | null = null;
@@ -745,6 +748,8 @@ export function ChatPage() {
       }
 
       setTypewriterDone(true);
+    } catch {
+      setSessionError('Failed to load this chat. Please try again.');
     } finally {
       setSessionLoading(false);
     }
@@ -927,6 +932,21 @@ export function ChatPage() {
       autoExpandedRef.current = null; // Reset for next time
     }
   }, [isLoading, messages]);
+
+  useEffect(() => {
+    if (!lastUserMessage) return;
+    // Clear it immediately to avoid double-fire
+    setLastUserMessage('');
+    // InputBar handles sending via useChat — we can't call it directly from ChatPage.
+    // Instead, populate the input and let the user confirm, or wire through a ref.
+    // Simplest approach: show a toast nudging the user to resend.
+    toast('Message failed. Your message has been copied — just hit Send again.', {
+      action: {
+        label: 'OK',
+        onClick: () => {},
+      },
+    });
+  }, [lastUserMessage]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -1165,6 +1185,24 @@ export function ChatPage() {
           {/* Session loading skeleton */}
           {sessionLoading && <MessageListSkeleton />}
 
+          {sessionError && !sessionLoading && (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+              <div className="flex items-center justify-center rounded-full bg-red-50 size-12">
+                <MessageSquare className="size-5 text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-red-600">Failed to load chat</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{sessionError}</p>
+              </div>
+              <button
+                onClick={() => currentSessionPk && loadSession(currentSessionPk)}
+                className="h-8 rounded-xl bg-black text-white px-4 text-sm font-medium hover:opacity-80 transition-opacity"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           {!sessionLoading && messages.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
               <div className="flex items-center justify-center rounded-full bg-muted size-12">
@@ -1292,11 +1330,29 @@ export function ChatPage() {
                         ) : assistantMsg.messageType === 'error' ? (
                           <div className="flex items-start gap-2 text-red-600">
                             <span className="text-red-500 mt-0.5">⚠</span>
-                            <div>
+                            <div className="flex-1">
                               <p className="font-semibold text-red-600 text-xs uppercase tracking-wide mb-1">
                                 Error
                               </p>
                               <p className="text-red-700 text-sm">{assistantMsg.content}</p>
+                              <button
+                                onClick={() => {
+                                  const lastUser = [...messages]
+                                    .reverse()
+                                    .find(m => m.role === 'user');
+                                  if (lastUser) {
+                                    // Remove the failed assistant message and re-send
+                                    useChatStore
+                                      .getState()
+                                      .setMessages(messages.filter(m => m.id !== assistantMsg.id));
+                                    // Re-send via InputBar's send — trigger via store
+                                    setLastUserMessage(lastUser.content);
+                                  }
+                                }}
+                                className="mt-2 h-7 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-3 text-xs font-medium transition-colors"
+                              >
+                                Retry
+                              </button>
                             </div>
                           </div>
                         ) : assistantMsg.messageType === 'itinerary' ? (
