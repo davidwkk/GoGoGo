@@ -27,8 +27,8 @@ const getStoredUser = (): AuthUser | null => {
 // ─── Store ────────────────────────────────────────────────────────────────
 
 export const useAuthStore = create<AuthState>(set => ({
-  user: null,
-  token: null,
+  user: getStoredUser(),
+  token: getStoredToken(),
 
   setAuth: (user, token) => {
     localStorage.setItem('access_token', token);
