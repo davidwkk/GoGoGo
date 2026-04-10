@@ -113,22 +113,37 @@ function useDynamicThinking(isLoading: boolean, hasMessages: boolean): string {
 function StreamingThought({ text, done }: { text: string; done: boolean }) {
   const [displayLength, setDisplayLength] = useState(0);
   const textRef = useRef(text);
+  const doneRef = useRef(done);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   textRef.current = text;
 
+  // Keep track of the done state without restarting the interval
   useEffect(() => {
-    setDisplayLength(0);
+    doneRef.current = done;
+  }, [done]);
+
+  useEffect(() => {
+    // Start or restart the interval
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     intervalRef.current = setInterval(() => {
       setDisplayLength(prev => {
         const remaining = textRef.current.length - prev;
+
+        // If we caught up to the current text...
         if (remaining <= 0) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
+          // ONLY clear the interval if the stream is officially finished
+          if (doneRef.current) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+          }
+          // If not done, keep the interval alive and wait for the next chunk!
           return prev;
         }
-        if (done) return prev + 10;
+
+        // Always use typewriter effect
+        if (doneRef.current) return prev + 10;
+        if (remaining > 500) return prev + 10;
         if (remaining > 200) return prev + 3;
         return prev + 1;
       });
@@ -137,14 +152,7 @@ function StreamingThought({ text, done }: { text: string; done: boolean }) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [done]);
-
-  useEffect(() => {
-    setDisplayLength(prev => {
-      const max = textRef.current.length;
-      return prev >= max ? max : prev;
-    });
-  }, [text]);
+  }, []);
 
   return (
     <>
@@ -189,18 +197,23 @@ function StreamingMessage({
     intervalRef.current = setInterval(() => {
       setDisplayLength(prev => {
         const remaining = contentRef.current.length - prev;
+
+        // If we caught up to the current text...
         if (remaining <= 0) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          // Signal completion once finished
-          if (!hasCompletedRef.current) {
-            hasCompletedRef.current = true;
-            onCompleteRef.current?.();
+          // ONLY clear the interval if the stream is officially finished
+          if (isDoneRef.current) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            // Signal completion once finished
+            if (!hasCompletedRef.current) {
+              hasCompletedRef.current = true;
+              onCompleteRef.current?.();
+            }
           }
+          // If not done, keep the interval alive and wait for the next chunk!
           return prev;
         }
+
         // Always use typewriter effect — no jumping even when done streaming.
-        // This ensures a smooth reveal regardless of how fast chunks arrived.
-        // Once the full response is received (isDone=true), finish at max speed.
         if (isDoneRef.current) {
           return prev + 10;
         }
@@ -855,16 +868,27 @@ export function ChatPage() {
     }
   };
 
-  // Track loading state for typewriter reset
-  const prevLoadingRef = useRef(isLoading);
+  // Track auto-expanding thinking bubbles securely
+  const autoExpandedRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (isLoading && !prevLoadingRef.current) {
-      // Loading started — reset typewriter and expanded bubbles
+    if (isLoading) {
       setTypewriterDone(false);
+      // Find the latest user message
+      const lastUser = [...messages].reverse().find(m => m.role === 'user');
+
+      // If we found it and haven't auto-expanded it yet for this loading cycle...
+      if (lastUser && autoExpandedRef.current !== lastUser.id) {
+        setExpandedBubbles(new Set([lastUser.id]));
+        autoExpandedRef.current = lastUser.id; // Mark as expanded
+      }
+    } else {
+      // --- Loading FINISHED ---
+      // Auto-close the thinking bubble when the trip plan or response is ready
       setExpandedBubbles(new Set());
+      autoExpandedRef.current = null; // Reset for next time
     }
-    prevLoadingRef.current = isLoading;
-  }, [isLoading]);
+  }, [isLoading, messages]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -1137,7 +1161,11 @@ export function ChatPage() {
             const assistantMsg = messages[pairIdx * 2 + 1];
             const isLastPair = pairIdx * 2 + 1 >= messages.length;
             const isStreamingAssistant =
-              isLastPair && assistantMsg?.role === 'assistant' && !typewriterDone;
+              isLastPair &&
+              assistantMsg?.role === 'assistant' &&
+              !typewriterDone &&
+              assistantMsg.messageType !== 'itinerary' &&
+              assistantMsg.messageType !== 'error';
 
             if (!userMsg || userMsg.role !== 'user') return null;
 
@@ -1199,9 +1227,12 @@ export function ChatPage() {
                     </button>
                     {expandedBubbles.has(userMsg.id) &&
                       (hasThinkingContent || isWaitingForResponse) && (
-                        <div className="mt-2 space-y-1 pt-2 border-t border-muted-foreground/20">
+                        <div className="mt-2 space-y-1.5 pt-2 border-t border-muted-foreground/20 overflow-hidden">
                           {thinkingStepsToShow.map((step, i) => (
-                            <div key={i} className="text-xs text-muted-foreground leading-relaxed">
+                            <div
+                              key={i}
+                              className="text-xs text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-left-2 duration-300"
+                            >
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
                             </div>
                           ))}
