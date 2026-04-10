@@ -23,8 +23,8 @@ import {
   Plane,
   PlusCircle,
   Sparkles,
-  Star,
   Square,
+  Star,
   Ticket,
   Trash2,
   Volume2,
@@ -964,6 +964,7 @@ export function ChatPage() {
                       </span>
                     )}
 
+                    {/* TODO: Simplify the following logic */}
                     {!isSidebarEditing && isLoggedIn && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
