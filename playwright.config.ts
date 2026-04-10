@@ -69,11 +69,10 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
-
   /* Run your local dev server before starting the tests */
   webServer: {
-    // Step into the frontend folder first
-    command: 'cd frontend && npm run dev', 
+    // FIX: Run vite directly from the frontend folder using npx
+    command: 'npx vite frontend', 
     url: 'http://localhost:5173', 
     reuseExistingServer: !process.env.CI, 
     timeout: 120 * 1000, 
