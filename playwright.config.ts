@@ -72,13 +72,10 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    // This tells Playwright to run your Vite server
-    command: 'npm run dev', 
-    // This tells Playwright to wait until this URL is responding before starting tests
+    // Step into the frontend folder first
+    command: 'cd frontend && npm run dev', 
     url: 'http://localhost:5173', 
-    // If you already have the server running locally, Playwright will just use it
     reuseExistingServer: !process.env.CI, 
-    // Give it a generous timeout to start up in the cloud (120 seconds)
     timeout: 120 * 1000, 
   },
 });
