@@ -11,6 +11,7 @@ import { chatSessionsService, type ChatSessionListItem } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useAuthStore, useChatStore } from '@/store';
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
+import DOMPurify from 'dompurify';
 import {
   Banknote,
   Bed,
@@ -1277,7 +1278,7 @@ export function ChatPage() {
                         <div>
                           <div className="prose prose-sm dark:prose-invert max-w-none">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {assistantMsg.content}
+                              {DOMPurify.sanitize(assistantMsg.content)}
                             </ReactMarkdown>
                           </div>
                           {ttsAvailable && assistantMsg.content.trim() && (
