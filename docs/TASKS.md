@@ -327,7 +327,7 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [ ] **Save the image for attractions** - Attraction images should be saved to db instead of fetching it every time.
 - [ ] **Fix the null fields in trip plan** - There are many null values in the generated trip plan which can be optimized.
 - [ ] **Fix return flight** - It should use the token given returned by the api call in the first call and fetch JUST 1 return flight in the round-trip flight!
-- [ ] **Limit the number of hotels returned from API** - Reduce the results to at most 5 hotels.
+- [x] **Limit the number of hotels returned from API** - Reduce the results to at most 3 hotels.
 
 ### 🧪 Tests to Write
 
