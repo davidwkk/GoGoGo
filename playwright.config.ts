@@ -69,12 +69,12 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
-  /* Run your local dev server before starting the tests */
   webServer: {
-    // FIX: Run vite directly from the frontend folder using npx
-    command: 'npx vite frontend', 
-    url: 'http://localhost:5173', 
-    reuseExistingServer: !process.env.CI, 
-    timeout: 120 * 1000, 
+    command: 'npm run dev',
+    // ADD THIS LINE to tell Playwright WHERE to run the command:
+    cwd: './frontend', 
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
   },
 });
