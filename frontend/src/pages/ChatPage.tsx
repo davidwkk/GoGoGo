@@ -964,34 +964,7 @@ export function ChatPage() {
                       </span>
                     )}
 
-                    {/* TODO: Simplify the following logic */}
-                    {!isSidebarEditing && isLoggedIn && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={e => {
-                            e.stopPropagation();
-                            beginSidebarRename(s.id, s.title);
-                          }}
-                          aria-label="Rename chat"
-                          type="button"
-                        >
-                          <Pencil className="size-3.5" />
-                        </button>
-                        <button
-                          className="text-muted-foreground hover:text-destructive"
-                          onClick={e => {
-                            e.stopPropagation();
-                            deleteSession(s.id);
-                          }}
-                          aria-label="Delete chat"
-                          type="button"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </div>
-                    )}
-                    {!isSidebarEditing && !isLoggedIn && (
+                    {!isSidebarEditing && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           className="text-muted-foreground hover:text-foreground"
