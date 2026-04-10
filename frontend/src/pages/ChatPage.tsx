@@ -482,6 +482,38 @@ function TypingIndicator() {
   );
 }
 
+function MessageListSkeleton() {
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      <div className="flex justify-end">
+        <div className="h-10 w-48 rounded-2xl bg-slate-200 animate-pulse rounded-br-md" />
+      </div>
+      <div className="flex justify-start">
+        <div className="h-8 w-36 rounded-2xl bg-muted animate-pulse rounded-bl-md" />
+      </div>
+      <div className="flex justify-start">
+        <div className="space-y-2">
+          <div className="h-10 w-64 rounded-2xl bg-muted animate-pulse rounded-bl-md" />
+          <div className="h-4 w-48 rounded bg-muted/70 animate-pulse ml-1" />
+        </div>
+      </div>
+      <div className="flex justify-end mt-6">
+        <div className="h-10 w-56 rounded-2xl bg-slate-200 animate-pulse rounded-br-md" />
+      </div>
+      <div className="flex justify-start">
+        <div className="h-8 w-36 rounded-2xl bg-muted animate-pulse rounded-bl-md" />
+      </div>
+      <div className="flex justify-start">
+        <div className="space-y-2">
+          <div className="h-10 w-72 rounded-2xl bg-muted animate-pulse rounded-bl-md" />
+          <div className="h-4 w-52 rounded bg-muted/70 animate-pulse ml-1" />
+          <div className="h-4 w-40 rounded bg-muted/70 animate-pulse ml-1" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ChatPage() {
   const navigate = useNavigate();
   const messages = useChatStore(s => s.messages);
@@ -522,6 +554,7 @@ export function ChatPage() {
   });
   // Set of user message IDs whose thinking bubble is expanded
   const [expandedBubbles, setExpandedBubbles] = useState<Set<string>>(new Set());
+  const [sessionLoading, setSessionLoading] = useState(false);
 
   const dynamicThinkingMessage = useDynamicThinking(isLoading, messages.length > 0);
 
@@ -664,53 +697,57 @@ export function ChatPage() {
     useChatStore.getState().setPartialThoughtText('');
     useChatStore.setState({ thinkingSteps: [] });
 
-    let guestUid: string | null = null;
-    if (!isLoggedIn) {
-      guestUid = localStorage.getItem('guest_uid');
-      if (!guestUid) {
-        guestUid = crypto.randomUUID();
-        localStorage.setItem('guest_uid', guestUid);
-      }
-    }
-    const res = isLoggedIn
-      ? await chatSessionsService.getMessages(id)
-      : await chatSessionsService.getGuestMessages(id, guestUid!);
-    setSessionId(String(id));
-    setMessages(
-      res.messages
-        .filter(m => m.message_type !== 'tool_result') // exclude persisted tool results (not user-visible)
-        .map(m => ({
-          id: String(m.id),
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-          timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-          messageType: m.message_type,
-          thinking_steps: m.thinking_steps,
-        }))
-    );
-
-    // Restore generated itinerary from loaded messages
-    const itineraryMsg = res.messages.find(m => m.message_type === 'itinerary');
-    if (itineraryMsg?.content) {
-      try {
-        const parsed = JSON.parse(itineraryMsg.content);
-        if (parsed?.__type === 'itinerary' && parsed?.data) {
-          setGeneratedItinerary(parsed.data as TripItinerary);
+    setSessionLoading(true);
+    try {
+      let guestUid: string | null = null;
+      if (!isLoggedIn) {
+        guestUid = localStorage.getItem('guest_uid');
+        if (!guestUid) {
+          guestUid = crypto.randomUUID();
+          localStorage.setItem('guest_uid', guestUid);
         }
-      } catch {
-        // ignore parse errors
       }
-    }
+      const res = isLoggedIn
+        ? await chatSessionsService.getMessages(id)
+        : await chatSessionsService.getGuestMessages(id, guestUid!);
+      setSessionId(String(id));
+      setMessages(
+        res.messages
+          .filter(m => m.message_type !== 'tool_result')
+          .map(m => ({
+            id: String(m.id),
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+            messageType: m.message_type,
+            thinking_steps: m.thinking_steps,
+          }))
+      );
 
-    // Restore thinking steps from loaded assistant message into Zustand store
-    const assistantMsgWithThinking = res.messages.find(
-      m => m.role === 'assistant' && Array.isArray(m.thinking_steps) && m.thinking_steps.length > 0
-    );
-    if (assistantMsgWithThinking) {
-      useChatStore.setState({ thinkingSteps: assistantMsgWithThinking.thinking_steps });
-    }
+      const itineraryMsg = res.messages.find(m => m.message_type === 'itinerary');
+      if (itineraryMsg?.content) {
+        try {
+          const parsed = JSON.parse(itineraryMsg.content);
+          if (parsed?.__type === 'itinerary' && parsed?.data) {
+            setGeneratedItinerary(parsed.data as TripItinerary);
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
 
-    setTypewriterDone(true);
+      const assistantMsgWithThinking = res.messages.find(
+        m =>
+          m.role === 'assistant' && Array.isArray(m.thinking_steps) && m.thinking_steps.length > 0
+      );
+      if (assistantMsgWithThinking) {
+        useChatStore.setState({ thinkingSteps: assistantMsgWithThinking.thinking_steps });
+      }
+
+      setTypewriterDone(true);
+    } finally {
+      setSessionLoading(false);
+    }
   };
 
   const beginSidebarRename = (id: number, current: string) => {
@@ -1125,7 +1162,10 @@ export function ChatPage() {
 
         {/* Message list */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-          {messages.length === 0 && !isLoading && (
+          {/* Session loading skeleton */}
+          {sessionLoading && <MessageListSkeleton />}
+
+          {!sessionLoading && messages.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
               <div className="flex items-center justify-center rounded-full bg-muted size-12">
                 <MessageSquare className="size-5 text-muted-foreground" />
@@ -1147,7 +1187,7 @@ export function ChatPage() {
             </div>
           )}
 
-          {isLoading && messages.length === 0 && (
+          {!sessionLoading && isLoading && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
               <div className="flex items-center justify-center rounded-full bg-muted size-12 animate-pulse">
                 <MessageSquare className="size-5 text-muted-foreground" />
@@ -1156,191 +1196,180 @@ export function ChatPage() {
             </div>
           )}
 
-          {/* Render messages as pairs: user message, thinking bubble, assistant response */}
-          {Array.from({ length: Math.ceil(messages.length / 2) }).map((_, pairIdx) => {
-            const userMsg = messages[pairIdx * 2];
-            const assistantMsg = messages[pairIdx * 2 + 1];
-            const isLastPair = pairIdx * 2 + 1 >= messages.length;
-            const isStreamingAssistant =
-              isLastPair &&
-              assistantMsg?.role === 'assistant' &&
-              !typewriterDone &&
-              assistantMsg.messageType !== 'itinerary' &&
-              assistantMsg.messageType !== 'error';
+          {!sessionLoading &&
+            Array.from({ length: Math.ceil(messages.length / 2) }).map((_, pairIdx) => {
+              const userMsg = messages[pairIdx * 2];
+              const assistantMsg = messages[pairIdx * 2 + 1];
+              const isLastPair = pairIdx * 2 + 1 >= messages.length;
+              const isStreamingAssistant =
+                isLastPair &&
+                assistantMsg?.role === 'assistant' &&
+                !typewriterDone &&
+                assistantMsg.messageType !== 'itinerary' &&
+                assistantMsg.messageType !== 'error';
 
-            if (!userMsg || userMsg.role !== 'user') return null;
+              if (!userMsg || userMsg.role !== 'user') return null;
 
-            // Get thinking data for this exchange
-            const hasLoadedThinkingSteps =
-              Array.isArray(assistantMsg?.thinking_steps) && assistantMsg.thinking_steps.length > 0;
-            const hasLiveThinkingSteps = thinkingSteps.length > 0;
-            const hasPartialThinking = partialThoughtText.length > 0;
+              const hasLoadedThinkingSteps =
+                Array.isArray(assistantMsg?.thinking_steps) &&
+                assistantMsg.thinking_steps.length > 0;
+              const hasLiveThinkingSteps = thinkingSteps.length > 0;
+              const hasPartialThinking = partialThoughtText.length > 0;
 
-            // Show thinking bubble ALWAYS for every user message (persistent)
-            // Show "Thinking..." if waiting for response OR if there's thinking content
-            const hasThinkingContent =
-              hasLoadedThinkingSteps || hasLiveThinkingSteps || hasPartialThinking;
-            // For the last pair, show bubble while waiting for LLM response
-            const isWaitingForResponse = isLastPair && isLoading && !assistantMsg;
-            // Differentiate: "Thinking..." while waiting, "Thinking process" after LLM finished, "No thinking process available" if none
-            const thinkingLabel = isWaitingForResponse
-              ? 'Thinking...'
-              : hasThinkingContent
-                ? 'Thinking process'
-                : 'No thinking process available';
+              const hasThinkingContent =
+                hasLoadedThinkingSteps || hasLiveThinkingSteps || hasPartialThinking;
+              const isWaitingForResponse = isLastPair && isLoading && !assistantMsg;
+              const thinkingLabel = isWaitingForResponse
+                ? 'Thinking...'
+                : hasThinkingContent
+                  ? 'Thinking process'
+                  : 'No thinking process available';
 
-            // Get thinking steps: prefer DB steps, fall back to live steps
-            const thinkingStepsToShow =
-              assistantMsg?.thinking_steps ?? (hasLiveThinkingSteps ? thinkingSteps : []);
+              const thinkingStepsToShow =
+                assistantMsg?.thinking_steps ?? (hasLiveThinkingSteps ? thinkingSteps : []);
 
-            return (
-              <div key={userMsg.id} className="space-y-4">
-                {/* User message */}
-                <div className="flex justify-end">
-                  <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-black text-white rounded-br-md">
-                    {userMsg.content}
-                  </div>
-                </div>
-
-                {/* Thinking bubble - ALWAYS shown for every user message */}
-                <div className="flex justify-start">
-                  <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
-                    <button
-                      onClick={() =>
-                        setExpandedBubbles(prev => {
-                          const next = new Set(prev);
-                          if (next.has(userMsg.id)) {
-                            next.delete(userMsg.id);
-                          } else {
-                            next.add(userMsg.id);
-                          }
-                          return next;
-                        })
-                      }
-                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    >
-                      <span>💭 {thinkingLabel}</span>
-                      <span
-                        className={`transition-transform ${expandedBubbles.has(userMsg.id) ? 'rotate-90' : ''}`}
-                      >
-                        ▶
-                      </span>
-                    </button>
-                    {expandedBubbles.has(userMsg.id) &&
-                      (hasThinkingContent || isWaitingForResponse) && (
-                        <div className="mt-2 space-y-1.5 pt-2 border-t border-muted-foreground/20 overflow-hidden">
-                          {thinkingStepsToShow.map((step, i) => (
-                            <div
-                              key={i}
-                              className="text-xs text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-left-2 duration-300"
-                            >
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
-                            </div>
-                          ))}
-                          {isWaitingForResponse && partialThoughtText && (
-                            <div className="text-xs text-muted-foreground leading-relaxed">
-                              <StreamingThought text={partialThoughtText} done={!isLoading} />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                  </div>
-                </div>
-
-                {/* Assistant response */}
-                {assistantMsg && assistantMsg.role === 'assistant' && (
-                  <div className="flex justify-start">
-                    <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
-                      {isStreamingAssistant ? (
-                        <StreamingMessage
-                          content={assistantMsg.content}
-                          isDone={!isLoading}
-                          onComplete={() => setTypewriterDone(true)}
-                        />
-                      ) : assistantMsg.messageType === 'error' ? (
-                        <div className="flex items-start gap-2 text-red-600">
-                          <span className="text-red-500 mt-0.5">⚠</span>
-                          <div>
-                            <p className="font-semibold text-red-600 text-xs uppercase tracking-wide mb-1">
-                              Error
-                            </p>
-                            <p className="text-red-700 text-sm">{assistantMsg.content}</p>
-                          </div>
-                        </div>
-                      ) : assistantMsg.messageType === 'itinerary' ? (
-                        // Itinerary is rendered as a card below via demoItinerary state.
-                        // Show a subtle inline indicator here instead of raw text.
-                        <div className="flex items-center gap-2 text-muted-foreground text-xs italic">
-                          <span>✨</span>
-                          <span>Your trip plan is ready below</span>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {DOMPurify.sanitize(assistantMsg.content)}
-                            </ReactMarkdown>
-                          </div>
-                          {ttsAvailable && assistantMsg.content.trim() && (
-                            <div className="mt-2 flex justify-end">
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={isStreamingAssistant}
-                                aria-label={
-                                  speakingMsgId === assistantMsg.id && isSpeaking
-                                    ? 'Stop speaking'
-                                    : 'Play text-to-speech'
-                                }
-                                onClick={() => {
-                                  if (speakingMsgId === assistantMsg.id && isSpeaking) {
-                                    stop();
-                                    setSpeakingMsgId(null);
-                                    return;
-                                  }
-                                  setSpeakingMsgId(assistantMsg.id);
-                                  speak(assistantMsg.content);
-                                }}
-                              >
-                                {speakingMsgId === assistantMsg.id && isSpeaking ? (
-                                  <>
-                                    <Square className="size-3" />
-                                    Stop
-                                  </>
-                                ) : (
-                                  <>
-                                    <Volume2 className="size-3" />
-                                    Play
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
+              return (
+                <div key={userMsg.id} className="space-y-4">
+                  <div className="flex justify-end">
+                    <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-black text-white rounded-br-md whitespace-pre-wrap">
+                      {userMsg.content}
                     </div>
                   </div>
-                )}
 
-                {/* Typing indicator when waiting for assistant response */}
-                {!assistantMsg && isLoading && isLastPair && <TypingIndicator />}
-              </div>
-            );
-          })}
+                  <div className="flex justify-start">
+                    <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                      <button
+                        onClick={() =>
+                          setExpandedBubbles(prev => {
+                            const next = new Set(prev);
+                            if (next.has(userMsg.id)) {
+                              next.delete(userMsg.id);
+                            } else {
+                              next.add(userMsg.id);
+                            }
+                            return next;
+                          })
+                        }
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      >
+                        <span>💭 {thinkingLabel}</span>
+                        <span
+                          className={`transition-transform ${expandedBubbles.has(userMsg.id) ? 'rotate-90' : ''}`}
+                        >
+                          ▶
+                        </span>
+                      </button>
+                      {expandedBubbles.has(userMsg.id) &&
+                        (hasThinkingContent || isWaitingForResponse) && (
+                          <div className="mt-2 space-y-1.5 pt-2 border-t border-muted-foreground/20 overflow-hidden">
+                            {thinkingStepsToShow.map((step, i) => (
+                              <div
+                                key={i}
+                                className="text-xs text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-left-2 duration-300"
+                              >
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
+                              </div>
+                            ))}
+                            {isWaitingForResponse && partialThoughtText && (
+                              <div className="text-xs text-muted-foreground leading-relaxed">
+                                <StreamingThought text={partialThoughtText} done={!isLoading} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                    </div>
+                  </div>
 
-          {/* Demo trip result — shown inline after generation */}
-          {showDemoLoading && <DemoLoadingSkeleton />}
+                  {assistantMsg && assistantMsg.role === 'assistant' && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-muted text-foreground rounded-bl-md">
+                        {isStreamingAssistant ? (
+                          <StreamingMessage
+                            content={assistantMsg.content}
+                            isDone={!isLoading}
+                            onComplete={() => setTypewriterDone(true)}
+                          />
+                        ) : assistantMsg.messageType === 'error' ? (
+                          <div className="flex items-start gap-2 text-red-600">
+                            <span className="text-red-500 mt-0.5">⚠</span>
+                            <div>
+                              <p className="font-semibold text-red-600 text-xs uppercase tracking-wide mb-1">
+                                Error
+                              </p>
+                              <p className="text-red-700 text-sm">{assistantMsg.content}</p>
+                            </div>
+                          </div>
+                        ) : assistantMsg.messageType === 'itinerary' ? (
+                          <div className="flex items-center gap-2 text-muted-foreground text-xs italic">
+                            <span>✨</span>
+                            <span>Your trip plan is ready below</span>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {DOMPurify.sanitize(assistantMsg.content)}
+                              </ReactMarkdown>
+                            </div>
+                            {ttsAvailable && assistantMsg.content.trim() && (
+                              <div className="mt-2 flex justify-end">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={isStreamingAssistant}
+                                  aria-label={
+                                    speakingMsgId === assistantMsg.id && isSpeaking
+                                      ? 'Stop speaking'
+                                      : 'Play text-to-speech'
+                                  }
+                                  onClick={() => {
+                                    if (speakingMsgId === assistantMsg.id && isSpeaking) {
+                                      stop();
+                                      setSpeakingMsgId(null);
+                                      return;
+                                    }
+                                    setSpeakingMsgId(assistantMsg.id);
+                                    speak(assistantMsg.content);
+                                  }}
+                                >
+                                  {speakingMsgId === assistantMsg.id && isSpeaking ? (
+                                    <>
+                                      <Square className="size-3" />
+                                      Stop
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Volume2 className="size-3" />
+                                      Play
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-          {demoItinerary && (
+                  {!assistantMsg && isLoading && isLastPair && <TypingIndicator />}
+                </div>
+              );
+            })}
+
+          {!sessionLoading && showDemoLoading && <DemoLoadingSkeleton />}
+
+          {!sessionLoading && demoItinerary && (
             <div className="flex justify-start">
               <ItineraryDisplay itinerary={demoItinerary} />
             </div>
           )}
 
-          {/* LLM-generated trip result — shown inline after streaming */}
-          {showGeneratedLoading && !generatedItinerary && <DemoLoadingSkeleton />}
+          {!sessionLoading && showGeneratedLoading && !generatedItinerary && (
+            <DemoLoadingSkeleton />
+          )}
 
-          {generatedItinerary && (
+          {!sessionLoading && generatedItinerary && (
             <div className="flex justify-start">
               <ItineraryDisplay itinerary={generatedItinerary} isGenerated />
             </div>
