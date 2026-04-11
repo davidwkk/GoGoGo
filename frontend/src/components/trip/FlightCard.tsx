@@ -1,4 +1,4 @@
-import { Plane, ArrowRight, ExternalLink, Clock, RotateCcw } from 'lucide-react';
+import { Plane, ArrowRight, ExternalLink, Clock, RotateCcw, MapPin } from 'lucide-react';
 import { Flight } from '../../types/trip';
 
 function formatDuration(minutes: number | null | undefined): string {
@@ -63,6 +63,12 @@ export const FlightCard = ({ flight, tripType = 'one_way' }: FlightCardProps) =>
               minute: '2-digit',
             })}
           </p>
+          {flight.departure_airport_name && (
+            <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
+              <MapPin className="size-3" />
+              {flight.departure_airport_name}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col items-center gap-1 flex-1 px-4">
@@ -84,6 +90,12 @@ export const FlightCard = ({ flight, tripType = 'one_way' }: FlightCardProps) =>
               minute: '2-digit',
             })}
           </p>
+          {flight.arrival_airport_name && (
+            <p className="text-[10px] text-slate-400 flex items-center gap-1 justify-end mt-1">
+              <MapPin className="size-3" />
+              {flight.arrival_airport_name}
+            </p>
+          )}
         </div>
       </div>
 
@@ -98,7 +110,7 @@ export const FlightCard = ({ flight, tripType = 'one_way' }: FlightCardProps) =>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-slate-500">
             {flight.airplane && <span className="font-medium">{flight.airplane}</span>}
-            {flight.cabin_class && <span className="capitalize">{flight.cabin_class}</span>}
+            {flight.travel_class && <span className="capitalize">{flight.travel_class}</span>}
             {flight.duration_minutes && (
               <span className="flex items-center gap-1">
                 <Clock className="size-3" />
@@ -121,8 +133,8 @@ export const FlightCard = ({ flight, tripType = 'one_way' }: FlightCardProps) =>
             </div>
           )}
 
-          {/* Conditional Booking Button */}
-          {flight.booking_url && (
+          {/* Only show booking button on outbound flight */}
+          {showPrice && flight.booking_url && (
             <a
               href={flight.booking_url}
               target="_blank"
