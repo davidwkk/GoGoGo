@@ -48,6 +48,58 @@ test.describe('GoGoGo E2E Flows', () => {
         return;
       }
       await context.grantPermissions(['microphone']);
+
+      // Inject mocks for voice/audio APIs to ensure they work in headless CI
+      await page.addInitScript(() => {
+        // 1. Mock Web Speech API (for useASR)
+        class MockSpeechRecognition {
+          onstart: any = null;
+          onend: any = null;
+          start() { setTimeout(() => this.onstart?.(), 10); }
+          stop() { setTimeout(() => this.onend?.(), 10); }
+        }
+        (window as any).SpeechRecognition = MockSpeechRecognition;
+        (window as any).webkitSpeechRecognition = MockSpeechRecognition;
+
+        // 2. Mock WebSocket for Live Session
+        const OriginalWebSocket = window.WebSocket;
+        (window as any).WebSocket = function(url: string, protocols: any) {
+          if (url.includes('/live/ws')) {
+            const ws: any = {
+              readyState: 1,
+              OPEN: 1,
+              send: () => {},
+              close: () => { setTimeout(() => ws.onclose?.(), 10); }
+            };
+            setTimeout(() => ws.onopen?.(), 10);
+            return ws;
+          }
+          return new OriginalWebSocket(url, protocols);
+        };
+        (window as any).WebSocket.CONNECTING = 0;
+        (window as any).WebSocket.OPEN = 1;
+        (window as any).WebSocket.CLOSING = 2;
+        (window as any).WebSocket.CLOSED = 3;
+
+        // 3. Mock getUserMedia (for useLiveSession)
+        if (!navigator.mediaDevices) (navigator as any).mediaDevices = {};
+        navigator.mediaDevices.getUserMedia = () => Promise.resolve({
+          getTracks: () => [{ stop: () => {} }]
+        } as any);
+
+        // 4. Mock AudioContext (for useLiveSession)
+        class MockAudioContext {
+          sampleRate = 16000;
+          resume = () => Promise.resolve();
+          createMediaStreamSource = () => ({ connect: () => {} });
+          createScriptProcessor = () => ({ connect: () => {}, disconnect: () => {} });
+          close = () => Promise.resolve();
+          destination = {};
+        }
+        (window as any).AudioContext = MockAudioContext;
+        (window as any).webkitAudioContext = MockAudioContext;
+      });
+
       await page.goto(`${BASE_URL}/login`);
       await page.getByRole('button', { name: 'Continue as Guest' }).click();
       await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
