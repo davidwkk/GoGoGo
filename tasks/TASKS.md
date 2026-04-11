@@ -1,21 +1,6 @@
 # 👥 `gogogo` — Task Assignment Document
 
-> Deadline: Apr 16, 2026 (~20 days) | Team: 3 members
-
----
-
-## 🧭 Ownership Overview
-
-| Area                                      | Owner                                                              |
-| ----------------------------------------- | ------------------------------------------------------------------ |
-| Infra — Docker, FastAPI skeleton, setup   | **David**                                                          |
-| Agent Core, Tools, Structured Output      | **David**                                                          |
-| Preference Extraction (Flash-Lite)        | **David**                                                          |
-| Voice — ASR + TTS                         | **David** (ASR); **Minqi** (TTS upgrades)                          |
-| Auth — Register/Login, JWT, Login UI      | **David**                                                          |
-| Chat — Session, Message History, Chat UI  | **David**                                                          |
-| Trip — CRUD, Itinerary Display, Map Embed | **David**                                                          |
-| DB Models + Migrations (all tables)       | **David** (owns all migrations and all models to remove conflicts) |
+> Deadline: Apr 16, 2026 | Team: 3 members
 
 ---
 
@@ -24,99 +9,6 @@
 ### 🎯 Goal
 
 Build the intelligent core of the app: agent loop, all tools, structured output, preference extraction, voice I/O, auth, chat persistence, and trip display.
-
-### 📦 Files Owned
-
-```
-backend/app/agent/
-├── agent.py                  # Gemini 3 Flash agent setup (gemini-3-flash-preview)
-├── callbacks.py              # Loguru logging callbacks
-├── schemas.py                # TripItinerary + all Pydantic output models
-└── tools/
-    ├── search.py             # Tavily (primary) + SerpAPI fallback
-    ├── flights.py            # SerpAPI Google Flights
-    ├── hotels.py             # SerpAPI Google Hotels
-    ├── weather.py            # OpenWeatherMap
-    ├── maps.py               # Google Maps Static/Embed URL builder
-    ├── transport.py           # SerpAPI Google Maps (route/transport options)
-    └── attractions.py        # Wikipedia REST API (attraction details)
-
-backend/app/services/
-├── chat_service.py           # Invoke agent, return TripItinerary
-├── preference_service.py      # Flash-Lite extraction (gemini-3.1-flash-lite-preview) + save preferences
-├── auth_service.py           # Register, login, password verify
-└── message_service.py        # Message persistence — create_session, get_session, append_message
-
-backend/app/db/models/
-├── user.py                   # users table
-├── chat_session.py           # chat_sessions table
-├── message.py                # messages table
-└── preference.py             # user_preferences table
-
-backend/app/repositories/
-├── user_repo.py              # User DB access
-├── session_repo.py           # ChatSession DB access
-├── message_repo.py           # Message DB access
-└── preference_repo.py        # Preference DB access (no expire_all!)
-
-backend/app/schemas/
-├── chat.py                   # ChatRequest / ChatResponse schemas
-├── auth.py                   # RegisterRequest, LoginRequest, TokenResponse
-└── user.py                   # UserOut schema
-
-backend/app/api/routes/
-├── chat.py                   # POST /chat
-├── chat_sessions.py           # POST /chat/sessions/{id}/end, GET /chat/sessions/{id}/messages
-├── auth.py                   # POST /auth/register, POST /auth/login
-├── users.py                  # GET /users/me
-└── health.py                 # /health
-
-backend/app/core/
-├── config.py                 # pydantic-settings env config
-├── logging.py                # Loguru setup
-├── security.py               # JWT encode/decode, password hashing
-└── middleware.py             # CORS setup
-
-backend/app/main.py            # FastAPI app entrypoint
-
-backend/app/repositories/
-└── trip_repo.py              # Trip DB access
-
-backend/app/services/
-└── trip_service.py           # Save trip, list trips, get trip by id
-
-backend/app/api/routes/
-└── trips.py                  # GET/DELETE /trips (POST /trips is internal — called by chat_service directly)
-
-frontend/src/
-├── pages/
-│   ├── LoginPage.tsx         # Login + Register form
-│   ├── ChatPage.tsx          # Message list, input bar
-│   └── TripPage.tsx          # Trip history list + detail view
-├── components/
-│   ├── chat/
-│   │   ├── ChatWindow.tsx    # Chat container
-│   │   ├── MessageBubble.tsx # User vs assistant styling
-│   │   └── InputBar.tsx      # Text input bar
-│   ├── trip/
-│   │   ├── ItineraryCard.tsx # Day-by-day plan display (as ActivityCard.tsx)
-│   │   └── FlightCard.tsx    # Flight info + booking link
-│   └── voice/
-│       ├── VoiceButton.tsx   # Mic toggle button
-│       └── TTSPlayer.tsx     # Auto-play TTS on agent response
-├── hooks/
-│   ├── useASR.ts             # Web Speech API hook
-│   ├── useTTS.ts             # Web Speech Synthesis hook
-│   ├── useChat.ts            # Chat request hook
-│   └── useAuth.ts            # Auth state, login/logout actions
-├── store/
-│   ├── chatSlice.ts          # Chat state (session, messages)
-│   └── tripSlice.ts          # Trip state (trip list, current trip)
-└── services/
-    ├── chatService.ts        # POST /chat API call
-    ├── tripService.ts        # GET/DELETE /trips API calls
-    └── authService.ts        # POST /auth/register, /auth/login
-```
 
 ### ✅ Task Breakdown
 
@@ -325,45 +217,9 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] **Guest access**: the chat history bar must be visible to guest users too; guest users can create new chat sessions, but cannot save trips.
 - [x] **Chat history bar alignment** — Fix the style of the chat history bar; specifically, the border/line below it should be at the same vertical level as the main chat page when the history bar is collapsed (alignment is correct when expanded).
 - [ ] **Save the image for attractions** - Attraction images should be saved to db instead of fetching it every time.
-- [ ] **Fix the null fields in trip plan** - There are many null values in the generated trip plan which can be optimized.
+- [x] **Fix the null fields in trip plan** - There are many null values in the generated trip plan which can be optimized.
 - [x] **Fix return flight** — Round-trip now uses `departure_token` from first API call to automatically fetch return flights in a second API call (same airports + dates, `type=1`). Returns 1 outbound + up to 3 return flights. No fallback to reversed-airport approach — errors are returned to LLM to retry.
 - [x] **Limit the number of hotels returned from API** - Reduce the results to at most 3 hotels.
-
-### 🧪 Tests to Write
-
-```
-backend/tests/unit/
-├── test_tools/
-│   ├── test_search.py        # Returns expected shape
-│   ├── test_flights.py
-│   ├── test_hotels.py
-│   ├── test_weather.py       ✅ (3 tests)
-│   ├── test_maps.py          ✅ (5 tests)
-│   ├── test_transport.py     # SerpAPI Google Maps returns transport options
-│   └── test_attractions.py   ✅ (3 tests)
-└── test_schemas/
-    └── test_trip_itinerary.py  ✅ DONE — 9 tests covering roundtrip, validation, constraints
-
-backend/tests/unit/
-└── test_security/
-    ├── test_jwt.py           # encode/decode roundtrip
-    └── test_password.py      # hash + verify
-
-backend/tests/integration/
-├── test_auth/
-│   ├── test_register.py      # 201, duplicate 409
-│   └── test_login.py         # 200 + token, wrong password 401
-└── test_trips/
-    ├── test_save_trip.py     # POST /trips saves correctly
-    ├── test_list_trips.py    # GET /trips returns user's trips only
-    └── test_get_trip.py      # GET /trips/{id} returns full itinerary
-
-backend/tests/integration/
-└── test_chat/
-└── test_chat_endpoint.py # POST /chat returns TripItinerary shape
-```
-
----
 
 ## 🙋 Minqi
 
@@ -425,18 +281,5 @@ backend/tests/integration/
 - [ ] **Error handling UI** — Timeout displays for failed API calls, retry buttons where applicable
 - [x] **API error envelope standardization** — Standardize `APIError { detail: string; code?: string }` in `api.ts` ✅ (already implemented in `api.ts` with interceptor; used in `LoginPage.tsx`)
 - [ ] **Mobile responsive layout audit** — Verify all pages (Login, Chat, Trip) render correctly on narrow viewports; fix any overflow or truncation issues
-
----
-
-## 🚨 Open Issues
-
----
-
-## 🚦 Definition of Done
-
-| Member    | Done When                                                                            |
-| --------- | ------------------------------------------------------------------------------------ |
-| **David** | Agent returns valid `TripItinerary` from real tools; preferences saved after session |
-| **Minqi** | Voice input/output works; chat history persists and loads                            |
-| **Xuan**  | Trips saved and listed; full itinerary renders with map; booking links work          |
-| **All**   | `docker-compose up` → full flow works: login → chat → get itinerary → view trip      |
+- [ ] Add FAKE loading sentences when LLM takes a long time to respond (e.g. >5: LLM is thinking hard >10: Current load is high, may need to wait longer time, etc.)
+- [ ] Fix the display issue in TripCard, FlightCard, AttractionCard (embed map), etc.
