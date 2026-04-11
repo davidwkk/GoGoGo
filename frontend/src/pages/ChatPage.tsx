@@ -918,13 +918,17 @@ export function ChatPage() {
 
   useEffect(() => {
     if (!lastUserMessage) return;
+    navigator.clipboard.writeText(lastUserMessage).catch(console.error);
     setLastUserMessage('');
-    toast('Message failed. Your message has been copied — just hit Send again.', {
-      action: {
-        label: 'OK',
-        onClick: () => {},
-      },
-    });
+    toast(
+      'Message failed. Your message has been copied to your clipboard — just paste and try again.',
+      {
+        action: {
+          label: 'OK',
+          onClick: () => {},
+        },
+      }
+    );
   }, [lastUserMessage]);
 
   return (
