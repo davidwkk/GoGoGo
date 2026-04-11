@@ -439,9 +439,18 @@ export function TripPage() {
                     <div className="h-px flex-1 bg-slate-100" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {selectedTrip.itinerary.flights.map((f: Flight, i: number) => (
-                      <FlightCard key={i} flight={f} />
-                    ))}
+                    {selectedTrip.itinerary.flights.map((f: Flight, i: number) => {
+                      const hasReturn = selectedTrip.itinerary.flights.some(
+                        f => f.direction === 'return'
+                      );
+                      return (
+                        <FlightCard
+                          key={i}
+                          flight={f}
+                          tripType={hasReturn ? 'round_trip' : 'one_way'}
+                        />
+                      );
+                    })}
                   </div>
                 </section>
               )}

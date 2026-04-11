@@ -32,13 +32,14 @@ export interface Activity {
 
   // --- Enriched via Tavily/SERP ---
   address?: string | null; // Full formatted address
-  map_url?: string | null;
+  map_url?: string | null; // Google Maps embed URL
   opening_hours?: string | null; // e.g. "09:00–18:00, closed Mon"
   admission_fee_hkd?: number | null; // null = free
   rating?: number | null; // 0–5 from Google / TripAdvisor
   review_count?: number | null;
   booking_url?: string | null;
   tips?: string[] | null; // Extracted from reviews / Tavily snippets
+  wiki_url?: string | null; // Wikipedia page URL
 
   // --- Media (Tavily image search / SERP) ---
   image_url?: string | null;
@@ -89,6 +90,7 @@ export interface Flight {
 
   // --- Enriched via SERP ---
   duration_minutes?: number | null;
+  airplane?: string | null; // e.g. "Boeing 787"
   cabin_class?: CabinClass | null;
   price_hkd?: number | null; // Estimated fare
   booking_url?: string | null;
@@ -109,6 +111,11 @@ export interface Hotel {
   address?: string | null;
   star_rating?: number | null; // 1–5
   guest_rating?: number | null; // e.g. 8.4 out of 10
+  hotel_class_int?: number | null; // 1-5 integer
+  reviews?: number | null; // total review count
+  location_rating?: number | null; // location score
+  amenities?: string[] | null; // list of amenities
+  description?: string | null; // hotel description
   booking_url?: string | null;
   image_url?: string | null;
   embed_map_url?: string | null; // Google Maps embed URL for iframe
