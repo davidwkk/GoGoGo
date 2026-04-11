@@ -186,14 +186,10 @@ if all_flights and len(all_flights) > 1:
 - Fix 4: Hotel interface updated with `hotel_class_int`, `reviews`, `location_rating`, `amenities`, `description`
 - Fix 5: Activity interface updated with `wiki_url`
 - Fix 8: TypeScript interfaces aligned with tool outputs
-
-### Not Yet Implemented
-
 - HotelCard.tsx - display new fields (hotel_class_int, reviews, location_rating, amenities expandable, description)
 - AttractionCard.tsx - collapsible description, wiki link, embed map
 - Backend prompts (Fix 6: prevent price hallucination, Fix 7: improve tips)
+
+### Not Yet Implemented
+
 - Fix 2: Uniform booking URL for round-trip in flights.py
-
-### Update 2026-04-11
-
-- ✅ HotelCard.tsx - displays hotel_class_int (star icons), rating, reviews, location_rating, description, expandable amenities
