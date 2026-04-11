@@ -1,4 +1,4 @@
-import { Star, Building2 } from 'lucide-react';
+import { Star, Building2, MapPin, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { MapEmbed } from './MapEmbed';
 import { useState, useEffect } from 'react';
 import { ImageLightbox } from '../common/ImageLightbox';
@@ -8,6 +8,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
 
   useEffect(() => {
     if (!hotel) return;
@@ -68,6 +69,10 @@ export function HotelCard({ hotel }: { hotel: any }) {
   const minTotal = (hotel.price_per_night_hkd?.min || 0) * nights;
   const maxTotal = (hotel.price_per_night_hkd?.max || 0) * nights;
 
+  const amenities = hotel.amenities || [];
+  const displayedAmenities = amenitiesExpanded ? amenities : amenities.slice(0, 4);
+  const hasMoreAmenities = amenities.length > 4;
+
   return (
     <>
       <section className="bg-slate-900 rounded-[3rem] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group mb-10">
@@ -98,7 +103,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
             )}
           </div>
 
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex justify-between items-start mb-6">
             <span className="px-4 py-1 bg-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] h-fit">
               Stay Details
             </span>
@@ -113,14 +118,48 @@ export function HotelCard({ hotel }: { hotel: any }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 mb-2 text-yellow-400">
-            <Star className="size-4 fill-current" />
-            <span className="text-sm font-bold">{hotel.rating || '4.5'}</span>
+          {/* Hotel Class, Rating, Reviews, Location */}
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            {hotel.hotel_class_int && (
+              <div className="flex items-center gap-1">
+                {Array.from({ length: hotel.hotel_class_int }).map((_, i) => (
+                  <Star key={i} className="size-4 fill-current text-yellow-400" />
+                ))}
+                <span className="text-xs text-slate-300 ml-1">
+                  {hotel.hotel_class_int}-Star Hotel
+                </span>
+              </div>
+            )}
+            {hotel.rating && (
+              <div className="flex items-center gap-1 text-yellow-400">
+                <Star className="size-4 fill-current" />
+                <span className="text-sm font-bold text-white">{hotel.rating}</span>
+              </div>
+            )}
+            {hotel.reviews && (
+              <div className="flex items-center gap-1 text-slate-400">
+                <Users className="size-3" />
+                <span className="text-xs">{hotel.reviews.toLocaleString()} reviews</span>
+              </div>
+            )}
+            {hotel.location_rating && (
+              <div className="flex items-center gap-1 text-slate-400">
+                <MapPin className="size-3" />
+                <span className="text-xs">Location: {hotel.location_rating}/10</span>
+              </div>
+            )}
           </div>
 
           <h4 className="text-4xl font-black mb-3 tracking-tight">{hotel.name}</h4>
 
-          <div className="flex flex-wrap gap-8 mb-10">
+          {/* Description */}
+          {hotel.description && (
+            <p className="text-sm text-slate-300 mb-6 leading-relaxed line-clamp-2">
+              {hotel.description}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-8 mb-8">
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                 Check-in
@@ -144,6 +183,41 @@ export function HotelCard({ hotel }: { hotel: any }) {
               </p>
             </div>
           </div>
+
+          {/* Amenities */}
+          {amenities.length > 0 && (
+            <div className="mb-8">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                Amenities
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {displayedAmenities.map((amenity: string, index: number) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-white/10 rounded-full text-xs text-slate-200"
+                  >
+                    {amenity}
+                  </span>
+                ))}
+                {hasMoreAmenities && (
+                  <button
+                    onClick={() => setAmenitiesExpanded(!amenitiesExpanded)}
+                    className="px-3 py-1 bg-blue-600/30 hover:bg-blue-600/50 rounded-full text-xs text-blue-300 flex items-center gap-1 transition-colors"
+                  >
+                    {amenitiesExpanded ? (
+                      <>
+                        Show Less <ChevronUp className="size-3" />
+                      </>
+                    ) : (
+                      <>
+                        +{amenities.length - 4} more <ChevronDown className="size-3" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {hotel.embed_map_url && (
             <div className="mb-8 rounded-2xl overflow-hidden border border-white/10 h-80">

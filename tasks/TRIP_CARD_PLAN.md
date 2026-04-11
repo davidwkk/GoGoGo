@@ -180,6 +180,7 @@ if all_flights and len(all_flights) > 1:
 ## Implementation Status
 
 ### Completed ✅
+
 - Fix 3: Flight interface updated with `airplane`; FlightCard displays airplane, cabin_class, duration
 - Fix 1: FlightCard shows price only on outbound; "Round Trip" badge added; "Round Trip Total" label
 - Fix 4: Hotel interface updated with `hotel_class_int`, `reviews`, `location_rating`, `amenities`, `description`
@@ -187,7 +188,11 @@ if all_flights and len(all_flights) > 1:
 - Fix 8: TypeScript interfaces aligned with tool outputs
 
 ### Not Yet Implemented
+
 - HotelCard.tsx - display new fields (hotel_class_int, reviews, location_rating, amenities expandable, description)
 - AttractionCard.tsx - collapsible description, wiki link, embed map
 - Backend prompts (Fix 6: prevent price hallucination, Fix 7: improve tips)
 - Fix 2: Uniform booking URL for round-trip in flights.py
+
+### Update 2026-04-11
+- ✅ HotelCard.tsx - displays hotel_class_int (star icons), rating, reviews, location_rating, description, expandable amenities
