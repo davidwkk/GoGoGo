@@ -312,6 +312,12 @@ async def _search_round_trip(
     # Combine: 1 outbound + up to 3 return flights
     all_flights = outbound_flights[:1] + return_flights[:3]
 
+    # Use only the first outbound flight's booking URL for all flights (round-trip)
+    if all_flights:
+        primary_booking_url = all_flights[0].get("booking_url")
+        for flight in all_flights[1:]:
+            flight["booking_url"] = primary_booking_url
+
     logger.bind(
         event="tool_done",
         layer="tool",
