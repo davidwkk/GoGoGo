@@ -452,7 +452,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "    Call 2: search_flights(departure=PEK, arrival=HKG, date=2026-05-17, return_date=None)\n"
         '  One-way: only if user explicitly says "one-way".\n'
         "  Each result includes a 'direction' field ('outbound' or 'return') so you know which leg it is.\n"
-        "- ATTRACTIONS: at least 1 per travel day (3-day trip = 3+ attractions).\n"
+        "- ATTRACTIONS: at least 2 per full travel day (a day with only 1 attraction is not acceptable — always plan at least 2 events/attractions per full day, while it can be just 1 activity for a half day: arriving the destination after 3pm).\n"
         "- Only call tools when:\n"
         '  1. User confirms "generate the plan" → call ALL required tools.\n'
         "  2. User explicitly asks for real-time data (weather, flight prices, availability).\n"
@@ -477,6 +477,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "- Do NOT guess or estimate prices for attractions, hotels, or flights.\n"
         "- Only include prices that are explicitly returned by the tools.\n\n"
         "## Tips Generation\n"
+        "- Give at least 1 tip for each attraction.\n"
         "- Generate practical tips for each attraction based ONLY on the information available in tool results.\n"
         "- Tips should include useful reminders like best time to visit, optimal duration, photography spots, or insider knowledge.\n"
         "- If no tips information is available in the tool results, set tips to null or an empty list.\n"
