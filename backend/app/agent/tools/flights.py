@@ -207,7 +207,16 @@ async def _search_round_trip(
     outbound_date: str,
     return_date: str,
 ) -> dict:
-    """Search round-trip: 1 outbound call + 1 return call via departure_token."""
+    """Search round-trip with automatic return flight fetching.
+
+    Makes two API calls:
+      1. Outbound: type=1 with return_date → get flights + departure_token
+      2. Return:  type=1 with departure_token → get return flights for selected outbound
+
+    If ANY step fails, returns the error and lets the LLM decide how to proceed.
+    No fallback to reversed-airport approach.
+    """
+    # Step 1: Get outbound flights
     outbound_result = await _search_single_leg(
         dep_code=dep_code,
         arr_code=arr_code,
@@ -217,56 +226,107 @@ async def _search_round_trip(
         trip_type="round_trip_outbound",
     )
 
-    # Extract departure_token from outbound result to fetch return flights
-    departure_token = outbound_result.get("departure_token")
-
-    if departure_token:
-        # Use departure_token to fetch return flights (linked to specific outbound flight)
-        # IMPORTANT: Keep SAME airport codes, same outbound_date, same return_date, type=1
-        return_result = await _search_return_by_token(
-            dep_code=dep_code,
-            arr_code=arr_code,
-            outbound_date=outbound_date,
-            return_date=return_date,
-            departure_token=departure_token,
-        )
-    else:
-        # Fallback: reversed-airport approach if no departure_token available
-        return_result = await _search_single_leg(
-            dep_code=arr_code,
-            arr_code=dep_code,
-            outbound_date=return_date,
-            return_date=None,
-            direction="return",
-            trip_type="one_way",
-        )
-
-    outbound_flights = outbound_result.get("flights", [])[:1]
-    return_flights = return_result.get("flights", [])[:1]
-    all_flights = outbound_flights + return_flights
-
-    errors = []
+    # Check if outbound call succeeded
     if outbound_result.get("error"):
-        errors.append(f"outbound: {outbound_result['error']}")
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="outbound_failed",
+            error=outbound_result["error"],
+        ).warning(f"TOOL: Round-trip outbound call failed: {outbound_result['error']}")
+        return {
+            "flights": [],
+            "error": f"Outbound flight search failed: {outbound_result['error']}",
+        }
+
+    outbound_flights = outbound_result.get("flights", [])
+    if not outbound_flights:
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="no_outbound_flights",
+        ).warning("TOOL: No outbound flights found")
+        return {
+            "flights": [],
+            "error": "No outbound flights found for the selected route and dates.",
+        }
+
+    # Extract departure_token from outbound result
+    departure_token = outbound_result.get("departure_token")
+    if not departure_token:
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="no_departure_token",
+        ).warning("TOOL: No departure_token in outbound response")
+        return {
+            "flights": [],
+            "error": "No departure_token returned. Cannot fetch return flights automatically.",
+        }
+
+    # Step 2: Fetch return flights using departure_token
+    # IMPORTANT: Same airport codes, same dates, type=1 (round trip)
+    return_result = await _search_return_by_token(
+        dep_code=dep_code,
+        arr_code=arr_code,
+        outbound_date=outbound_date,
+        return_date=return_date,
+        departure_token=departure_token,
+    )
+
+    # Check if return call succeeded
     if return_result.get("error"):
-        errors.append(f"return: {return_result['error']}")
-    combined_error = "; ".join(errors) if errors else None
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="return_failed",
+            error=return_result["error"],
+        ).warning(f"TOOL: Return flight fetch failed: {return_result['error']}")
+        return {
+            "flights": [],
+            "error": f"Return flight fetch failed: {return_result['error']}. Please try again.",
+        }
+
+    return_flights = return_result.get("flights", [])
+    if not return_flights:
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="no_return_flights",
+        ).warning("TOOL: No return flights found via departure_token")
+        return {
+            "flights": [],
+            "error": "No return flights found for the selected outbound flight. Please try different dates or route.",
+        }
+
+    # Combine: 1 outbound + up to 3 return flights
+    all_flights = outbound_flights[:1] + return_flights[:3]
 
     logger.bind(
         event="tool_done",
         layer="tool",
         tool="search_flights",
         is_round_trip=True,
-        outbound_count=len(outbound_flights),
-        return_count=len(return_flights),
+        outbound_count=len(outbound_flights[:1]),
+        return_count=len(return_flights[:1]),
         total_count=len(all_flights),
     ).debug(
         f"TOOL: search_flights done — round-trip | "
-        f"outbound={dep_code}→{arr_code} ({len(outbound_flights)} flights) "
-        f"return={arr_code}→{dep_code} ({len(return_flights)} flights) | "
-        f"error={combined_error or 'none'}"
+        f"outbound={dep_code}→{arr_code} ({len(outbound_flights[:1])} flight) "
+        f"return={arr_code}→{dep_code} ({len(return_flights[:1])} flight) | "
+        f"error=None"
     )
-    return {"flights": all_flights, "error": combined_error}
+    return {"flights": all_flights, "error": None}
 
 
 async def _search_return_by_token(
