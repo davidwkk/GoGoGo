@@ -51,6 +51,14 @@ test.describe('GoGoGo E2E Flows', () => {
       await page.goto(`${BASE_URL}/login`);
       await page.getByRole('button', { name: 'Continue as Guest' }).click();
       await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
+
+      // Toggle on
+      await page.getByRole('button', { name: 'Start recording' }).click();
+      await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible();
+
+      // Toggle off
+      await page.getByRole('button', { name: 'Stop recording' }).click();
+      await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
     });
   });
 
