@@ -467,7 +467,7 @@ def _build_system_instruction(preferences: dict | None = None) -> str:
         "Populate ALL of the following fields from tool results:\n"
         "- Activity: opening_hours, admission_fee_hkd, rating, review_count, tips, image_url, thumbnail_url, booking_url, address, wiki_url\n"
         "- Hotel: star_rating, guest_rating, hotel_class_int, reviews, location_rating, amenities, description, image_url, embed_map_url\n"
-        "- Flight: duration_minutes, airplane, cabin_class\n"
+        "- Flight: duration_minutes, airplane, travel_class\n"
         "- TripItinerary: estimated_total_budget_hkd (compute from flights + hotels + activities)\n"
         "- DayPlan: theme, notes, estimated_daily_budget_hkd\n\n"
         "## Price Hallucination Prevention (CRITICAL)\n"

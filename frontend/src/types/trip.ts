@@ -84,6 +84,8 @@ export interface Flight {
   flight_number: string;
   departure_airport: string;
   arrival_airport: string;
+  departure_airport_name?: string | null;
+  arrival_airport_name?: string | null;
   departure_time: string; // ISO 8601
   arrival_time: string; // ISO 8601
   stops: FlightStop[];
@@ -91,7 +93,7 @@ export interface Flight {
   // --- Enriched via SERP ---
   duration_minutes?: number | null;
   airplane?: string | null; // e.g. "Boeing 787"
-  cabin_class?: CabinClass | null;
+  travel_class?: string | null; // e.g. "Economy"
   price_hkd?: number | null; // Estimated fare
   booking_url?: string | null;
 }
