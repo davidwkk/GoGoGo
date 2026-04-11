@@ -369,9 +369,12 @@ function ItineraryDisplay({
               <div className="h-px flex-1 bg-slate-100" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {itinerary.flights.map((f: Flight, i: number) => (
-                <FlightCard key={i} flight={f} />
-              ))}
+              {itinerary.flights.map((f: Flight, i: number) => {
+                const hasReturn = itinerary.flights.some(f => f.direction === 'return');
+                return (
+                  <FlightCard key={i} flight={f} tripType={hasReturn ? 'round_trip' : 'one_way'} />
+                );
+              })}
             </div>
           </div>
         )}
