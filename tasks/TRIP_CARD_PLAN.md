@@ -195,4 +195,5 @@ if all_flights and len(all_flights) > 1:
 - Fix 2: Uniform booking URL for round-trip in flights.py
 
 ### Update 2026-04-11
+
 - ✅ HotelCard.tsx - displays hotel_class_int (star icons), rating, reviews, location_rating, description, expandable amenities
