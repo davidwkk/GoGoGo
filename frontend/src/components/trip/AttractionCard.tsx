@@ -225,12 +225,16 @@ export const AttractionCard = ({
           )}
 
           <div className="mt-3 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <MapPin className="size-3 text-blue-400" />
-              <span className="text-[10px] font-medium truncate">
+            <button
+              onClick={() => setShowMap(!showMap)}
+              className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-colors text-left group/loc"
+              title="Click to view map"
+            >
+              <MapPin className="size-3 text-blue-400 shrink-0" />
+              <span className="text-[10px] font-medium line-clamp-1 border-b border-dashed border-blue-200 group-hover/loc:border-blue-600 transition-colors">
                 {data.location || 'Location TBD'}
               </span>
-            </div>
+            </button>
             <div className="flex items-center gap-2">
               {data.wiki_url && (
                 <a
@@ -243,22 +247,25 @@ export const AttractionCard = ({
                   Wiki
                 </a>
               )}
-              {data.map_url && (
-                <button
-                  onClick={() => setShowMap(!showMap)}
-                  className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-500 hover:text-blue-600 transition-colors"
-                >
-                  <Map className="size-3" />
-                  {showMap ? 'Hide Map' : 'Map'}
-                </button>
-              )}
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className={`flex items-center gap-1 px-2 py-1 text-[10px] transition-colors ${showMap ? 'text-blue-600 bg-blue-50 rounded-md' : 'text-slate-500 hover:text-blue-600'}`}
+              >
+                <Map className="size-3" />
+                {showMap ? 'Hide Map' : 'Map'}
+              </button>
             </div>
           </div>
 
           {/* Embedded Map */}
-          {showMap && data.map_url && (
-            <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 h-48">
-              <MapEmbed url={data.map_url} />
+          {showMap && (
+            <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 h-48 bg-slate-50">
+              <MapEmbed
+                url={
+                  data.map_url ||
+                  `https://maps.google.com/maps?q=${encodeURIComponent(`${data.name} ${data.location || ''}`)}&output=embed`
+                }
+              />
             </div>
           )}
         </div>

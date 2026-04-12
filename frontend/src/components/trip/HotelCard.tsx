@@ -1,8 +1,113 @@
-import { Star, Building2, MapPin, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { MapEmbed } from './MapEmbed';
+import { Star, Building2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ImageLightbox } from '../common/ImageLightbox';
-import { checkImageWorks, getWikiImage } from '@/utils/wikiImage';
+
+// --- ULTIMATE WIKI THROTTLE & RETRY SYSTEM ---
+const win = window as any;
+
+if (!win.__wikiQueueSystem) {
+  win.__wikiQueueSystem = {
+    queue: [],
+    isProcessing: false,
+    cache: new Map(),
+
+    process: async () => {
+      if (win.__wikiQueueSystem.isProcessing) return;
+      win.__wikiQueueSystem.isProcessing = true;
+
+      while (win.__wikiQueueSystem.queue.length > 0) {
+        const { url, resolve, reject } = win.__wikiQueueSystem.queue[0]; // Peek at next
+        try {
+          const res = await fetch(url);
+
+          if (res.status === 429) {
+            console.warn('Wiki 429 Rate Limit Hit. Pausing for 2 seconds then retrying...');
+            await new Promise(r => setTimeout(r, 2000));
+            continue; // Retry the exact same request!
+          }
+
+          win.__wikiQueueSystem.queue.shift(); // Remove from queue
+          resolve(res);
+        } catch (e) {
+          win.__wikiQueueSystem.queue.shift();
+          reject(e);
+        }
+
+        // Strictly wait 500ms between requests to keep Wikipedia happy
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      win.__wikiQueueSystem.isProcessing = false;
+    },
+
+    fetch: (url: string) => {
+      return new Promise((resolve, reject) => {
+        win.__wikiQueueSystem.queue.push({ url, resolve, reject });
+        win.__wikiQueueSystem.process();
+      });
+    },
+  };
+}
+
+const getWikiImage = async (searchQuery: string): Promise<string | null> => {
+  if (!searchQuery) return null;
+  const query = searchQuery.trim().toLowerCase();
+
+  // Return cached URL or hook into an already-running Promise to stop duplicates!
+  if (win.__wikiQueueSystem.cache.has(query)) {
+    return win.__wikiQueueSystem.cache.get(query);
+  }
+
+  const promise = (async () => {
+    try {
+      const res = await win.__wikiQueueSystem.fetch(
+        `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchQuery)}&gsrlimit=1&prop=pageimages&pithumbsize=800&format=json&origin=*`
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const pages = data?.query?.pages;
+        if (pages) {
+          const pageId = Object.keys(pages)[0];
+          if (pageId !== '-1' && pages[pageId].thumbnail?.source) {
+            const url = pages[pageId].thumbnail.source;
+            win.__wikiQueueSystem.cache.set(query, url); // Overwrite promise with real URL
+            return url;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Wiki fetch error', e);
+    }
+
+    win.__wikiQueueSystem.cache.set(query, null);
+    return null;
+  })();
+
+  // Cache the Promise immediately to stop the "Thundering Herd"
+  win.__wikiQueueSystem.cache.set(query, promise);
+  return promise;
+};
+
+const checkImageWorks = (url: string): Promise<boolean> => {
+  return new Promise(resolve => {
+    const img = new Image();
+    const cleanup = () => {
+      img.onload = null;
+      img.onerror = null;
+      img.src = '';
+    };
+    img.onload = () => {
+      cleanup();
+      resolve(true);
+    };
+    img.onerror = () => {
+      cleanup();
+      resolve(false);
+    };
+    img.src = url;
+  });
+};
 
 export function HotelCard({ hotel }: { hotel: any }) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -69,10 +174,6 @@ export function HotelCard({ hotel }: { hotel: any }) {
   const minTotal = (hotel.price_per_night_hkd?.min || 0) * nights;
   const maxTotal = (hotel.price_per_night_hkd?.max || 0) * nights;
 
-  const amenities = hotel.amenities || [];
-  const displayedAmenities = amenitiesExpanded ? amenities : amenities.slice(0, 4);
-  const hasMoreAmenities = amenities.length > 4;
-
   return (
     <>
       <section className="bg-slate-900 rounded-[3rem] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group mb-10">
@@ -103,7 +204,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
             )}
           </div>
 
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-8">
             <span className="px-4 py-1 bg-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] h-fit">
               Stay Details
             </span>
@@ -118,34 +219,33 @@ export function HotelCard({ hotel }: { hotel: any }) {
             </div>
           </div>
 
-          {/* Hotel Class, Rating, Reviews, Location */}
-          <div className="flex flex-wrap items-center gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4 mb-2">
+            {/* Hotel Class (Stars) */}
             {hotel.hotel_class_int && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center text-yellow-400">
                 {Array.from({ length: hotel.hotel_class_int }).map((_, i) => (
-                  <Star key={i} className="size-4 fill-current text-yellow-400" />
+                  <Star key={i} className="size-4 fill-current" />
                 ))}
-                <span className="text-xs text-slate-300 ml-1">
-                  {hotel.hotel_class_int}-Star Hotel
+              </div>
+            )}
+
+            {/* Guest Rating */}
+            {(hotel.guest_rating || hotel.star_rating) && (
+              <div className="flex items-center gap-1 bg-blue-500/20 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-bold text-blue-300">
+                  {hotel.guest_rating || hotel.star_rating}/10
                 </span>
+                {hotel.reviews && (
+                  <span className="text-[10px] text-blue-200 ml-1">({hotel.reviews} reviews)</span>
+                )}
               </div>
             )}
-            {hotel.rating && (
-              <div className="flex items-center gap-1 text-yellow-400">
-                <Star className="size-4 fill-current" />
-                <span className="text-sm font-bold text-white">{hotel.rating}</span>
-              </div>
-            )}
-            {hotel.reviews && (
-              <div className="flex items-center gap-1 text-slate-400">
-                <Users className="size-3" />
-                <span className="text-xs">{hotel.reviews.toLocaleString()} reviews</span>
-              </div>
-            )}
+
+            {/* Location Rating */}
             {hotel.location_rating && (
-              <div className="flex items-center gap-1 text-slate-400">
+              <div className="flex items-center gap-1 text-emerald-400">
                 <MapPin className="size-3" />
-                <span className="text-xs">Location: {hotel.location_rating}/10</span>
+                <span className="text-xs font-bold">{hotel.location_rating}/10</span>
               </div>
             )}
           </div>
@@ -154,12 +254,41 @@ export function HotelCard({ hotel }: { hotel: any }) {
 
           {/* Description */}
           {hotel.description && (
-            <p className="text-sm text-slate-300 mb-6 leading-relaxed line-clamp-2">
+            <p className="text-sm text-slate-300 mb-6 leading-relaxed line-clamp-3">
               {hotel.description}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-8 mb-8">
+          {/* Amenities */}
+          {hotel.amenities && hotel.amenities.length > 0 && (
+            <div className="mb-8">
+              <button
+                onClick={() => setAmenitiesExpanded(!amenitiesExpanded)}
+                className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 hover:text-slate-300 transition-colors"
+              >
+                Amenities{' '}
+                {amenitiesExpanded ? (
+                  <ChevronUp className="size-3" />
+                ) : (
+                  <ChevronDown className="size-3" />
+                )}
+              </button>
+              <div
+                className={`flex flex-wrap gap-2 overflow-hidden transition-all ${amenitiesExpanded ? 'max-h-96' : 'max-h-8'}`}
+              >
+                {hotel.amenities.map((amenity: string, idx: number) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-1 bg-white/5 border border-white/10 rounded-md text-xs text-slate-300"
+                  >
+                    {amenity}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-8 mb-10">
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                 Check-in
@@ -184,47 +313,6 @@ export function HotelCard({ hotel }: { hotel: any }) {
             </div>
           </div>
 
-          {/* Amenities */}
-          {amenities.length > 0 && (
-            <div className="mb-8">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
-                Amenities
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {displayedAmenities.map((amenity: string, index: number) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-white/10 rounded-full text-xs text-slate-200"
-                  >
-                    {amenity}
-                  </span>
-                ))}
-                {hasMoreAmenities && (
-                  <button
-                    onClick={() => setAmenitiesExpanded(!amenitiesExpanded)}
-                    className="px-3 py-1 bg-blue-600/30 hover:bg-blue-600/50 rounded-full text-xs text-blue-300 flex items-center gap-1 transition-colors"
-                  >
-                    {amenitiesExpanded ? (
-                      <>
-                        Show Less <ChevronUp className="size-3" />
-                      </>
-                    ) : (
-                      <>
-                        +{amenities.length - 4} more <ChevronDown className="size-3" />
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {hotel.embed_map_url && (
-            <div className="mb-8 rounded-2xl overflow-hidden border border-white/10 h-80">
-              <MapEmbed url={hotel.embed_map_url} />
-            </div>
-          )}
-
           <div className="flex justify-between items-end border-t border-white/10 pt-10">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-blue-300">
@@ -237,7 +325,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
               </p>
             </div>
             <a
-              href={hotel.booking_url || '#'}
+              href={hotel.booking_link || '#'}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-xl active:scale-95 uppercase tracking-widest text-center inline-block"
