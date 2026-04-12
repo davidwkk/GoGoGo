@@ -15,6 +15,7 @@ import {
   Banknote,
   Bed,
   Calendar,
+  Copy,
   MapPin,
   MessageSquare,
   PanelLeftClose,
@@ -270,6 +271,8 @@ function ItineraryDisplay({
     return `HKD ${range.min.toLocaleString()} - ${range.max.toLocaleString()}`;
   };
 
+  const hasReturn = itinerary.flights?.some((f: Flight) => f.direction === 'return') ?? false;
+
   return (
     <div className="w-full max-w-3xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
       {/* Header */}
@@ -385,13 +388,10 @@ function ItineraryDisplay({
               </h3>
               <div className="h-px flex-1 bg-slate-100" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {itinerary.flights.map((f: Flight, i: number) => {
-                const hasReturn = itinerary.flights.some(f => f.direction === 'return');
-                return (
-                  <FlightCard key={i} flight={f} tripType={hasReturn ? 'round_trip' : 'one_way'} />
-                );
-              })}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {itinerary.flights.map((f: Flight, i: number) => (
+                <FlightCard key={i} flight={f} tripType={hasReturn ? 'round_trip' : 'one_way'} />
+              ))}
             </div>
           </div>
         )}
@@ -1130,6 +1130,16 @@ export function ChatPage() {
             </button>
           )}
 
+          {historyCollapsed && (
+            <button
+              onClick={startNewChat}
+              className="hidden md:flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+            >
+              <PlusCircle className="size-3" />
+              New Chat
+            </button>
+          )}
+
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               {currentSessionPk && currentSession ? (
@@ -1314,9 +1324,10 @@ export function ChatPage() {
                                     setLastUserMessage(lastUser.content);
                                   }
                                 }}
-                                className="mt-3 h-8 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-4 text-xs font-medium transition-colors"
+                                className="mt-3 inline-flex items-center gap-1.5 h-8 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-4 text-xs font-medium transition-colors"
                               >
-                                Retry
+                                <Copy className="size-3.5" />
+                                Copy Message
                               </button>
                             </div>
                           </div>
