@@ -151,5 +151,5 @@ uv sync
 
 ## Documentation
 
-- **Architecture & API Design:** See [INFRA_PLAN.md](./INFRA_PLAN.md)
+- **Architecture & API Design:** See [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Development Conventions:** See [CLAUDE.md](./CLAUDE.md)

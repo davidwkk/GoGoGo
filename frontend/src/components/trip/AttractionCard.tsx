@@ -1,7 +1,19 @@
-import { Clock, MapPin, Star, Lightbulb, Ticket, Building2 } from 'lucide-react';
+import {
+  Clock,
+  MapPin,
+  Star,
+  Lightbulb,
+  Ticket,
+  Building2,
+  ChevronDown,
+  ChevronUp,
+  Globe,
+  Map,
+} from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Activity } from '@/types/trip';
 import { ImageLightbox } from '../common/ImageLightbox';
+import { MapEmbed } from './MapEmbed';
 import { checkImageWorks, getWikiImage } from '@/utils/wikiImage';
 
 const ActivityImage = ({
@@ -112,11 +124,16 @@ export const AttractionCard = ({
   activity: Activity | Activity[];
   label: string;
 }) => {
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
   if (!activity || (Array.isArray(activity) && activity.length === 0)) return null;
   const data = Array.isArray(activity) ? activity[0] : activity;
 
   const fee = data.admission_fee_hkd;
   const feeText = fee === 0 ? 'Free' : fee ? `HKD ${fee}` : null;
+
+  const hasLongDescription = data.description && data.description.length > 150;
 
   return (
     <div className="relative pl-8 pb-8 last:pb-0 group">
@@ -160,9 +177,36 @@ export const AttractionCard = ({
 
           <h4 className="font-bold text-slate-900 leading-tight">{data.name || 'Planned Stop'}</h4>
 
-          <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-            {data.description || 'Enjoy your time exploring this location.'}
-          </p>
+          {/* Collapsible Description */}
+          <div className="mt-1 leading-relaxed">
+            {hasLongDescription ? (
+              <>
+                <p
+                  className={`text-[11px] text-slate-500 leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-2'}`}
+                >
+                  {data.description || 'Enjoy your time exploring this location.'}
+                </p>
+                <button
+                  onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                  className="text-[10px] text-blue-600 font-medium mt-1 hover:text-blue-700"
+                >
+                  {descriptionExpanded ? (
+                    <span className="flex items-center gap-1">
+                      Show less <ChevronUp className="size-3" />
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      Read more <ChevronDown className="size-3" />
+                    </span>
+                  )}
+                </button>
+              </>
+            ) : (
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                {data.description || 'Enjoy your time exploring this location.'}
+              </p>
+            )}
+          </div>
 
           {data.tips && data.tips.length > 0 && (
             <div className="mt-3 space-y-1.5">
@@ -180,12 +224,50 @@ export const AttractionCard = ({
             </div>
           )}
 
-          <div className="mt-3 flex items-center gap-1.5 text-slate-400">
-            <MapPin className="size-3 text-blue-400" />
-            <span className="text-[10px] font-medium truncate">
-              {data.location || 'Location TBD'}
-            </span>
+          <div className="mt-3 flex items-center justify-between">
+            <button
+              onClick={() => setShowMap(!showMap)}
+              className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-colors text-left group/loc"
+              title="Click to view map"
+            >
+              <MapPin className="size-3 text-blue-400 shrink-0" />
+              <span className="text-[10px] font-medium line-clamp-1 border-b border-dashed border-blue-200 group-hover/loc:border-blue-600 transition-colors">
+                {data.location || 'Location TBD'}
+              </span>
+            </button>
+            <div className="flex items-center gap-2">
+              {data.wiki_url && (
+                <a
+                  href={data.wiki_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-500 hover:text-blue-600 transition-colors"
+                >
+                  <Globe className="size-3" />
+                  Wiki
+                </a>
+              )}
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className={`flex items-center gap-1 px-2 py-1 text-[10px] transition-colors ${showMap ? 'text-blue-600 bg-blue-50 rounded-md' : 'text-slate-500 hover:text-blue-600'}`}
+              >
+                <Map className="size-3" />
+                {showMap ? 'Hide Map' : 'Map'}
+              </button>
+            </div>
           </div>
+
+          {/* Embedded Map */}
+          {showMap && (
+            <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 h-48 bg-slate-50">
+              <MapEmbed
+                url={
+                  data.map_url ||
+                  `https://maps.google.com/maps?q=${encodeURIComponent(`${data.name} ${data.location || ''}`)}&output=embed`
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
