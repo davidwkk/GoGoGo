@@ -12,13 +12,12 @@ async function injectAuth(page: import('@playwright/test').Page) {
 }
 
 test.describe('GoGoGo E2E Flows', () => {
-
   test('Login Flow: register -> redirect to chat', async ({ page, browserName }) => {
     await page.route('**/auth/register', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ access_token: 'fake-jwt', token_type: 'bearer' })
+        body: JSON.stringify({ access_token: 'fake-jwt', token_type: 'bearer' }),
       });
     });
 
@@ -42,7 +41,11 @@ test.describe('GoGoGo E2E Flows', () => {
   });
 
   test.describe('Voice Tests', () => {
-    test('Voice Input Toggle: Verify mic button toggles state', async ({ page, browserName, context }) => {
+    test('Voice Input Toggle: Verify mic button toggles state', async ({
+      page,
+      browserName,
+      context,
+    }) => {
       if (browserName !== 'chromium') {
         test.skip();
         return;
@@ -55,21 +58,27 @@ test.describe('GoGoGo E2E Flows', () => {
         class MockSpeechRecognition {
           onstart: any = null;
           onend: any = null;
-          start() { setTimeout(() => this.onstart?.(), 10); }
-          stop() { setTimeout(() => this.onend?.(), 10); }
+          start() {
+            setTimeout(() => this.onstart?.(), 10);
+          }
+          stop() {
+            setTimeout(() => this.onend?.(), 10);
+          }
         }
         (window as any).SpeechRecognition = MockSpeechRecognition;
         (window as any).webkitSpeechRecognition = MockSpeechRecognition;
 
         // 2. Mock WebSocket for Live Session
         const OriginalWebSocket = window.WebSocket;
-        (window as any).WebSocket = function(url: string, protocols: any) {
+        (window as any).WebSocket = function (url: string, protocols: any) {
           if (url.includes('/live/ws')) {
             const ws: any = {
               readyState: 1,
               OPEN: 1,
               send: () => {},
-              close: () => { setTimeout(() => ws.onclose?.(), 10); }
+              close: () => {
+                setTimeout(() => ws.onclose?.(), 10);
+              },
             };
             setTimeout(() => ws.onopen?.(), 10);
             return ws;
@@ -83,9 +92,10 @@ test.describe('GoGoGo E2E Flows', () => {
 
         // 3. Mock getUserMedia (for useLiveSession)
         if (!navigator.mediaDevices) (navigator as any).mediaDevices = {};
-        navigator.mediaDevices.getUserMedia = () => Promise.resolve({
-          getTracks: () => [{ stop: () => {} }]
-        } as any);
+        navigator.mediaDevices.getUserMedia = () =>
+          Promise.resolve({
+            getTracks: () => [{ stop: () => {} }],
+          } as any);
 
         // 4. Mock AudioContext (for useLiveSession)
         class MockAudioContext {
@@ -114,13 +124,15 @@ test.describe('GoGoGo E2E Flows', () => {
     });
   });
 
-  test('Chat to Trip View: Send message -> wait for AI -> navigate to TripPage -> verify renders', async ({ page }) => {
+  test('Chat to Trip View: Send message -> wait for AI -> navigate to TripPage -> verify renders', async ({
+    page,
+  }) => {
     const itineraryData = {
       destination: 'Tokyo',
       duration_days: 3,
       flights: [],
       days: [],
-      estimated_total_budget_hkd: { min: 5000, max: 10000 }
+      estimated_total_budget_hkd: { min: 5000, max: 10000 },
     };
 
     const makeEvent = (payload: object) => `data: ${JSON.stringify(payload)}\n\n`;
@@ -145,7 +157,7 @@ test.describe('GoGoGo E2E Flows', () => {
       if (request.method() === 'GET') {
         return route.fulfill({
           status: 200,
-          json: [{ id: 1, title: 'Tokyo Trip', destination: 'Tokyo' }]
+          json: [{ id: 1, title: 'Tokyo Trip', destination: 'Tokyo' }],
         });
       }
       return route.continue();
@@ -154,7 +166,7 @@ test.describe('GoGoGo E2E Flows', () => {
     await page.route(`${API_BASE}/trips/1`, async route => {
       return route.fulfill({
         status: 200,
-        json: { id: 1, title: 'Tokyo Trip', destination: 'Tokyo', itinerary: itineraryData }
+        json: { id: 1, title: 'Tokyo Trip', destination: 'Tokyo', itinerary: itineraryData },
       });
     });
 
@@ -170,26 +182,32 @@ test.describe('GoGoGo E2E Flows', () => {
     await page.goto(`${BASE_URL}/trips`);
     await expect(page.getByText('Tokyo Trip')).toBeVisible({ timeout: 10000 });
     await page.getByText('Tokyo Trip').click();
-    await expect(page.getByRole('heading', { name: 'Tokyo Trip', exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Tokyo Trip', exact: true })).toBeVisible({
+      timeout: 10000,
+    });
   });
 
-  test('Trip Detail View: Click saved trip -> verify sections render with images', async ({ page }) => {
+  test('Trip Detail View: Click saved trip -> verify sections render with images', async ({
+    page,
+  }) => {
     const kyotoItinerary = {
       destination: 'Kyoto',
       flights: [{ id: 'f1', airline: 'JAL' }],
       hotels: [{ id: 'h1', name: 'Kyoto Inn', image_url: 'https://via.placeholder.com/150' }],
-      days: [{
-        day_number: 1,
-        date: '2026-05-01',
-        morning: [{ name: 'Kinkaku-ji', image_url: 'https://via.placeholder.com/150' }]
-      }]
+      days: [
+        {
+          day_number: 1,
+          date: '2026-05-01',
+          morning: [{ name: 'Kinkaku-ji', image_url: 'https://via.placeholder.com/150' }],
+        },
+      ],
     };
 
     await page.route(`${API_BASE}/trips`, async (route, request) => {
       if (request.method() === 'GET') {
         return route.fulfill({
           status: 200,
-          json: [{ id: 123, title: 'Kyoto Adventures', destination: 'Kyoto' }]
+          json: [{ id: 123, title: 'Kyoto Adventures', destination: 'Kyoto' }],
         });
       }
       return route.continue();
@@ -198,7 +216,12 @@ test.describe('GoGoGo E2E Flows', () => {
     await page.route(`${API_BASE}/trips/123`, async route => {
       return route.fulfill({
         status: 200,
-        json: { id: 123, title: 'Kyoto Adventures', destination: 'Kyoto', itinerary: kyotoItinerary }
+        json: {
+          id: 123,
+          title: 'Kyoto Adventures',
+          destination: 'Kyoto',
+          itinerary: kyotoItinerary,
+        },
       });
     });
 
@@ -214,5 +237,4 @@ test.describe('GoGoGo E2E Flows', () => {
     await expect(page.getByText('Daily Schedule')).toBeVisible();
     await expect(page.locator('img').first()).toBeVisible();
   });
-
 });
