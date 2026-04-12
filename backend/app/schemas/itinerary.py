@@ -5,7 +5,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.schemas.enums import ActivityCategory, CabinClass, FlightDirection
+from app.schemas.enums import ActivityCategory, FlightDirection
 
 
 # ─────────────────────────────────────────
@@ -46,6 +46,7 @@ class Activity(BaseModel):
     review_count: int | None = None
     booking_url: str | None = None
     tips: list[str] | None = None
+    wiki_url: str | None = None
 
     # --- Media (Tavily image search / SERP) ---
     image_url: str | None = None
@@ -89,6 +90,11 @@ class HotelInfo(BaseModel):
     address: str | None = None
     star_rating: int | None = None
     guest_rating: float | None = None
+    hotel_class_int: int | None = None
+    reviews: int | None = None
+    location_rating: float | None = None
+    amenities: list[str] | None = None
+    description: str | None = None
     booking_url: str | None = None
     image_url: str | None = None
     embed_map_url: str | None = Field(
@@ -132,13 +138,16 @@ class Flight(BaseModel):
     flight_number: str
     departure_airport: str = Field(description="IATA airport code")
     arrival_airport: str = Field(description="IATA airport code")
+    departure_airport_name: str | None = None
+    arrival_airport_name: str | None = None
     departure_time: DateTime = Field(description="ISO 8601 datetime")
     arrival_time: DateTime = Field(description="ISO 8601 datetime")
     stops: Annotated[list[FlightStop], Field(default_factory=list, max_length=2)]
 
     # --- Enriched via SERP ---
     duration_minutes: int | None = None
-    cabin_class: CabinClass | None = None
+    airplane: str | None = None
+    travel_class: str | None = None
     price_hkd: float | None = None
     booking_url: str | None = None
 

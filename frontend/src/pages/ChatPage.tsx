@@ -23,8 +23,8 @@ import {
   Plane,
   PlusCircle,
   Sparkles,
-  Star,
   Square,
+  Star,
   Ticket,
   Trash2,
   Volume2,
@@ -376,6 +376,8 @@ function ItineraryDisplay({
           </div>
         )}
 
+        const hasReturn = itinerary.flights?.some((f: Flight) => f.direction === 'return') ?? false;
+
         {/* Flights */}
         {itinerary.flights && itinerary.flights.length > 0 && (
           <div>
@@ -387,7 +389,7 @@ function ItineraryDisplay({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {itinerary.flights.map((f: Flight, i: number) => (
-                <FlightCard key={i} flight={f} />
+                <FlightCard key={i} flight={f} tripType={hasReturn ? 'round_trip' : 'one_way'} />
               ))}
             </div>
           </div>
@@ -1068,11 +1070,44 @@ export function ChatPage() {
                           e.stopPropagation();
                           deleteSession(s.id);
                         }}
-                        aria-label="Delete chat"
-                        type="button"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="flex-1 text-left truncate" title={s.title}>
+                        {s.title}
+                      </span>
+                    )}
+
+                    {!isSidebarEditing && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={e => {
+                            e.stopPropagation();
+                            beginSidebarRename(s.id, s.title);
+                          }}
+                          aria-label="Rename chat"
+                          type="button"
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                        <button
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={e => {
+                            e.stopPropagation();
+                            deleteSession(s.id);
+                          }}
+                          aria-label="Delete chat"
+                          type="button"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {s.created_at && (
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      {new Date(s.created_at).toLocaleString()}
                     </div>
                   )}
                 </div>
