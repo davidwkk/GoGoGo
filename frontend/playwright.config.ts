@@ -71,8 +71,6 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    // ADD THIS LINE to tell Playwright WHERE to run the command:
-    cwd: './frontend',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
