@@ -9,6 +9,7 @@ import {
   Bed,
   Ticket,
   Trash2,
+  ArrowLeft, // Added ArrowLeft for the mobile back button
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
@@ -21,7 +22,7 @@ import { HotelCard } from '../components/trip/HotelCard';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { useAuthStore } from '@/store';
 
-// --- SKELETON COMPONENTS (defined after imports per ES module rules) ---
+// --- SKELETON COMPONENTS ---
 
 function SidebarTripSkeleton() {
   return (
@@ -40,26 +41,19 @@ function SidebarTripSkeleton() {
 
 function TripDetailSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto p-12 w-full animate-in fade-in duration-300">
-      {/* Header Skeleton */}
+    // Adjusted padding for mobile responsiveness
+    <div className="max-w-3xl mx-auto p-6 sm:p-8 md:p-12 w-full animate-in fade-in duration-300">
       <div className="h-3 w-32 bg-blue-100 rounded mb-6 animate-pulse" />
-      <div className="h-14 w-3/4 bg-slate-200 rounded-lg mb-8 animate-pulse" />
+      <div className="h-10 md:h-14 w-3/4 bg-slate-200 rounded-lg mb-8 animate-pulse" />
       <div className="h-24 w-full bg-slate-50 rounded-[2rem] mb-12 animate-pulse border border-slate-100" />
 
-      <div className="space-y-16">
-        {/* Budget Skeleton */}
+      <div className="space-y-12 md:space-y-16">
         <div className="h-40 w-full bg-slate-50 rounded-[2rem] animate-pulse border border-slate-100" />
-
-        {/* Flights Skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="h-32 w-full bg-slate-50 rounded-[2rem] animate-pulse border border-slate-100" />
           <div className="h-32 w-full bg-slate-50 rounded-[2rem] animate-pulse border border-slate-100" />
         </div>
-
-        {/* Map Skeleton */}
         <div className="h-64 w-full bg-slate-100 rounded-3xl animate-pulse" />
-
-        {/* Days Skeleton */}
         <div className="space-y-10">
           {[1, 2].map(i => (
             <div key={i}>
@@ -108,18 +102,15 @@ export function TripPage() {
     return `HKD ${range.min.toLocaleString()} - ${range.max.toLocaleString()}`;
   };
 
-  // Sync auth state whenever localStorage changes (handles logout in other tabs/components)
   useEffect(() => {
     const handleStorage = () => useAuthStore.getState().initAuth();
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // --- DAVID'S FIX: Extract fetch logic to a reusable function ---
   const fetchTrips = () => {
     if (!token) return;
 
-    // Cancel any in-flight request from a previous auth state
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -131,18 +122,14 @@ export function TripPage() {
       .listTrips()
       .then(data => setTrips(data || []))
       .catch(err => {
-        // Ignore abort errors — they happen when user logs out mid-request
         if (
           err.name === 'CanceledError' ||
           (err instanceof Error && err.message.includes('cancel'))
         )
           return;
         const authErr = err as AuthError;
-        // Only handle if authErr has a user-facing message — auth errors are already
-        // handled by the api interceptor's toast + redirect, so skip them here
         if (authErr?.userMessage) {
           setError(authErr.userMessage);
-          // Redirect to login immediately
           toast.dismiss();
           navigate('/login');
         } else {
@@ -153,10 +140,8 @@ export function TripPage() {
       .finally(() => setLoading(false));
   };
 
-  // Fetch trips only when auth state becomes true (not on every render)
   useEffect(() => {
     fetchTrips();
-
     return () => {
       abortControllerRef.current?.abort();
     };
@@ -197,7 +182,7 @@ export function TripPage() {
 
   if (!token) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-center px-4">
         {error ? (
           <>
             <AlertCircle className="size-8 text-red-400" />
@@ -207,7 +192,7 @@ export function TripPage() {
             </div>
             <div className="flex gap-2 mt-2">
               <button
-                onClick={fetchTrips} // --- DAVID'S FIX: Call the fetch function instead of reload ---
+                onClick={fetchTrips}
                 className="h-8 rounded-xl bg-slate-100 text-slate-900 px-4 text-sm font-medium hover:bg-slate-200 transition-colors"
               >
                 Try Again
@@ -247,10 +232,15 @@ export function TripPage() {
     );
   }
 
+  // Logic to determine what to show on mobile
+  const showMainAreaOnMobile = selectedTrip !== null || fetchingDetail;
+
   return (
     <div className="flex h-screen bg-white text-slate-900">
-      {/* SIDEBAR */}
-      <div className="w-80 border-r flex flex-col bg-slate-50/50">
+      {/* SIDEBAR: Hidden on mobile if a trip is selected */}
+      <div
+        className={`${showMainAreaOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-80 shrink-0 border-r flex-col bg-slate-50/50`}
+      >
         <div className="p-6 border-b bg-white">
           <h1 className="text-xl font-black tracking-tight uppercase">My Trips</h1>
           <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase">
@@ -321,31 +311,42 @@ export function TripPage() {
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto bg-white">
+      {/* MAIN CONTENT AREA: Hidden on mobile if NO trip is selected */}
+      <div
+        className={`${!showMainAreaOnMobile ? 'hidden md:block' : 'block'} flex-1 overflow-y-auto bg-white`}
+      >
         {fetchingDetail ? (
           <TripDetailSkeleton />
         ) : selectedTrip ? (
-          <div className="max-w-3xl mx-auto p-12">
-            <header className="mb-12">
-              <div className="flex items-center gap-2 text-blue-600 mb-6 font-black text-[10px] uppercase tracking-[0.3em]">
+          <div className="max-w-3xl mx-auto p-6 sm:p-8 md:p-12">
+            {/* Mobile Back Button */}
+            <button
+              onClick={() => setSelectedTrip(null)}
+              className="md:hidden flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-900 mb-6 px-3 py-1.5 -ml-3 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <ArrowLeft className="size-4" />
+              Back to Trips
+            </button>
+
+            <header className="mb-8 md:mb-12">
+              <div className="flex items-center gap-2 text-blue-600 mb-4 md:mb-6 font-black text-[10px] uppercase tracking-[0.3em]">
                 <Calendar className="size-4" /> Saved Itinerary
               </div>
-              <h2 className="text-6xl font-black tracking-tighter mb-8 leading-none text-slate-900">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter mb-6 md:mb-8 leading-tight md:leading-none text-slate-900">
                 {selectedTrip.title}
               </h2>
-              <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 italic text-slate-500 text-xl shadow-inner">
+              <div className="p-6 md:p-8 bg-slate-50 rounded-[2rem] border border-slate-100 italic text-slate-500 text-lg md:text-xl shadow-inner">
                 "{selectedTrip.itinerary.summary || 'No summary available'}"
               </div>
             </header>
 
             {/* Container for main sections to handle uniform spacing */}
-            <div className="space-y-16">
-              {/* 1. WEATHER SUMMARY (Moved up for better UX) */}
+            <div className="space-y-12 md:space-y-16">
+              {/* 1. WEATHER SUMMARY */}
               {selectedTrip.itinerary.weather_summary && (
                 <section>
-                  <div className="p-6 bg-blue-50 rounded-[2rem] border border-blue-100 flex gap-4 items-center">
-                    <div className="bg-white px-3 py-1 rounded-full shadow-sm font-black text-blue-600 text-[10px] uppercase tracking-widest whitespace-nowrap">
+                  <div className="p-5 md:p-6 bg-blue-50 rounded-[2rem] border border-blue-100 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
+                    <div className="bg-white px-3 py-1 rounded-full shadow-sm font-black text-blue-600 text-[10px] uppercase tracking-widest whitespace-nowrap self-start">
                       Travel Tip
                     </div>
                     <p className="text-xs text-blue-800 leading-relaxed font-medium italic">
@@ -365,18 +366,18 @@ export function TripPage() {
                     <div className="h-px flex-1 bg-slate-100" />
                   </div>
 
-                  <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
+                  <div className="bg-white border border-slate-100 rounded-[2rem] p-6 md:p-8 shadow-sm">
                     {/* Total */}
-                    <div className="flex items-center justify-between gap-6 mb-8 border-b border-slate-50 pb-8">
+                    <div className="flex items-center justify-between gap-6 mb-6 md:mb-8 border-b border-slate-50 pb-6 md:pb-8">
                       <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
+                        <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner shrink-0">
                           <Banknote className="size-6" />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-slate-400">
                             Total Trip Estimate
                           </p>
-                          <p className="text-3xl font-black text-slate-900 tracking-tighter">
+                          <p className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
                             {formatRange(budget.total_hkd)}
                           </p>
                         </div>
@@ -384,7 +385,7 @@ export function TripPage() {
                     </div>
 
                     {/* Breakdown Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                           <Plane className="size-5" />
@@ -466,18 +467,18 @@ export function TripPage() {
                 <div className="space-y-12">
                   {selectedTrip.itinerary.days?.map((day: DayPlan) => (
                     <div key={day.day_number}>
-                      {/* --- UPDATED DAY HEADER --- */}
+                      {/* DAY HEADER */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                         <div className="flex items-center gap-4">
                           <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-lg shadow-xl shrink-0">
                             {day.day_number}
                           </div>
                           <div>
-                            <h4 className="font-black text-xl text-slate-900 leading-none">
+                            <h4 className="font-black text-lg md:text-xl text-slate-900 leading-tight md:leading-none">
                               Day {day.day_number}
                               {day.theme ? `: ${day.theme}` : ''}
                             </h4>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1.5">
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 md:mt-1.5">
                               {day.date}
                             </p>
                           </div>
@@ -493,9 +494,8 @@ export function TripPage() {
                           </div>
                         )}
                       </div>
-                      {/* --- END UPDATED DAY HEADER --- */}
 
-                      <div className="ml-2 border-l-2 border-slate-50 pl-2">
+                      <div className="ml-2 sm:ml-4 border-l-2 border-slate-50 pl-4 sm:pl-6">
                         <AttractionCard activity={day.morning?.[0]} label="Morning" />
                         <AttractionCard activity={day.afternoon?.[0]} label="Afternoon" />
                         <AttractionCard activity={day.evening?.[0]} label="Evening" />
@@ -510,7 +510,7 @@ export function TripPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4 hidden md:flex">
             <div className="flex items-center justify-center rounded-full bg-muted size-12">
               <Map className="size-5 text-muted-foreground" />
             </div>
