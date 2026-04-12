@@ -280,6 +280,6 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [ ] **Skeleton/loading states** — Add skeleton loaders for trip cards, chat messages, and itinerary sections while data loads
 - [ ] **Error handling UI** — Timeout displays for failed API calls, retry buttons where applicable
 - [x] **API error envelope standardization** — Standardize `APIError { detail: string; code?: string }` in `api.ts` ✅ (already implemented in `api.ts` with interceptor; used in `LoginPage.tsx`)
-- [ ] **Mobile responsive layout audit** — Verify all pages (Login, Chat, Trip) render correctly on narrow viewports; fix any overflow or truncation issues
+- [x] **Mobile responsive layout audit** — Verify all pages (Login, Chat, Trip) render correctly on narrow viewports; fix any overflow or truncation issues
 - [ ] Add FAKE loading sentences when LLM takes a long time to respond (e.g. >5: LLM is thinking hard >10: Current load is high, may need to wait longer time, etc.)
-- [ ] Fix the display issue in TripCard, FlightCard, AttractionCard (embed map), etc.
+- [x] Fix the display issue in TripCard, FlightCard, AttractionCard (embed map), etc.
