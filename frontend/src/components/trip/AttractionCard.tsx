@@ -1,15 +1,4 @@
-import {
-  Clock,
-  MapPin,
-  Star,
-  Lightbulb,
-  Ticket,
-  Building2,
-  ChevronDown,
-  ChevronUp,
-  Globe,
-  Map,
-} from 'lucide-react';
+import { Clock, MapPin, Star, Lightbulb, Ticket, Building2, Globe, Map } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Activity } from '@/types/trip';
 import { ImageLightbox } from '../common/ImageLightbox';
@@ -124,16 +113,15 @@ export const AttractionCard = ({
   activity: Activity | Activity[];
   label: string;
 }) => {
-  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [showMap, setShowMap] = useState(false);
 
   if (!activity || (Array.isArray(activity) && activity.length === 0)) return null;
   const data = Array.isArray(activity) ? activity[0] : activity;
 
+  const descriptionText = data.description || 'Enjoy your time exploring this location.';
+
   const fee = data.admission_fee_hkd;
   const feeText = fee === 0 ? 'Free' : fee ? `HKD ${fee}` : null;
-
-  const hasLongDescription = data.description && data.description.length > 150;
 
   return (
     <div className="relative pl-8 pb-8 last:pb-0 group">
@@ -177,36 +165,7 @@ export const AttractionCard = ({
 
           <h4 className="font-bold text-slate-900 leading-tight">{data.name || 'Planned Stop'}</h4>
 
-          {/* Collapsible Description */}
-          <div className="mt-1 leading-relaxed">
-            {hasLongDescription ? (
-              <>
-                <p
-                  className={`text-[11px] text-slate-500 leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-2'}`}
-                >
-                  {data.description || 'Enjoy your time exploring this location.'}
-                </p>
-                <button
-                  onClick={() => setDescriptionExpanded(!descriptionExpanded)}
-                  className="text-[10px] text-blue-600 font-medium mt-1 hover:text-blue-700"
-                >
-                  {descriptionExpanded ? (
-                    <span className="flex items-center gap-1">
-                      Show less <ChevronUp className="size-3" />
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1">
-                      Read more <ChevronDown className="size-3" />
-                    </span>
-                  )}
-                </button>
-              </>
-            ) : (
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                {data.description || 'Enjoy your time exploring this location.'}
-              </p>
-            )}
-          </div>
+          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">{descriptionText}</p>
 
           {data.tips && data.tips.length > 0 && (
             <div className="mt-3 space-y-1.5">
