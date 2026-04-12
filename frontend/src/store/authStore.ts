@@ -26,9 +26,13 @@ const getStoredUser = (): AuthUser | null => {
 
 // ─── Store ────────────────────────────────────────────────────────────────
 
+const initialToken = getStoredToken();
+const initialUser = getStoredUser();
+const isAuthValid = !!(initialToken && initialUser);
+
 export const useAuthStore = create<AuthState>(set => ({
-  user: null,
-  token: null,
+  user: isAuthValid ? initialUser : null,
+  token: isAuthValid ? initialToken : null,
 
   setAuth: (user, token) => {
     localStorage.setItem('access_token', token);
@@ -49,6 +53,8 @@ export const useAuthStore = create<AuthState>(set => ({
     const user = getStoredUser();
     if (token && user) {
       set({ token, user });
+    } else {
+      set({ token: null, user: null });
     }
   },
 }));
