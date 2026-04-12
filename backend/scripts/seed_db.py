@@ -146,7 +146,7 @@ DEMO_ITINERARY = {
                     "category": "culture",
                     "estimated_duration_minutes": 120,
                     "address": "2-3-1 Asakusa, Taito City, Tokyo 111-0032",
-                    "map_url": "https://maps.google.com/?q=Senso-ji",
+                    "map_url": "https://maps.google.com/maps?q=35.7148,139.7967&output=embed",
                     "opening_hours": "6:00 AM - 5:00 PM",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.7,
@@ -174,7 +174,7 @@ DEMO_ITINERARY = {
                     "category": "sightseeing",
                     "estimated_duration_minutes": 180,
                     "address": "1-1-2 Oshiage, Sumida City, Tokyo 131-0045",
-                    "map_url": "https://maps.google.com/?q=Tokyo+Skytree",
+                    "map_url": "https://maps.google.com/maps?q=35.7101,139.8107&output=embed",
                     "opening_hours": "10:00 AM - 9:00 PM",
                     "admission_fee_hkd": 210.0,
                     "rating": 4.5,
@@ -194,9 +194,16 @@ DEMO_ITINERARY = {
                 {
                     "name": "Ramen Dinner in Shinjuku",
                     "description": (
-                        "End the day with a steaming bowl of tonkotsu ramen at a local "
-                        "favorite. The rich pork broth and hand-pulled noodles are the "
-                        "perfect comfort food after a day of exploring."
+                        "Ramen is a Japanese noodle dish consisting of Chinese-style alkaline "
+                        "wheat noodles served in a meat or fish-based broth, often flavored with "
+                        "soy sauce or miso. Toppings range from sliced pork (chashu) and "
+                        "soft-boiled eggs to nori and scallions. Tonkotsu ramen features a "
+                        "rich, creamy pork bone broth simmered for hours until deeply savory. "
+                        "Shinjuku's Kabukicho district is home to some of Tokyo's finest ramen "
+                        "shops, each with their own house specialty. Slurping is not only "
+                        "acceptable — it is encouraged, as it cools the noodles and aerates the "
+                        "aromatics for maximum flavor. A perfect, soul-warming end to a day "
+                        "of temple visits and sightseeing."
                     ),
                     "location": "Shinjuku, Tokyo",
                     "category": "food",
@@ -234,7 +241,7 @@ DEMO_ITINERARY = {
                     "category": "food",
                     "estimated_duration_minutes": 120,
                     "address": "4-16-2 Tsukiji, Chuo City, Tokyo 104-0045",
-                    "map_url": "https://maps.google.com/?q=Tsukiji+Market",
+                    "map_url": "https://maps.google.com/maps?q=35.6654,139.7707&output=embed",
                     "opening_hours": "5:00 AM - 2:00 PM",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.6,
@@ -261,7 +268,7 @@ DEMO_ITINERARY = {
                     "category": "culture",
                     "estimated_duration_minutes": 150,
                     "address": "6-1-16 Toyosu, Koto City, Tokyo 135-0061",
-                    "map_url": "https://maps.google.com/?q=teamLab+Planets",
+                    "map_url": "https://maps.google.com/maps?q=35.6498,139.7875&output=embed",
                     "opening_hours": "9:00 AM - 10:00 PM",
                     "admission_fee_hkd": 320.0,
                     "rating": 4.8,
@@ -281,15 +288,23 @@ DEMO_ITINERARY = {
                 {
                     "name": "Odaiba Seaside Dinner",
                     "description": (
-                        "Dine with a view of Rainbow Bridge and Tokyo Bay. The waterfront "
-                        "area offers dozens of restaurants spanning Japanese izakaya to "
-                        "international cuisine."
+                        "Odaiba is a large artificial island in Tokyo Bay, connected to "
+                        "central Tokyo by the Rainbow Bridge. Originally built for defensive "
+                        "purposes in the 1960s and then redeveloped in the 1990s into a "
+                        "futuristic shopping and entertainment district, Odaiba offers "
+                        "breathtaking views of the Tokyo skyline across the bay. Dine "
+                        "waterside as the Rainbow Bridge lights up at sunset, with options "
+                        "ranging from Japanese izakaya and sushi bars to international "
+                        "cuisine. The Gundam statue, teamLab Borderless museum, and a "
+                        "full-scale replica of the Liberty Bell are all within walking "
+                        "distance — making Odaiba one of Tokyo's most exciting evening "
+                        "destinations."
                     ),
                     "location": "Odaiba, Tokyo",
                     "category": "food",
                     "estimated_duration_minutes": 90,
                     "address": "1-1-10 Aomi, Koto City, Tokyo 135-0064",
-                    "map_url": "https://maps.google.com/?q=Odaiba",
+                    "map_url": "https://maps.google.com/maps?q=35.5544,139.7742&output=embed",
                     "opening_hours": "11:00 AM - 11:00 PM",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.3,
@@ -323,7 +338,7 @@ DEMO_ITINERARY = {
                     "category": "culture",
                     "estimated_duration_minutes": 150,
                     "address": "1-1 Yoyogikamizonocho, Shibuya City, Tokyo 151-8557",
-                    "map_url": "https://maps.google.com/?q=Meiji+Jingu",
+                    "map_url": "https://maps.google.com/maps?q=35.6764,139.6993&output=embed",
                     "opening_hours": "Sunrise - Sunset",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.7,
@@ -350,7 +365,7 @@ DEMO_ITINERARY = {
                     "category": "sightseeing",
                     "estimated_duration_minutes": 60,
                     "address": "Shibuya Station, Shibuya City, Tokyo 150-0043",
-                    "map_url": "https://maps.google.com/?q=Shibuya+Crossing",
+                    "map_url": "https://maps.google.com/maps?q=35.6595,139.7004&output=embed",
                     "opening_hours": "24 hours",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.6,
@@ -377,7 +392,7 @@ DEMO_ITINERARY = {
                     "category": "food",
                     "estimated_duration_minutes": 120,
                     "address": "164164 Kabukicho, Shinjuku City, Tokyo 160-0021",
-                    "map_url": "https://maps.google.com/?q=Golden+Gai",
+                    "map_url": "https://maps.google.com/maps?q=35.6942,139.7034&output=embed",
                     "opening_hours": "6:00 PM - 4:00 AM",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.5,
@@ -403,15 +418,25 @@ DEMO_ITINERARY = {
                 {
                     "name": "Day Trip to Mount Fuji",
                     "description": (
-                        "Full-day excursion to Chureito Pagoda and Lake Kawaguchi. The "
-                        "5-story pagoda offers the classic Fuji photo shot, especially "
-                        "stunning during cherry blossom season."
+                        "A full-day excursion to Mount Fuji's most iconic viewpoints. "
+                        "Start at Chureito Pagoda, a five-story Buddhist pagoda in "
+                        "Fujiyoshida that has become one of Japan's most photographed "
+                        "spots — the 400-step staircase frames Mount Fuji perfectly, "
+                        "especially stunning during cherry blossom season and in autumn "
+                        "when the maple leaves turn red. Continue to Lake Kawaguchi, "
+                        "the second-largest of Fuji's Five Lakes, where you can take "
+                        "the cable car up to Tenjo Height for unbeatable panoramic Fuji "
+                        "views. The lakefront promenade is perfect for a leisurely "
+                        "stroll, and local shops sell hoto noodles and Fuji-shaped "
+                        "souvenirs. On clear mornings, Fuji's reflection on the mirror-"
+                        "like lake surface creates a scene straight out of a woodblock "
+                        "print — one of Japan's most iconic natural vistas."
                     ),
                     "location": "Fujiyoshida, Yamanashi",
                     "category": "nature",
                     "estimated_duration_minutes": 240,
                     "address": "2-4 Chureito Pagoda, Fujiyoshida, Yamanashi 403-0015",
-                    "map_url": "https://maps.google.com/?q=Chureito+Pagoda",
+                    "map_url": "https://maps.google.com/maps?q=35.3945,138.7764&output=embed",
                     "opening_hours": "24 hours (viewpoint)",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.8,
@@ -438,7 +463,7 @@ DEMO_ITINERARY = {
                     "category": "nature",
                     "estimated_duration_minutes": 120,
                     "address": "湖1 Kawaguchiko, Minamitsuru District, Yamanashi 401-0301",
-                    "map_url": "https://maps.google.com/?q=Lake+Kawaguchi",
+                    "map_url": "https://maps.google.com/maps?q=35.5163,138.7513&output=embed",
                     "opening_hours": "9:00 AM - 5:30 PM",
                     "admission_fee_hkd": 250.0,
                     "rating": 4.6,
@@ -465,7 +490,7 @@ DEMO_ITINERARY = {
                     "category": "shopping",
                     "estimated_duration_minutes": 120,
                     "address": "Sotokanda, Chiyoda City, Tokyo 101-0021",
-                    "map_url": "https://maps.google.com/?q=Akihabara",
+                    "map_url": "https://maps.google.com/maps?q=35.7023,139.7745&output=embed",
                     "opening_hours": "10:00 AM - 10:00 PM",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.4,
@@ -499,7 +524,7 @@ DEMO_ITINERARY = {
                     "category": "culture",
                     "estimated_duration_minutes": 150,
                     "address": "13-9 Uenokoen, Taito City, Tokyo 110-8712",
-                    "map_url": "https://maps.google.com/?q=Ueno+Park",
+                    "map_url": "https://maps.google.com/maps?q=35.7146,139.7733&output=embed",
                     "opening_hours": "9:30 AM - 5:00 PM",
                     "admission_fee_hkd": 100.0,
                     "rating": 4.7,
@@ -526,7 +551,7 @@ DEMO_ITINERARY = {
                     "category": "shopping",
                     "estimated_duration_minutes": 90,
                     "address": "4 Ueno, Taito City, Tokyo 110-0005",
-                    "map_url": "https://maps.google.com/?q=Ameyoko",
+                    "map_url": "https://maps.google.com/maps?q=35.7099,139.7742&output=embed",
                     "opening_hours": "10:00 AM - 8:00 PM",
                     "admission_fee_hkd": 0.0,
                     "rating": 4.3,
@@ -553,7 +578,7 @@ DEMO_ITINERARY = {
                     "category": "food",
                     "estimated_duration_minutes": 120,
                     "address": "6-10-1 Ginza, Chuo City, Tokyo 104-0061",
-                    "map_url": "https://maps.google.com/?q=Ginza+Sushi",
+                    "map_url": "https://maps.google.com/maps?q=35.6715,139.7649&output=embed",
                     "opening_hours": "5:00 PM - 10:00 PM",
                     "admission_fee_hkd": 1500.0,
                     "rating": 4.9,
