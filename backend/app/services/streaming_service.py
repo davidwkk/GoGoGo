@@ -271,7 +271,14 @@ async def finalize_trip_plan(
         "- Hotel: hotel_class_int, reviews, location_rating, amenities, description, star_rating, guest_rating, image_url, embed_map_url, booking_url\n"
         "- Flight: duration_minutes, airplane, travel_class, departure_airport_name, arrival_airport_name, price_hkd, booking_url\n\n"
         "IMPORTANT: Round all budget values (total_hkd, flights_hkd, hotels_hkd, "
-        "activities_hkd) to the nearest multiple of 100 (e.g., 3000, 5200, 10800).\n"
+        "activities_hkd) to the nearest multiple of 100 (e.g., 3000, 5200, 10800).\n\n"
+        "## Tips Generation (CRITICAL)\n"
+        "- You MUST generate at least 1 tip for EVERY activity in days[].morning[], days[].afternoon[], and days[].evening[].\n"
+        "- The correct field path is: days[].morning[].tips, days[].afternoon[].tips, days[].evening[].tips — each Activity has a tips: list[str] | None field.\n"
+        "- Generate practical tips based ONLY on the information available in the tool results (reviews, ratings, descriptions, amenities, opening_hours).\n"
+        "- Tips should include useful reminders like best time to visit, optimal duration, photography spots, dress code, or insider knowledge.\n"
+        "- If a tool result provides tips information, extract and refine it. If no tips data is available, generate a sensible tip from available context (e.g., 'Best visited in the morning to avoid crowds' based on opening hours and rating).\n"
+        "- NEVER leave tips as null or empty for any activity — every activity MUST have at least 1 tip.\n\n"
         f"{prefs_section}"
     )
 
