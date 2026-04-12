@@ -10,11 +10,10 @@ NOTE: google_flights engine does NOT support free-text "q" param.
 --- Round-trip strategy ---
 For round-trips, we make exactly 2 API calls:
   1. Outbound: type=1, departure_id=<origin>, arrival_id=<dest>, outbound_date=<date>, return_date=<return_date>
-  2. Return:  type=2, departure_id=<dest>, arrival_id=<origin>, outbound_date=<return_date>
+     Returns departure_token(s) in the response.
+  2. Return: type=2 with departure_token from step 1 to fetch linked return flights.
 
-The departure_token approach (Step 1 + per-token follow-ups for return) was tried but
-proved unreliable: tokens were either all identical for this route, or returned HTTP 400.
-A simple reversed-airport one-way call for the return leg is more reliable and faster.
+Fallback: If departure_token is unavailable or HTTP 400, falls back to reversed-airport one-way call.
 
 --- SerpAPI Google Flights Full Response Schema ---
 {
@@ -98,7 +97,6 @@ from app.core.config import settings
 
 _IATA_RE = re.compile(r"^[A-Z]{3,4}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
-_MAX_FLIGHTS_PER_LEG = 10
 
 # City/metro codes that Google Maps / SerpAPI accepts but are NOT airport codes.
 # If a search returns 0 results, we retry with the corresponding airport code.
@@ -209,7 +207,16 @@ async def _search_round_trip(
     outbound_date: str,
     return_date: str,
 ) -> dict:
-    """Search round-trip: 1 outbound call + 1 return call (simple reversed-airport)."""
+    """Search round-trip with automatic return flight fetching.
+
+    Makes two API calls:
+      1. Outbound: type=1 with return_date → get flights + departure_token
+      2. Return:  type=1 with departure_token → get return flights for selected outbound
+
+    If ANY step fails, returns the error and lets the LLM decide how to proceed.
+    No fallback to reversed-airport approach.
+    """
+    # Step 1: Get outbound flights
     outbound_result = await _search_single_leg(
         dep_code=dep_code,
         arr_code=arr_code,
@@ -219,41 +226,201 @@ async def _search_round_trip(
         trip_type="round_trip_outbound",
     )
 
-    return_result = await _search_single_leg(
-        dep_code=arr_code,
-        arr_code=dep_code,
-        outbound_date=return_date,
-        return_date=None,
-        direction="return",
-        trip_type="one_way",
+    # Check if outbound call succeeded
+    if outbound_result.get("error"):
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="outbound_failed",
+            error=outbound_result["error"],
+        ).warning(f"TOOL: Round-trip outbound call failed: {outbound_result['error']}")
+        return {
+            "flights": [],
+            "error": f"Outbound flight search failed: {outbound_result['error']}",
+        }
+
+    outbound_flights = outbound_result.get("flights", [])
+    if not outbound_flights:
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="no_outbound_flights",
+        ).warning("TOOL: No outbound flights found")
+        return {
+            "flights": [],
+            "error": "No outbound flights found for the selected route and dates.",
+        }
+
+    # Extract departure_token from outbound result
+    departure_token = outbound_result.get("departure_token")
+    if not departure_token:
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="no_departure_token",
+        ).warning("TOOL: No departure_token in outbound response")
+        return {
+            "flights": [],
+            "error": "No departure_token returned. Cannot fetch return flights automatically.",
+        }
+
+    # Step 2: Fetch return flights using departure_token
+    # IMPORTANT: Same airport codes, same dates, type=1 (round trip)
+    return_result = await _search_return_by_token(
+        dep_code=dep_code,
+        arr_code=arr_code,
+        outbound_date=outbound_date,
+        return_date=return_date,
+        departure_token=departure_token,
     )
 
-    outbound_flights = outbound_result.get("flights", [])[:_MAX_FLIGHTS_PER_LEG]
-    return_flights = return_result.get("flights", [])[:_MAX_FLIGHTS_PER_LEG]
-    all_flights = outbound_flights + return_flights
-
-    errors = []
-    if outbound_result.get("error"):
-        errors.append(f"outbound: {outbound_result['error']}")
+    # Check if return call succeeded
     if return_result.get("error"):
-        errors.append(f"return: {return_result['error']}")
-    combined_error = "; ".join(errors) if errors else None
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="return_failed",
+            error=return_result["error"],
+        ).warning(f"TOOL: Return flight fetch failed: {return_result['error']}")
+        return {
+            "flights": [],
+            "error": f"Return flight fetch failed: {return_result['error']}. Please try again.",
+        }
+
+    return_flights = return_result.get("flights", [])
+    if not return_flights:
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            is_round_trip=True,
+            step="no_return_flights",
+        ).warning("TOOL: No return flights found via departure_token")
+        return {
+            "flights": [],
+            "error": "No return flights found for the selected outbound flight. Please try different dates or route.",
+        }
+
+    # Combine: 1 outbound + up to 3 return flights
+    all_flights = outbound_flights[:1] + return_flights[:3]
+
+    # Use only the first outbound flight's booking URL for all flights (round-trip)
+    if all_flights:
+        primary_booking_url = all_flights[0].get("booking_url")
+        for flight in all_flights[1:]:
+            flight["booking_url"] = primary_booking_url
 
     logger.bind(
         event="tool_done",
         layer="tool",
         tool="search_flights",
         is_round_trip=True,
-        outbound_count=len(outbound_flights),
-        return_count=len(return_flights),
+        outbound_count=len(outbound_flights[:1]),
+        return_count=len(return_flights[:1]),
         total_count=len(all_flights),
     ).debug(
         f"TOOL: search_flights done — round-trip | "
-        f"outbound={dep_code}→{arr_code} ({len(outbound_flights)} flights) "
-        f"return={arr_code}→{dep_code} ({len(return_flights)} flights) | "
-        f"error={combined_error or 'none'}"
+        f"outbound={dep_code}→{arr_code} ({len(outbound_flights[:1])} flight) "
+        f"return={arr_code}→{dep_code} ({len(return_flights[:1])} flight) | "
+        f"error=None"
     )
-    return {"flights": all_flights, "error": combined_error}
+    return {"flights": all_flights, "error": None}
+
+
+async def _search_return_by_token(
+    dep_code: str,
+    arr_code: str,
+    outbound_date: str,
+    return_date: str,
+    departure_token: str,
+) -> dict:
+    """Fetch return flights using departure_token from the outbound flight.
+
+    Per SerpAPI docs, departure_token links an outbound flight to its return options.
+    Uses type=1 (round trip) with SAME airport codes and dates as the outbound search,
+    plus the departure_token, to get return flights for the selected outbound leg.
+    """
+    params: dict = {
+        "api_key": settings.SERPAPI_KEY,
+        "engine": "google_flights",
+        "departure_id": dep_code,
+        "arrival_id": arr_code,
+        "outbound_date": outbound_date,
+        "return_date": return_date,
+        "type": "1",  # round trip (required for departure_token to work)
+        "currency": "HKD",
+        "hl": "en",
+        "departure_token": departure_token,
+    }
+
+    logger.bind(
+        event="tool_api_call",
+        layer="tool",
+        tool="search_flights",
+        dep_code=dep_code,
+        arr_code=arr_code,
+        date=outbound_date,
+        direction="return",
+        trip_type="return_via_token",
+        engine="google_flights",
+        has_departure_token=True,
+    ).debug(
+        f"TOOL: Searching return flights via departure_token: {dep_code} → {arr_code} on {outbound_date}"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(
+                "https://serpapi.com/search.json",
+                params=params,
+            )
+            if response.status_code == 400:
+                error_body = response.text
+                logger.bind(
+                    event="tool_api_error",
+                    layer="tool",
+                    tool="search_flights",
+                    status_code=400,
+                    direction="return",
+                    response_body=error_body[:200],
+                ).error(f"TOOL: HTTP 400 with departure_token: {error_body[:200]}")
+                return {"flights": [], "error": f"HTTP 400: {error_body[:200]}"}
+            response.raise_for_status()
+            data = response.json()
+
+        raw_itineraries = data.get("best_flights", []) + data.get("other_flights", [])
+        flights, _ = _parse_itineraries(raw_itineraries, "return", outbound_date)
+
+        logger.bind(
+            event="tool_done",
+            layer="tool",
+            tool="search_flights",
+            dep_code=dep_code,
+            arr_code=arr_code,
+            flight_count=len(flights),
+            direction="return",
+            trip_type="return_via_token",
+        ).debug(
+            f"TOOL: search_flights (return via token) done — {len(flights)} segments for {dep_code} → {arr_code}"
+        )
+        return {"flights": flights}
+    except Exception as e:
+        logger.bind(
+            event="tool_error",
+            layer="tool",
+            tool="search_flights",
+            direction="return",
+            error=str(e),
+        ).error(f"TOOL: Return flight search failed: {e}")
+        return {"flights": [], "error": f"Return flight search failed: {e}"}
 
 
 async def _search_single_leg(
@@ -356,7 +523,11 @@ async def _search_single_leg(
             data = response.json()
 
         raw_itineraries = data.get("best_flights", []) + data.get("other_flights", [])
-        flights = _parse_itineraries(raw_itineraries, direction, outbound_date)
+        flights, departure_tokens = _parse_itineraries(
+            raw_itineraries, direction, outbound_date
+        )
+        # Get the first valid departure_token for use in return flight lookup
+        first_departure_token = next((t for t in departure_tokens if t), None)
 
         # Retry with correct airport code if 0 results and code is a known city code
         if not flights:
@@ -419,7 +590,7 @@ async def _search_single_leg(
             f"TOOL: search_flights ({direction}/{trip_type}) done — {len(flights)} segments "
             f"({len(raw_itineraries)} itineraries) for {dep_code} → {arr_code} on {outbound_date}"
         )
-        return {"flights": flights}
+        return {"flights": flights, "departure_token": first_departure_token}
     except httpx.TimeoutException:
         logger.bind(
             event="tool_timeout",
@@ -454,13 +625,19 @@ def _parse_itineraries(
     raw_itineraries: list[dict],
     direction: str,
     outbound_date: str | None,
-) -> list[dict]:
-    """Parse raw SerpAPI itineraries into our normalized flight dicts."""
+) -> tuple[list[dict], list[str | None]]:
+    """Parse raw SerpAPI itineraries into our normalized flight dicts.
+
+    Returns:
+        Tuple of (flights list, departure_tokens list)
+    """
     flights = []
+    departure_tokens = []
     for itinerary in raw_itineraries:
         seg_flights = itinerary.get("flights", [])
         layovers = itinerary.get("layovers") or []
         price = itinerary.get("price")
+        departure_token = itinerary.get("departure_token")
 
         seg_outbound_date: str | None = None
         if seg_flights:
@@ -511,7 +688,8 @@ def _parse_itineraries(
                     "booking_url": booking_url,
                 }
             )
-    return flights
+            departure_tokens.append(departure_token)
+    return flights, departure_tokens
 
 
 def _parse_iso_datetime(value: str) -> str:

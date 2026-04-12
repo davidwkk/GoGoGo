@@ -123,7 +123,7 @@ async def get_attraction(attraction_name: str) -> dict:
                 map_url = (
                     f"https://www.google.com/maps/embed/v1/place"
                     f"?key={settings.GOOGLE_MAPS_API_KEY}"
-                    f"&q=place/{lat},{lon}"
+                    f"&q=@{lat},{lon}"
                 )
 
         # Thumbnail vs full image
