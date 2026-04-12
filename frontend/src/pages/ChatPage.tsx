@@ -23,8 +23,8 @@ import {
   Plane,
   PlusCircle,
   Sparkles,
-  Star,
   Square,
+  Star,
   Ticket,
   Trash2,
   Volume2,
@@ -385,10 +385,13 @@ function ItineraryDisplay({
               </h3>
               <div className="h-px flex-1 bg-slate-100" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {itinerary.flights.map((f: Flight, i: number) => (
-                <FlightCard key={i} flight={f} />
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {itinerary.flights.map((f: Flight, i: number) => {
+                const hasReturn = itinerary.flights.some(f => f.direction === 'return');
+                return (
+                  <FlightCard key={i} flight={f} tripType={hasReturn ? 'round_trip' : 'one_way'} />
+                );
+              })}
             </div>
           </div>
         )}
@@ -1124,16 +1127,6 @@ export function ChatPage() {
               title="Expand"
             >
               <PanelLeftOpen className="size-4" />
-            </button>
-          )}
-
-          {historyCollapsed && (
-            <button
-              onClick={startNewChat}
-              className="hidden md:flex items-center gap-1.5 h-8 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
-            >
-              <PlusCircle className="size-3" />
-              New Chat
             </button>
           )}
 

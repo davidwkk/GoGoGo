@@ -1,10 +1,26 @@
-import { Plane, ArrowRight, ExternalLink } from 'lucide-react';
+import { Plane, ArrowRight, ExternalLink, Clock } from 'lucide-react';
 import { Flight } from '../../types/trip';
 
-export const FlightCard = ({ flight }: { flight: Flight }) => {
+export const FlightCard = ({
+  flight,
+  tripType = 'one_way',
+}: {
+  flight: Flight;
+  tripType?: 'round_trip' | 'one_way';
+}) => {
   // Dynamically calculate stops from the array
   const stopCount = flight.stops?.length || 0;
   const stopLabel = stopCount === 0 ? 'Direct' : `${stopCount} Stop${stopCount > 1 ? 's' : ''}`;
+
+  const formatDuration = (mins?: number | null) => {
+    if (!mins) return null;
+    const hrs = Math.floor(mins / 60);
+    const m = mins % 60;
+    return hrs > 0 ? `${hrs}h ${m}m` : `${m}m`;
+  };
+
+  const isReturn = flight.direction === 'return';
+  const showPrice = !isReturn || tripType === 'one_way';
 
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all group">
@@ -40,6 +56,10 @@ export const FlightCard = ({ flight }: { flight: Flight }) => {
         </div>
 
         <div className="flex flex-col items-center gap-1 flex-1 px-4">
+          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+            <Clock className="size-3" />
+            {formatDuration(flight.duration_minutes) || '---'}
+          </span>
           <ArrowRight className="text-slate-200 size-5" />
           <div className="h-px w-full bg-slate-100 relative">
             <div className="absolute inset-0 flex justify-center -top-1.5">
@@ -66,20 +86,33 @@ export const FlightCard = ({ flight }: { flight: Flight }) => {
         <div className="flex flex-col">
           <span className="text-xs font-bold text-slate-800">{flight.airline}</span>
           <span className="text-[10px] text-slate-400 font-medium tracking-tight">
-            {flight.flight_number}
+            {flight.flight_number} {flight.airplane ? `• ${flight.airplane}` : ''}
           </span>
+          {flight.travel_class && (
+            <span className="text-[10px] text-blue-500 font-bold tracking-tight mt-0.5">
+              {flight.travel_class}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">
-              Total
-            </p>
-            {/* Dynamically render the price if it exists */}
-            <p className="text-sm font-black text-green-600">
-              {flight.price_hkd ? `HKD ${flight.price_hkd.toLocaleString()}` : 'HKD ---'}
-            </p>
-          </div>
+          {showPrice ? (
+            <div className="text-right">
+              <p className="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">
+                {tripType === 'round_trip' ? 'Round Trip Total' : 'Total'}
+              </p>
+              <p className="text-sm font-black text-green-600">
+                {flight.price_hkd ? `HKD ${flight.price_hkd.toLocaleString()}` : 'HKD ---'}
+              </p>
+            </div>
+          ) : (
+            <div className="text-right">
+              <p className="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">
+                Included in
+              </p>
+              <p className="text-sm font-black text-slate-400">Round Trip</p>
+            </div>
+          )}
 
           {/* Conditional Booking Button */}
           {flight.booking_url && (

@@ -248,7 +248,7 @@ async def search_hotels(
                 "TOOL: No matching properties; falling back to non_matching_properties"
             )
 
-        for h in properties[:10]:
+        for h in properties[:1]:
             # Price — use rate_per_night.extracted_lowest (already in HKD)
             rate_per_night = h.get("rate_per_night") or {}
             price_min_hkd = rate_per_night.get("extracted_lowest")
