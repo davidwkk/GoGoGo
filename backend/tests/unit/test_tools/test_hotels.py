@@ -100,8 +100,9 @@ async def test_search_hotels_returns_expected_results():
     assert hotel["check_out_date"] == "2026-04-06"
     assert hotel["check_in_time"] == "3:00 PM"
     assert hotel["check_out_time"] == "12:00 PM"
-    # Price: already in HKD from SerpAPI
-    assert hotel["price_per_night_min_hkd"] == 347
+    # Price: rounded to nearest 100 (floor for min, ceil for max)
+    assert hotel["price_per_night_min_hkd"] == 300  # 347 // 100 * 100 = 300
+    assert hotel["price_per_night_max_hkd"] == 400  # (347+99)//100*100 = 400
     assert hotel["total_price_hkd"] == 1733
     assert hotel["hotel_class"] == "5-star hotel"
     assert hotel["hotel_class_int"] == 5
