@@ -118,7 +118,7 @@ async def test_search_flights_validates_iata_codes():
     )  # city names, not IATA
 
     assert "error" in result
-    assert "IATA airport codes" in result["error"]
+    assert "IATA" in result["error"] and "3-letter" in result["error"]
     assert result["flights"] == []
 
 
