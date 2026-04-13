@@ -262,23 +262,23 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 ### 🔲 Remaining Tasks
 
 - [x] **Image popup dialog** — Make images in trip cards clickable; show full-size image in a popup dialog when clicked (e.g., lightbox modal)
-- [ ] **Typewriter Effect** — Add typewriter effect to ChatPage for LLM's response; stream tokens as they arrive for a more natural chat feel
-- [ ] **Fix the display bug** - '✨ Your trip plan is ready below' only appears when the user refresh the page, but not when the trip is done. It should appear directly when the trip plan is generated and rendered.
+- [x] **Typewriter Effect** — Add typewriter effect to ChatPage for LLM's response; stream tokens as they arrive for a more natural chat feel
+- [x] **Fix the display bug** - '✨ Your trip plan is ready below' only appears when the user refresh the page, but not when the trip is done. It should appear directly when the trip plan is generated and rendered.
 
 #### Frontend E2E Tests
 
 > ⚠️ **Label backend dependencies as TODO** — if a test requires a backend API that doesn't exist yet, add a `# TODO: needs backend <feature>` comment so it can be implemented later without blocking
 
-- [ ] **Login flow** — `LoginPage.tsx` → register → redirect to chat
-- [ ] **Guest mode flow** — Continue as Guest → redirect to chat
-- [ ] **Chat → generate plan → view trip** — Send message → click "Generate Trip Plan" → wait for itinerary → navigate to TripPage → verify itinerary renders
-- [ ] **Trip detail view** — Click a saved trip → verify all sections (flights, hotels, attractions) render with images
-- [ ] **Voice input toggle** — Verify mic button appears, toggles recording state (if browser supports Web Speech API)
+- [x] **Login flow** — `LoginPage.tsx` → register → redirect to chat
+- [x] **Guest mode flow** — Continue as Guest → redirect to chat
+- [x] **Chat → generate plan → view trip** — Send message → click "Generate Trip Plan" → wait for itinerary → navigate to TripPage → verify itinerary renders
+- [x] **Trip detail view** — Click a saved trip → verify all sections (flights, hotels, attractions) render with images
+- [x] **Voice input toggle** — Verify mic button appears, toggles recording state (if browser supports Web Speech API)
 
 #### Frontend Polishing & Robustness
 
-- [ ] **Skeleton/loading states** — Add skeleton loaders for trip cards, chat messages, and itinerary sections while data loads
-- [ ] **Error handling UI** — Timeout displays for failed API calls, retry buttons where applicable
+- [x] **Skeleton/loading states** — Add skeleton loaders for trip cards, chat messages, and itinerary sections while data loads
+- [x] **Error handling UI** — Timeout displays for failed API calls, retry buttons where applicable
 - [x] **API error envelope standardization** — Standardize `APIError { detail: string; code?: string }` in `api.ts` ✅ (already implemented in `api.ts` with interceptor; used in `LoginPage.tsx`)
 - [x] **Mobile responsive layout audit** — Verify all pages (Login, Chat, Trip) render correctly on narrow viewports; fix any overflow or truncation issues
 - [ ] Add FAKE loading sentences when LLM takes a long time to respond (e.g. >5: LLM is thinking hard >10: Current load is high, may need to wait longer time, etc.)
