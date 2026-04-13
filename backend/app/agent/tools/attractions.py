@@ -58,8 +58,6 @@ from __future__ import annotations
 import httpx
 from loguru import logger
 
-from app.core.config import settings
-
 
 async def get_attraction(attraction_name: str) -> dict:
     """Fetch attraction details from Wikipedia REST API."""
@@ -114,17 +112,13 @@ async def get_attraction(attraction_name: str) -> dict:
                 "lon": raw_coords.get("lon"),
             }
 
-        # Build Google Maps embed URL from coordinates
+        # Build Google Maps embed URL from coordinates (no API key required)
         map_url = None
-        if coords and settings.GOOGLE_MAPS_API_KEY:
+        if coords:
             lat = coords.get("lat")
             lon = coords.get("lon")
             if lat is not None and lon is not None:
-                map_url = (
-                    f"https://www.google.com/maps/embed/v1/place"
-                    f"?key={settings.GOOGLE_MAPS_API_KEY}"
-                    f"&q=@{lat},{lon}"
-                )
+                map_url = f"https://www.google.com/maps?q={lat},{lon}&output=embed"
 
         # Thumbnail vs full image
         thumbnail = data.get("thumbnail") or {}

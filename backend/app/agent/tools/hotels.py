@@ -263,13 +263,21 @@ async def search_hotels(
             total_rate = h.get("total_rate") or {}
             total_price_hkd = total_rate.get("extracted_lowest")
 
-            # Build embed map URL — use hotel name search (no API key required for embed)
+            # Build embed map URL — use GPS coordinates if available, otherwise city name (no API key required)
             embed_map_url: str | None = None
-            hotel_name = h.get("name", "")
-            if hotel_name:
-                encoded_name = hotel_name.replace(" ", "+")
+            gps = h.get("gps_coordinates")
+            if gps:
+                lat = gps.get("latitude")
+                lon = gps.get("longitude")
+                if lat is not None and lon is not None:
+                    embed_map_url = (
+                        f"https://www.google.com/maps?q={lat},{lon}&output=embed"
+                    )
+            else:
+                # Fallback: search by destination city
+                encoded_dest = destination.replace(" ", "+")
                 embed_map_url = (
-                    f"https://www.google.com/maps?q={encoded_name}&output=embed"
+                    f"https://www.google.com/maps?q={encoded_dest}&output=embed"
                 )
 
             # Build booking URL from property_token (Chk/I/Cgo prefix → Google Hotels entity)
