@@ -1,6 +1,7 @@
 import { Star, Building2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ImageLightbox } from '../common/ImageLightbox';
+import { MapEmbed } from './MapEmbed';
 
 // --- ULTIMATE WIKI THROTTLE & RETRY SYSTEM ---
 const win = window as any;
@@ -324,6 +325,13 @@ export function HotelCard({ hotel }: { hotel: any }) {
               </p>
             </div>
           </div>
+
+          {/* Embedded Map */}
+          {hotel.embed_map_url && (
+            <div className="mt-6 rounded-2xl overflow-hidden h-48 bg-slate-800 border border-white/10">
+              <MapEmbed url={hotel.embed_map_url} />
+            </div>
+          )}
 
           <div className="flex justify-between items-end border-t border-white/10 pt-10">
             <div>
