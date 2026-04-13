@@ -1211,7 +1211,7 @@ export function ChatPage() {
             Array.from({ length: Math.ceil(messages.length / 2) }).map((_, pairIdx) => {
               const userMsg = messages[pairIdx * 2];
               const assistantMsg = messages[pairIdx * 2 + 1];
-              const isLastPair = pairIdx * 2 + 1 >= messages.length;
+              const isLastPair = pairIdx === Math.ceil(messages.length / 2) - 1;
               const isStreamingAssistant =
                 isLastPair &&
                 assistantMsg?.role === 'assistant' &&
