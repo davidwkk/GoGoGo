@@ -98,13 +98,12 @@ from app.core.config import settings
 _IATA_RE = re.compile(r"^[A-Z]{3,4}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
 
-# City/metro codes that Google Maps / SerpAPI accepts but are NOT airport codes.
-# If a search returns 0 results, we retry with the corresponding airport code.
+# City/metro codes that SerpAPI accepts but are NOT airport codes.
 _CITY_TO_AIRPORT: dict[str, str] = {
-    "BJS": "PEK",  # Beijing Capital
-    "SHA": "PVG",  # Shanghai Pudong
-    "NKG": "NKG",  # Nanjing (correct, keep)
-    "CAN": "CAN",  # Guangzhou (correct, keep)
+    "BJS": "PEK",
+    "SHA": "PVG",
+    "NKG": "NKG",
+    "CAN": "CAN",
 }
 
 
@@ -143,21 +142,94 @@ async def search_flights(
         ).warning("TOOL: SERPAPI_KEY not configured")
         return {"error": "SERPAPI_KEY not configured", "flights": []}
 
-    # Strict IATA validation
-    dep_code = departure.strip().upper() if departure else ""
-    arr_code = arrival.strip().upper() if arrival else ""
-    if not (_IATA_RE.match(dep_code) and _IATA_RE.match(arr_code)):
+    # ── Robust IATA code normalization ──────────────────────────────────────────
+    raw_dep = (departure or "").strip()
+    raw_arr = (arrival or "").strip()
+
+    # Handle missing departure — default to HKG
+    if not raw_dep:
+        logger.bind(
+            event="tool_param_fix",
+            layer="tool",
+            tool="search_flights",
+            original=repr(departure),
+            fix="defaulted to HKG",
+        ).warning("TOOL: Missing departure, defaulting to HKG")
+        raw_dep = "HKG"
+
+    # Handle comma-separated codes like "HND,NRT" → take first
+    if "," in raw_dep:
+        raw_dep = raw_dep.split(",")[0].strip()
+        logger.bind(
+            event="tool_param_fix",
+            layer="tool",
+            tool="search_flights",
+            original=departure,
+            fix=f"took first code: {raw_dep}",
+        ).warning(f"TOOL: Comma-separated departure code, took first: {raw_dep}")
+
+    if "," in raw_arr:
+        raw_arr = raw_arr.split(",")[0].strip()
+        logger.bind(
+            event="tool_param_fix",
+            layer="tool",
+            tool="search_flights",
+            original=arrival,
+            fix=f"took first code: {raw_arr}",
+        ).warning(f"TOOL: Comma-separated arrival code, took first: {raw_arr}")
+
+    # Uppercase
+    dep_code = raw_dep.upper()
+    arr_code = raw_arr.upper()
+
+    # Resolve city/metro codes to airport codes
+    if dep_code in _CITY_TO_AIRPORT and _CITY_TO_AIRPORT[dep_code] != dep_code:
+        dep_code = _CITY_TO_AIRPORT[dep_code]
+        logger.bind(
+            event="tool_param_fix",
+            layer="tool",
+            tool="search_flights",
+            original=raw_dep,
+            fix=f"resolved to airport: {dep_code}",
+        ).info(f"TOOL: City code {raw_dep} resolved to {dep_code}")
+
+    if arr_code in _CITY_TO_AIRPORT and _CITY_TO_AIRPORT[arr_code] != arr_code:
+        arr_code = _CITY_TO_AIRPORT[arr_code]
+        logger.bind(
+            event="tool_param_fix",
+            layer="tool",
+            tool="search_flights",
+            original=raw_arr,
+            fix=f"resolved to airport: {arr_code}",
+        ).info(f"TOOL: City code {raw_arr} resolved to {arr_code}")
+
+    # For Tokyo/NRT ambiguity, prefer HND over NRT
+    if arr_code == "NRT":
+        arr_code = "HND"
+        logger.bind(
+            event="tool_param_fix",
+            layer="tool",
+            tool="search_flights",
+            original="NRT",
+            fix="NRT→HND (prefer Haneda for central Tokyo proximity)",
+        ).info("TOOL: NRT resolved to HND (prefer Haneda)")
+
+    # Final IATA format validation
+    if not _IATA_RE.match(dep_code) or not _IATA_RE.match(arr_code):
         logger.bind(
             event="tool_invalid_params",
             layer="tool",
             tool="search_flights",
             departure=departure,
             arrival=arrival,
-        ).error(f"TOOL: Invalid airport codes: {departure!r} → {arrival!r}")
+            normalized=f"{dep_code} → {arr_code}",
+        ).error(
+            f"TOOL: Invalid airport codes after normalization: {dep_code!r} → {arr_code!r}"
+        )
         return {
             "error": (
-                "departure and arrival must be valid IATA airport codes (3-4 uppercase letters). "
-                f"Got: {departure!r} → {arrival!r}"
+                f"Invalid airport code(s): {dep_code!r} → {arr_code!r}. "
+                "Use 3-letter IATA codes (e.g., HKG, HND, PEK)."
             ),
             "flights": [],
         }
