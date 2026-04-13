@@ -35,6 +35,7 @@ class TestTripItineraryValidation:
     def test_valid_minimal_itinerary(self):
         """TripItinerary validates with minimal required fields."""
         itinerary = TripItinerary(
+            title="1-Day Hong Kong Quick Trip Jul 1 | Solo",
             destination="Hong Kong",
             duration_days=1,
             summary="Quick HK trip.",
@@ -163,6 +164,7 @@ class TestTripItineraryValidation:
         """duration_days must be >= 1."""
         with pytest.raises(Exception):
             TripItinerary(
+                title="0-Day Bad Trip",
                 destination="HK",
                 duration_days=0,  # invalid
                 summary="Bad trip.",

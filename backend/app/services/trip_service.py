@@ -38,8 +38,8 @@ def save_trip(
 
     itinerary_json = itinerary.model_dump(mode="json")
 
-    # Generate title from destination and first/last date
-    title = _generate_title(itinerary.destination, itinerary.days)
+    # Use LLM-generated title from the itinerary
+    title = itinerary.title
 
     trip = create_trip(
         db=db,

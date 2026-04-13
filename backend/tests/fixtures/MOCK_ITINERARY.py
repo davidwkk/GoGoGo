@@ -19,6 +19,7 @@ from app.schemas.itinerary import (
 )
 
 MOCK_ITINERARY = TripItinerary(
+    title="5-Day Tokyo Cultural Immersion Jun 1-5 | Solo",
     destination="Tokyo, Japan",
     duration_days=5,
     summary=(

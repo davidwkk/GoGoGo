@@ -166,6 +166,17 @@ class BudgetBreakdown(BaseModel):
 
 class TripItinerary(BaseModel):
     # --- Core (LLM-generated) ---
+    title: str = Field(
+        description=(
+            "A descriptive trip title that captures: travel date (e.g. 'Apr 1-3, 2026'), "
+            "destination, travel type (e.g. solo, family, couple, friends), "
+            "travel style (e.g. vacation, romantic getaway, adventure, business), "
+            "and number of travelers (e.g. '2 people', 'Family of 4'). "
+            "Examples: '3-Day Tokyo Family Vacation Apr 1-3 | 4 People', "
+            "'2-Person Bali Romantic Getaway Jun 15-20', "
+            "'Solo Kyoto Adventure May 10-15'"
+        )
+    )
     destination: str
     duration_days: int = Field(ge=1)
     summary: str
