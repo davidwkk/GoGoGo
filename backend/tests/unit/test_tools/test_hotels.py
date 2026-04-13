@@ -111,9 +111,9 @@ async def test_search_hotels_returns_expected_results():
     assert "Free Wi-Fi" in hotel["amenities"]
     assert hotel["image_url"] == "https://d2hyz2bfif3cr8.cloudfront.net/image.jpg"
     assert hotel["thumbnail_url"] == "https://lh3.googleusercontent.com/proxy/thumb.jpg"
-    assert hotel["eco_certified"] is True
-    assert hotel["deal"] == "27% less than usual"
-    assert hotel["deal_description"] == "Great Deal"
+    assert "eco_certified" not in hotel
+    assert "deal" not in hotel
+    assert "deal_description" not in hotel
     # Nearby places
     assert len(hotel["nearby_places"]) == 1
     assert (

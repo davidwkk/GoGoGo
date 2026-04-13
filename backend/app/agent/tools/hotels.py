@@ -249,9 +249,15 @@ async def search_hotels(
             )
 
         for h in properties[:1]:
-            # Price — use rate_per_night.extracted_lowest (already in HKD)
+            # Price — round to nearest 100 (floor for min, ceil for max)
             rate_per_night = h.get("rate_per_night") or {}
-            price_min_hkd = rate_per_night.get("extracted_lowest")
+            raw_price = rate_per_night.get("extracted_lowest")
+            if raw_price is not None:
+                price_min_hkd = int(raw_price // 100 * 100)
+                price_max_hkd = int((raw_price + 99) // 100 * 100)
+            else:
+                price_min_hkd = None
+                price_max_hkd = None
 
             # Total price for the stay (already in HKD)
             total_rate = h.get("total_rate") or {}
@@ -302,23 +308,20 @@ async def search_hotels(
                     "check_in_date": check_in,
                     "check_out_date": check_out,
                     "price_per_night_min_hkd": price_min_hkd,
-                    "price_per_night_max_hkd": price_min_hkd,  # no range in this schema
+                    "price_per_night_max_hkd": price_max_hkd,
                     "total_price_hkd": total_price_hkd,
                     "hotel_class": h.get("hotel_class"),  # e.g. "5-star hotel"
                     "hotel_class_int": h.get("extracted_hotel_class"),  # e.g. 5
                     "rating": h.get("overall_rating"),
                     "reviews": h.get("reviews"),
                     "location_rating": h.get("location_rating"),
-                    "amenities": (h.get("amenities") or [])[:6],  # top 6
+                    "amenities": (h.get("amenities") or [])[:3],  # top 3 for display
                     "description": h.get("description", ""),
                     "image_url": image_url,
                     "thumbnail_url": thumbnail_url,
                     "embed_map_url": embed_map_url,
                     "nearby_places": nearby,
                     "booking_url": booking_url,
-                    "eco_certified": h.get("eco_certified"),
-                    "deal": h.get("deal"),
-                    "deal_description": h.get("deal_description"),
                 }
             )
 

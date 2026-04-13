@@ -115,6 +115,10 @@ export function HotelCard({ hotel }: { hotel: any }) {
   const [loading, setLoading] = useState(true);
   const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
 
+  const allAmenities = hotel.amenities || [];
+  const displayedAmenities = amenitiesExpanded ? allAmenities : allAmenities.slice(0, 3);
+  const hasMoreAmenities = allAmenities.length > 3;
+
   useEffect(() => {
     if (!hotel) return;
     let isMounted = true;
@@ -122,7 +126,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
     const loadBestImage = async () => {
       setLoading(true);
 
-      // 1. Try backend image first
+      // 1. Use backend image_url directly if available
       if (hotel.image_url) {
         const works = await checkImageWorks(hotel.image_url);
         if (works && isMounted) {
@@ -242,7 +246,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
             )}
 
             {/* Location Rating */}
-            {hotel.location_rating && (
+            {hotel.location_rating != null && (
               <div className="flex items-center gap-1 text-emerald-400">
                 <MapPin className="size-3" />
                 <span className="text-xs font-bold">{hotel.location_rating}/10</span>
@@ -260,23 +264,25 @@ export function HotelCard({ hotel }: { hotel: any }) {
           )}
 
           {/* Amenities */}
-          {hotel.amenities && hotel.amenities.length > 0 && (
+          {allAmenities.length > 0 && (
             <div className="mb-8">
-              <button
-                onClick={() => setAmenitiesExpanded(!amenitiesExpanded)}
-                className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 hover:text-slate-300 transition-colors"
-              >
-                Amenities{' '}
-                {amenitiesExpanded ? (
-                  <ChevronUp className="size-3" />
-                ) : (
-                  <ChevronDown className="size-3" />
-                )}
-              </button>
+              {hasMoreAmenities && (
+                <button
+                  onClick={() => setAmenitiesExpanded(!amenitiesExpanded)}
+                  className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 hover:text-slate-300 transition-colors"
+                >
+                  Amenities{' '}
+                  {amenitiesExpanded ? (
+                    <ChevronUp className="size-3" />
+                  ) : (
+                    <ChevronDown className="size-3" />
+                  )}
+                </button>
+              )}
               <div
                 className={`flex flex-wrap gap-2 overflow-hidden transition-all ${amenitiesExpanded ? 'max-h-96' : 'max-h-8'}`}
               >
-                {hotel.amenities.map((amenity: string, idx: number) => (
+                {displayedAmenities.map((amenity: string, idx: number) => (
                   <span
                     key={idx}
                     className="px-2 py-1 bg-white/5 border border-white/10 rounded-md text-xs text-slate-300"
@@ -294,6 +300,9 @@ export function HotelCard({ hotel }: { hotel: any }) {
                 Check-in
               </p>
               <p className="text-sm font-medium text-slate-200">{hotel.check_in_date}</p>
+              {hotel.check_in_time && (
+                <p className="text-xs text-slate-400">{hotel.check_in_time}</p>
+              )}
             </div>
             <div className="h-8 w-px bg-white/10 self-center" />
             <div>
@@ -301,6 +310,9 @@ export function HotelCard({ hotel }: { hotel: any }) {
                 Check-out
               </p>
               <p className="text-sm font-medium text-slate-200">{hotel.check_out_date}</p>
+              {hotel.check_out_time && (
+                <p className="text-xs text-slate-400">{hotel.check_out_time}</p>
+              )}
             </div>
             <div className="h-8 w-px bg-white/10 self-center" />
             <div>
