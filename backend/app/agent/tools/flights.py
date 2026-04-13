@@ -11,7 +11,7 @@ NOTE: google_flights engine does NOT support free-text "q" param.
 For round-trips, we make exactly 2 API calls:
   1. Outbound: type=1, departure_id=<origin>, arrival_id=<dest>, outbound_date=<date>, return_date=<return_date>
      Returns departure_token(s) in the response.
-  2. Return: type=2 with departure_token from step 1 to fetch linked return flights.
+  2. Return: type=1 with additional departure_token from step 1 to fetch linked return flights.
 
 Fallback: If departure_token is unavailable or HTTP 400, falls back to reversed-airport one-way call.
 
@@ -113,6 +113,7 @@ async def search_flights(
     arrival: str,
     date: str,
     return_date: str | None = None,
+    passengers: int = 1,
 ) -> dict:
     """Search for flights using SerpAPI Google Flights.
 
@@ -188,7 +189,9 @@ async def search_flights(
     is_round_trip = return_date is not None
 
     if is_round_trip:
-        return await _search_round_trip(dep_code, arr_code, date, return_date)
+        return await _search_round_trip(
+            dep_code, arr_code, date, return_date, passengers
+        )
 
     result = await _search_single_leg(
         dep_code=dep_code,
@@ -197,6 +200,7 @@ async def search_flights(
         return_date=None,
         direction="outbound",
         trip_type="one_way",
+        passengers=passengers,
     )
     return result
 
@@ -206,6 +210,7 @@ async def _search_round_trip(
     arr_code: str,
     outbound_date: str,
     return_date: str,
+    passengers: int = 1,
 ) -> dict:
     """Search round-trip with automatic return flight fetching.
 
@@ -224,6 +229,7 @@ async def _search_round_trip(
         return_date=return_date,
         direction="outbound",
         trip_type="round_trip_outbound",
+        passengers=passengers,
     )
 
     # Check if outbound call succeeded
@@ -278,6 +284,7 @@ async def _search_round_trip(
         outbound_date=outbound_date,
         return_date=return_date,
         departure_token=departure_token,
+        passengers=passengers,
     )
 
     # Check if return call succeeded
@@ -341,6 +348,7 @@ async def _search_return_by_token(
     outbound_date: str,
     return_date: str,
     departure_token: str,
+    passengers: int = 1,
 ) -> dict:
     """Fetch return flights using departure_token from the outbound flight.
 
@@ -397,7 +405,9 @@ async def _search_return_by_token(
             data = response.json()
 
         raw_itineraries = data.get("best_flights", []) + data.get("other_flights", [])
-        flights, _ = _parse_itineraries(raw_itineraries, "return", outbound_date)
+        flights, _ = _parse_itineraries(
+            raw_itineraries, "return", outbound_date, return_date, passengers
+        )
 
         logger.bind(
             event="tool_done",
@@ -430,6 +440,7 @@ async def _search_single_leg(
     return_date: str | None,
     direction: str,
     trip_type: str,  # "one_way" | "round_trip_outbound"
+    passengers: int = 1,
 ) -> dict:
     """Make a single-leg API call to SerpAPI and return parsed results."""
     type_value = "2" if trip_type == "one_way" else "1"
@@ -524,7 +535,7 @@ async def _search_single_leg(
 
         raw_itineraries = data.get("best_flights", []) + data.get("other_flights", [])
         flights, departure_tokens = _parse_itineraries(
-            raw_itineraries, direction, outbound_date
+            raw_itineraries, direction, outbound_date, return_date, passengers
         )
         # Get the first valid departure_token for use in return flight lookup
         first_departure_token = next((t for t in departure_tokens if t), None)
@@ -625,6 +636,8 @@ def _parse_itineraries(
     raw_itineraries: list[dict],
     direction: str,
     outbound_date: str | None,
+    return_date: str | None = None,
+    passengers: int = 1,
 ) -> tuple[list[dict], list[str | None]]:
     """Parse raw SerpAPI itineraries into our normalized flight dicts.
 
@@ -633,11 +646,14 @@ def _parse_itineraries(
     """
     flights = []
     departure_tokens = []
+
     for itinerary in raw_itineraries:
         seg_flights = itinerary.get("flights", [])
         layovers = itinerary.get("layovers") or []
         price = itinerary.get("price")
         departure_token = itinerary.get("departure_token")
+        trip_type = itinerary.get("type", "")  # e.g. "Round trip" or "One way"
+        is_round_trip = "round" in trip_type.lower()
 
         seg_outbound_date: str | None = None
         if seg_flights:
@@ -645,7 +661,6 @@ def _parse_itineraries(
             seg_outbound_date = (
                 _parse_iso_datetime(first_dep)[:10] if first_dep else None
             )
-        date_for_url = seg_outbound_date or outbound_date
 
         for i, f in enumerate(seg_flights):
             dep = f.get("departure_airport", {})
@@ -663,7 +678,18 @@ def _parse_itineraries(
             seg_dep_code = dep.get("id", "")
             seg_arr_code = arr.get("id", "")
 
-            query = f"{seg_dep_code}+to+{seg_arr_code}%2C+{date_for_url}"
+            seg_date = seg_outbound_date or outbound_date
+            seat_text = f"{passengers}+seats" if passengers > 1 else "1+seat"
+            if is_round_trip and return_date:
+                # Round trip: natural language with both dates
+                query = f"flights+to+{seg_arr_code}+from+{seg_dep_code}+on+{seg_date}+through+{return_date}+{seat_text}"
+            elif direction == "return":
+                # Not round trip, return leg: one-way on return date
+                query = f"flights+to+{seg_arr_code}+from+{seg_dep_code}+on+{seg_date}+{seat_text}"
+            else:
+                # Not round trip, outbound leg: one-way on departure date
+                query = f"flights+to+{seg_arr_code}+from+{seg_dep_code}+on+{seg_date}+{seat_text}"
+
             booking_url = (
                 f"https://www.google.com/travel/flights/search?q={query}&hl=en&curr=HKD"
             )
