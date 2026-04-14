@@ -17,6 +17,7 @@ import {
   Calendar,
   Copy,
   MapPin,
+  Menu,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
@@ -28,8 +29,7 @@ import {
   Star,
   Ticket,
   Trash2,
-  Volume2,
-  Menu, // Added Menu icon for mobile sidebar toggle
+  Volume2, // Added Menu icon for mobile sidebar toggle
   X, // Added X icon to close sidebar on mobile
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -1318,10 +1318,10 @@ export function ChatPage() {
                                     .reverse()
                                     .find(m => m.role === 'user');
                                   if (lastUser) {
-                                    useChatStore
-                                      .getState()
-                                      .setMessages(messages.filter(m => m.id !== assistantMsg.id));
-                                    setLastUserMessage(lastUser.content);
+                                    navigator.clipboard
+                                      .writeText(lastUser.content)
+                                      .catch(console.error);
+                                    toast('Message copied — paste and try again.');
                                   }
                                 }}
                                 className="mt-3 inline-flex items-center gap-1.5 h-8 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-4 text-xs font-medium transition-colors"
