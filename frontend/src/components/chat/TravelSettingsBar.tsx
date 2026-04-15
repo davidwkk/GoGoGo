@@ -45,9 +45,20 @@ const MAX_FLIGHT_STOPS = [
   { value: '2', label: '2 Stops' },
 ];
 
+const LLM_MODELS: { value: string; label: string }[] = [
+  { value: 'gemini-3.1-flash-lite-preview', label: '3.1 Flash Lite (Fast)' },
+  { value: 'gemini-3-flash-preview', label: '3 Flash (Smart)' },
+  { value: 'gemini-2.5-flash-lite', label: '2.5 Flash Lite (Backup)' },
+  { value: 'gemini-2.5-flash', label: '2.5 Flash (Backup)' },
+];
+
 export function TravelSettingsBar() {
   const travelSettings = useChatStore(s => s.travelSettings);
   const setTravelSettings = useChatStore(s => s.setTravelSettings);
+  const llm_model = useChatStore(s => s.llm_model);
+  const setLlmModel = useChatStore(s => s.setLlmModel);
+
+  console.log('[TravelSettingsBar] llm_model from store:', llm_model);
 
   return (
     <details className="border-t bg-muted/20">
@@ -184,6 +195,31 @@ export function TravelSettingsBar() {
               }
             />
           </div>
+        </div>
+
+        {/* LLM Model */}
+        <div className="space-y-1">
+          <Label htmlFor="llm_model" className="text-xs">
+            Model
+          </Label>
+          <Select
+            value={llm_model}
+            onValueChange={val => {
+              console.log('[TravelSettingsBar] model selected:', val);
+              setLlmModel(val);
+            }}
+          >
+            <SelectTrigger id="llm_model" className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LLM_MODELS.map(m => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </details>

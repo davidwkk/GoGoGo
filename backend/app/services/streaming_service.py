@@ -47,6 +47,11 @@ MAX_TOOL_ROUNDS = 20
 TIMEOUT_SECONDS = 120.0
 
 
+def _supports_thinking(model: str) -> bool:
+    """Check if model supports thinking config (3.x series does, 2.x does not)."""
+    return not any(x in model.lower() for x in ["2.0", "2.5"])
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Message history helpers
 # ──────────────────────────────────────────────────────────────────────────────
@@ -141,8 +146,10 @@ def _messages_to_content(messages: list[Message]) -> list[types.Content]:
                     content = summary
             except Exception:
                 pass
+        # Map 'assistant' to 'MODEL' (API only accepts MODEL or USER)
+        gemini_role = "MODEL" if msg.role == "assistant" else msg.role
         result.append(
-            types.Content(role=msg.role, parts=[types.Part.from_text(text=content)])
+            types.Content(role=gemini_role, parts=[types.Part.from_text(text=content)])
         )
     return result
 
@@ -569,6 +576,7 @@ async def stream_agent_response(
     preferences: dict | None = None,
     trace_id: str | None = None,
     user_id: UUID | None = None,
+    model: str | None = None,
 ) -> AsyncIterator[str]:
     """
     Unified streaming loop — replaces all three previous agent paths.
@@ -583,7 +591,14 @@ async def stream_agent_response(
       - done:             stream complete
     """
     trace_id = trace_id or str(uuid4())
-    model = settings.GEMINI_LITE_MODEL
+    logger.bind(
+        event="stream_start",
+        service="chat",
+        trace_id=trace_id,
+        received_model=model,
+        default_model=settings.GEMINI_LITE_MODEL,
+    ).info("Stream start — model selection")
+    model = model or settings.GEMINI_LITE_MODEL
 
     logger.bind(
         event="stream_start",
@@ -681,13 +696,15 @@ async def stream_agent_response(
                 config = types.GenerateContentConfig(
                     system_instruction=system_instruction,
                     tools=[*ALL_TOOLS, finalize_trip_plan_decl],
-                    thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel.MEDIUM,
-                    ),
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(
                         disable=True
                     ),
                 )
+                # Only add thinking_config for models that support it (3.x series)
+                if _supports_thinking(model):
+                    config.thinking_config = types.ThinkingConfig(
+                        thinking_level=types.ThinkingLevel.MINIMAL,
+                    )
 
                 # ── Step 1: Drain the full stream first ──────────────────────────
                 # Retry loop handles transient SOCKS5 proxy/idle timeouts (60s default).
@@ -936,7 +953,7 @@ async def stream_agent_response(
                     # Append model turn BEFORE calling finalize_trip_plan
                     model_parts = list(round_text_parts) + list(round_func_parts)
                     if model_parts:
-                        messages.append(types.Content(role="model", parts=model_parts))
+                        messages.append(types.Content(role="MODEL", parts=model_parts))
 
                     result = await finalize_trip_plan(
                         preferences=preferences,
@@ -1043,7 +1060,7 @@ async def stream_agent_response(
                 # ── Step 3: Append model turn, then execute regular tools ────────
                 model_parts = list(round_text_parts) + list(round_func_parts)
                 if model_parts:
-                    messages.append(types.Content(role="model", parts=model_parts))
+                    messages.append(types.Content(role="MODEL", parts=model_parts))
 
                 for part in round_func_parts:
                     fc = getattr(part, "function_call", None)

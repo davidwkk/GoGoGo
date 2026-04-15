@@ -19,3 +19,7 @@ class ChatRequest(BaseModel):
         description="If true, backend will create a new session even when an active one exists",
     )
     user_preferences: UserPreference = Field(default_factory=UserPreference)
+    llm_model: str | None = Field(
+        default=None,
+        description="Gemini model to use for streaming. Defaults to GEMINI_LITE_MODEL setting.",
+    )

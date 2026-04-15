@@ -13,7 +13,7 @@ import base64
 import json
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from google.genai import Client, types
 
 from app.core.config import settings
@@ -40,8 +40,13 @@ def _b64_data(data: Any) -> str | None:
 
 
 @router.websocket("/ws")
-async def live_ws(ws: WebSocket) -> None:
+async def live_ws(
+    ws: WebSocket,
+    model: str | None = Query(default=None, alias="model"),
+) -> None:
     await ws.accept()
+
+    live_model = model or settings.GEMINI_LIVE_MODEL
 
     http_opts = (
         types.HttpOptionsDict(client_args={"proxy": settings.SOCKS5_PROXY_URL})
@@ -57,9 +62,7 @@ async def live_ws(ws: WebSocket) -> None:
         "output_audio_transcription": {},
     }
 
-    async with client.aio.live.connect(
-        model=settings.GEMINI_LIVE_MODEL, config=config
-    ) as session:
+    async with client.aio.live.connect(model=live_model, config=config) as session:
 
         async def pump_client_to_gemini() -> None:
             try:

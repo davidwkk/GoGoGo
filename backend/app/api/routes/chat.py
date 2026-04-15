@@ -120,6 +120,12 @@ async def chat_stream(
     prefs_dict = body.user_preferences.model_dump() if body.user_preferences else None
 
     logger.bind(
+        event="chat_stream_debug",
+        call_id=call_id,
+        body_llm_model=body.llm_model,
+    ).info(f"[chat_stream] body.llm_model = {body.llm_model}")
+
+    logger.bind(
         event="chat_stream_request",
         call_id=call_id,
         trace_id=trace_id,
@@ -130,7 +136,7 @@ async def chat_stream(
         force_new_session=body.force_new_session,
         proxy_enabled=settings.LLM_PROXY_ENABLED,
         proxy_url=settings.SOCKS5_PROXY_URL if settings.LLM_PROXY_ENABLED else None,
-        model=settings.GEMINI_LITE_MODEL,
+        model=body.llm_model or settings.GEMINI_LITE_MODEL,
         has_preferences=prefs_dict is not None,
         preferences_keys=list(prefs_dict.keys()) if prefs_dict else [],
     ).info(
@@ -147,6 +153,7 @@ async def chat_stream(
             preferences=prefs_dict,
             trace_id=trace_id,
             user_id=user_id,
+            model=body.llm_model,
         ),
         media_type="text/event-stream",
         headers={
