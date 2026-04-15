@@ -216,7 +216,6 @@ result = TripItinerary.model_validate_json(response.text)  # validate response
 - [x] Protected route wrapper — tell the user to login if unauthenticated (no auto-redirect, but show a button to the login page)
 - [x] **Guest access**: the chat history bar must be visible to guest users too; guest users can create new chat sessions, but cannot save trips.
 - [x] **Chat history bar alignment** — Fix the style of the chat history bar; specifically, the border/line below it should be at the same vertical level as the main chat page when the history bar is collapsed (alignment is correct when expanded).
-- [ ] **Save the image for attractions** - Attraction images should be saved to db instead of fetching it every time.
 - [x] **Fix the null fields in trip plan** - There are many null values in the generated trip plan which can be optimized.
 - [x] **Fix return flight** — Round-trip now uses `departure_token` from first API call to automatically fetch return flights in a second API call (same airports + dates, `type=1`). Returns 1 outbound + up to 3 return flights. No fallback to reversed-airport approach — errors are returned to LLM to retry.
 - [x] **Limit the number of hotels returned from API** - Reduce the results to at most 3 hotels.
