@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useChatStore } from '@/store';
+
 export type LiveStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export interface LiveTranscriptItem {
@@ -275,10 +277,11 @@ export function useLiveSession() {
     userUnlockedAfterStopRef.current = false;
     discardAudioUntilTurnCompleteRef.current = false;
     try {
+      const live_model = useChatStore.getState().live_model;
       const wsUrl =
         (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1')
           .replace(/^http/, 'ws')
-          .replace(/\/$/, '') + '/live/ws';
+          .replace(/\/$/, '') + `/live/ws?model=${encodeURIComponent(live_model)}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
       ws.onopen = () => setStatus('connected');

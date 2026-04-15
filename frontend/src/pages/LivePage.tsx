@@ -5,8 +5,24 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { useLiveSession } from '@/hooks/useLiveSession';
+import { useChatStore } from '@/store';
+
+const LIVE_MODELS: { value: string; label: string }[] = [
+  { value: 'gemini-3.1-flash-live-preview', label: '3.1 Flash Live (Default)' },
+  {
+    value: 'gemini-2.5-flash-native-audio-preview-12-2025',
+    label: '2.5 Flash Native Audio (Backup)',
+  },
+];
 
 export function LivePage() {
   const [text, setText] = useState('');
@@ -27,6 +43,9 @@ export function LivePage() {
     clear,
     lastError,
   } = useLiveSession();
+
+  const live_model = useChatStore(s => s.live_model);
+  const setLiveModel = useChatStore(s => s.setLiveModel);
 
   useEffect(() => {
     if (lastError) toast.error(lastError);
@@ -65,6 +84,19 @@ export function LivePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Select value={live_model} onValueChange={setLiveModel}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LIVE_MODELS.map(m => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {status !== 'connected' ? (
               <Button onClick={connect} disabled={status === 'connecting'}>
                 {status === 'connecting' ? 'Connecting…' : 'Connect'}

@@ -74,6 +74,7 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
     addThinkingStep,
     setPartialThoughtText,
     travelSettings,
+    llm_model,
   } = useChatStore();
 
   const sendMessage = useCallback(
@@ -112,6 +113,8 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
           max_flight_stops: travelSettings.max_flight_stops,
         };
 
+        console.log('[useChat] Sending request with llm_model:', llm_model);
+
         const req: ChatRequest = {
           message,
           session_id: effectiveSessionId,
@@ -119,11 +122,15 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
           generate_plan: generatePlan,
           trip_parameters: tripParams,
           user_preferences: prefs,
+          llm_model,
         };
+
+        console.log('[useChat] Full request:', JSON.stringify(req, null, 2));
         if (forceNewSessionNextMessage) setForceNewSessionNextMessage(false);
 
         // Use streaming for casual chat (generatePlan=false)
         if (!generatePlan) {
+          console.log('[useChat] Streaming path — llm_model in req:', req.llm_model);
           let fullText = '';
           let chunkCount = 0;
           let msgId: string | null = null;
@@ -418,6 +425,7 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
       addThinkingStep,
       setPartialThoughtText,
       travelSettings,
+      llm_model,
       onItinerary,
       onFinalizing,
       onError,

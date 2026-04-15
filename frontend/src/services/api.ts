@@ -166,6 +166,7 @@ export interface ChatRequest {
     purpose: string;
   };
   user_preferences?: Record<string, unknown>;
+  llm_model?: string;
 }
 
 export interface ChatResponse {

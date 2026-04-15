@@ -39,6 +39,10 @@ export interface ChatState {
   // Travel Settings
   travelSettings: TravelSettings;
 
+  // LLM Model selection
+  llm_model: string;
+  live_model: string;
+
   // Actions
   setSessionId: (id: string | null) => void;
   setMessages: (messages: Message[]) => void;
@@ -59,6 +63,8 @@ export interface ChatState {
   setPartialThoughtText: (text: string) => void;
   setTravelSettings: (settings: Partial<TravelSettings>) => void;
   resetTravelSettings: () => void;
+  setLlmModel: (model: string) => void;
+  setLiveModel: (model: string) => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -73,6 +79,9 @@ export const useChatStore = create<ChatState>(set => ({
   partialThoughtText: '',
 
   travelSettings: DEFAULT_TRAVEL_SETTINGS,
+
+  llm_model: 'gemini-3.1-flash-lite-preview',
+  live_model: 'gemini-3.1-flash-live-preview',
 
   setSessionId: id => set({ sessionId: id }),
   setMessages: messages => set({ messages }),
@@ -122,6 +131,10 @@ export const useChatStore = create<ChatState>(set => ({
     })),
 
   resetTravelSettings: () => set({ travelSettings: DEFAULT_TRAVEL_SETTINGS }),
+
+  setLlmModel: model => set({ llm_model: model }),
+
+  setLiveModel: model => set({ live_model: model }),
 }));
 
 // ─── Auth store re-exports ───────────────────────────────────────────────────
