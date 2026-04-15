@@ -591,22 +591,17 @@ async def stream_agent_response(
       - done:             stream complete
     """
     trace_id = trace_id or str(uuid4())
-    logger.bind(
-        event="stream_start",
-        service="chat",
-        trace_id=trace_id,
-        received_model=model,
-        default_model=settings.GEMINI_LITE_MODEL,
-    ).info("Stream start — model selection")
     model = model or settings.GEMINI_LITE_MODEL
-
+    user_selected = model != settings.GEMINI_LITE_MODEL
     logger.bind(
         event="stream_start",
         service="chat",
         trace_id=trace_id,
         model=model,
+        user_selected_model=user_selected,
+        default_model=settings.GEMINI_LITE_MODEL,
         session_id=session_id,
-    ).info("Unified streaming loop started")
+    ).info(f"Stream start — model={model} (user_selected={user_selected})")
 
     # ── Create assistant message in DB ──────────────────────────────────────────
     assistant_msg = append_message(

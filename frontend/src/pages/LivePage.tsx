@@ -47,6 +47,13 @@ export function LivePage() {
   const live_model = useChatStore(s => s.live_model);
   const setLiveModel = useChatStore(s => s.setLiveModel);
 
+  const handleModelChange = (val: string) => {
+    const defaultModel = 'gemini-3.1-flash-live-preview';
+    const userSelected = val !== defaultModel;
+    console.log('[LivePage] model selected: %s | user_selected=%s', val, userSelected);
+    setLiveModel(val);
+  };
+
   useEffect(() => {
     if (lastError) toast.error(lastError);
   }, [lastError]);
@@ -84,7 +91,7 @@ export function LivePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Select value={live_model} onValueChange={setLiveModel}>
+            <Select value={live_model} onValueChange={handleModelChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue />
               </SelectTrigger>

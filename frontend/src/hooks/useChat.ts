@@ -113,7 +113,13 @@ export function useChat({ onItinerary, onFinalizing, onError, onTripSaved }: Use
           max_flight_stops: travelSettings.max_flight_stops,
         };
 
-        console.log('[useChat] Sending request with llm_model:', llm_model);
+        const defaultModel = 'gemini-3.1-flash-lite-preview';
+        const userSelectedModel = llm_model && llm_model !== defaultModel;
+        console.log(
+          '[useChat] Sending request | llm_model=%s | user_selected=%s',
+          llm_model,
+          userSelectedModel
+        );
 
         const req: ChatRequest = {
           message,
