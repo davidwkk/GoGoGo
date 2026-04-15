@@ -100,10 +100,10 @@ DEMO_ITINERARY = {
             "check_out_date": "2026-05-19",
             "price_per_night_hkd": {"min": 2800, "max": 4500},
             "star_rating": 5,
-            "guest_rating": 9.2,
+            "guest_rating": 4.5,
             "hotel_class_int": 5,
             "reviews": 8743,
-            "location_rating": 9.4,
+            "location_rating": 4.4,
             "amenities": [
                 "Infinity pool",
                 "Spa",
