@@ -34,6 +34,13 @@ const ActivityImage = ({
           setLoading(false);
           return;
         }
+        // imageUrl exists but broken — don't fetch Wikipedia, use fallback
+        if (isMounted) {
+          const safeName = encodeURIComponent(name || 'travel');
+          setImgSrc(`https://picsum.photos/seed/${safeName}/800/600`);
+          setLoading(false);
+          return;
+        }
       }
 
       // 2. Fire BOTH Wikipedia searches in parallel (Queue protects us!)
