@@ -394,7 +394,7 @@ async def finalize_trip_plan(
         event="llm_request",
         service="chat",
         event_type="finalize_trip_plan",
-        model=settings.GEMINI_LITE_MODEL,
+        model=settings.GEMINI_MODEL,
         messages_count=len(final_contents),
         config=finalize_config_log,
         messages_preview=[
@@ -410,13 +410,13 @@ async def finalize_trip_plan(
             for i in range(len(finalize_messages_log))
         ],
     ).debug(
-        f"🤖 LLM finalize_trip_plan request | model={settings.GEMINI_LITE_MODEL} | "
+        f"🤖 LLM finalize_trip_plan request | model={settings.GEMINI_MODEL} | "
         f"messages={len(final_contents)} | config={finalize_config_log}"
     )
 
     def sync_generate():
         return client.models.generate_content(
-            model=settings.GEMINI_LITE_MODEL,
+            model=settings.GEMINI_MODEL,
             contents=final_contents,
             config=config,
         )
@@ -431,7 +431,7 @@ async def finalize_trip_plan(
             event="llm_tokens",
             service="chat",
             event_type="finalize_trip_plan",
-            model=settings.GEMINI_LITE_MODEL,
+            model=settings.GEMINI_MODEL,
             prompt_tokens=usage.prompt_token_count,
             completion_tokens=usage.candidates_token_count,
             total_tokens=usage.total_token_count,
@@ -446,7 +446,7 @@ async def finalize_trip_plan(
         event="llm_response",
         service="chat",
         event_type="finalize_trip_plan",
-        model=settings.GEMINI_LITE_MODEL,
+        model=settings.GEMINI_MODEL,
         response_text=(response.text or "")[:20000],
     ).debug(f"🤖 LLM finalize_trip_plan response: {(response.text or '')[:20000]}")
 
@@ -624,15 +624,16 @@ async def stream_agent_response(
       - done:             stream complete
     """
     trace_id = trace_id or str(uuid4())
-    model = model or settings.GEMINI_LITE_MODEL
-    user_selected = model != settings.GEMINI_LITE_MODEL
+    default_model = settings.GEMINI_MODEL
+    model = model or default_model
+    user_selected = model != default_model
     logger.bind(
         event="stream_start",
         service="chat",
         trace_id=trace_id,
         model=model,
         user_selected_model=user_selected,
-        default_model=settings.GEMINI_LITE_MODEL,
+        default_model=default_model,
         session_id=session_id,
     ).info(f"Stream start — model={model} (user_selected={user_selected})")
 
@@ -673,11 +674,7 @@ async def stream_agent_response(
             "search_flights (TWICE for round-trips), search_hotels, get_weather, get_attraction (at least once each). "
             "Takes NO arguments — reads trip details from the conversation history."
         ),
-        parameters_json_schema={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
+        parameters=None,
     )
 
     # ── Load conversation history from DB ────────────────────────────────────

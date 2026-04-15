@@ -136,12 +136,13 @@ async def chat_stream(
         force_new_session=body.force_new_session,
         proxy_enabled=settings.LLM_PROXY_ENABLED,
         proxy_url=settings.SOCKS5_PROXY_URL if settings.LLM_PROXY_ENABLED else None,
-        model=body.llm_model or settings.GEMINI_LITE_MODEL,
+        model=body.llm_model or settings.GEMINI_MODEL,
         has_preferences=prefs_dict is not None,
         preferences_keys=list(prefs_dict.keys()) if prefs_dict else [],
     ).info(
         f"[{call_id}] Chat stream request | user={user_id} | session={session.id} | "
         f"msg_len={len(body.message)} | proxy={settings.LLM_PROXY_ENABLED} | "
+        f"model={body.llm_model or settings.GEMINI_MODEL} | "
         f"prefs={bool(prefs_dict)}"
     )
 
