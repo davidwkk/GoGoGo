@@ -1,20 +1,41 @@
-David:
+# POST_DEMO TODO
 
-1. Remove 2.5 flash lite model from the list of available models since it is incapable of doing the task.
-2. Add a checklist section in both frontend and backend for better UIUX.
+## David
+
+**Bug Fix:**
+
+- [ ] (none currently)
+
+**Features:**
+
+- [ ] Remove 2.5 Flash Lite model from available models list — it's incapable of the required task
+- [ ] Add checklist section to both frontend and backend for better UX
+
+---
+
+## Minqi
+
+**Bug Fix:**
+
+- [ ] Fix favorite/unmark behavior — after unmarking a live session, it should return to its original position, not stay at the top
+
+**Features:**
+
+- [ ] Add "Clear all live session" button — user can wipe all sessions with one click
+- [ ] Live page layout polish:
+  - Make layout more uniform and aesthetic (especially when no live history sessions exist)
+  - 'Clear transcript' button should have border + filled color (like the 'Connect' button)
 
 ---
 
-Minqi:
+## Xuan
 
-1. Bug Fix: After marking a live session as favorite and unmark it, it will stay on top instead of going back to the original position. This is not the expected behavior, the unmarked session should go back to its original position instead of staying at the top.
-2. Feature: Clear all live session button. User should be able to clear all sections by clicking 1 button.
-3. Live page layout fix: make it more uniform and aesthetic. Especially the layout without the live history session. And the 'Clear transcript' button should also have a border with filled color just like the 'connect' button next to it.
+**Bug Fix:**
 
----
+- [ ] Fix 'Your trip plan is ready below' not showing on first render — only appears after refreshing the chat session
 
-Xuan:
+**Features:**
 
-1. Add a Shareable Trip Plans feature. The user should be able to generate a link to view the plan or simply export the trip plan to PDF.
-
----
+- [ ] Shareable Trip Plans feature:
+  - Export trip plan to PDF
+  - Generate a shareable link to view the plan
