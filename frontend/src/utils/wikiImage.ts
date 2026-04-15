@@ -1,3 +1,19 @@
+export const BACKEND_ORIGIN = import.meta.env.VITE_API_URL
+  ? new URL(import.meta.env.VITE_API_URL).origin
+  : 'http://localhost:8000';
+
+/**
+ * Convert relative /images/ paths to full backend URLs.
+ * Leaves absolute URLs (external images) unchanged.
+ */
+export function getBackendImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('/images/')) {
+    return `${BACKEND_ORIGIN}${url}`;
+  }
+  return url;
+}
+
 const VALID_IMAGE_TYPES = new Set([
   'image/jpeg',
   'image/png',
