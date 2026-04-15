@@ -48,9 +48,14 @@ export const FlightCard = ({
             {flight.departure_airport}
           </p>
           <p className="text-[11px] text-slate-400 font-bold uppercase">
-            {new Date(flight.departure_time).toLocaleTimeString([], {
+            {new Date(
+              flight.departure_time.endsWith('Z')
+                ? flight.departure_time.slice(0, -1)
+                : flight.departure_time
+            ).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
+              timeZone: 'Asia/Hong_Kong',
             })}
           </p>
         </div>
@@ -73,9 +78,14 @@ export const FlightCard = ({
             {flight.arrival_airport}
           </p>
           <p className="text-[11px] text-slate-400 font-bold uppercase">
-            {new Date(flight.arrival_time).toLocaleTimeString([], {
+            {new Date(
+              flight.arrival_time.endsWith('Z')
+                ? flight.arrival_time.slice(0, -1)
+                : flight.arrival_time
+            ).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
+              timeZone: 'Asia/Hong_Kong',
             })}
           </p>
         </div>
