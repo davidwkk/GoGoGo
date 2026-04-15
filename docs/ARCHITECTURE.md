@@ -8,16 +8,17 @@ GoGoGo is a travel agent AI app. Users chat with an AI to plan trips, receiving 
 
 ## Tech Stack
 
-| Layer            | Technology                                                                        |
-| ---------------- | --------------------------------------------------------------------------------- |
-| Backend          | FastAPI + SQLAlchemy 2.0 + PostgreSQL 16                                          |
-| ORM / Migrations | Alembic                                                                           |
-| Auth             | JWT (python-jose) + passlib bcrypt                                                |
-| Agent            | Google Gemini 3 Flash + Gemini 3.1 Flash-Lite                                     |
-| Tools            | Tavily (search), SerpAPI (flights/hotels), OpenWeatherMap, Google Maps, Wikipedia |
-| Frontend         | React 18 + Vite + React Router + Zustand                                          |
-| UI               | shadcn/ui + Tailwind CSS                                                          |
-| Voice            | Web Speech API (ASR + TTS)                                                        |
+| Layer            | Technology                                                             |
+| ---------------- | ---------------------------------------------------------------------- |
+| Backend          | FastAPI + SQLAlchemy 2.0 + PostgreSQL 16                               |
+| ORM / Migrations | Alembic                                                                |
+| Auth             | JWT (python-jose) + bcrypt (direct)                                    |
+| Agent            | Google Gemini 3 Flash + Gemini 3.1 Flash-Lite + Gemini Live            |
+| Tools            | Tavily (search), SerpAPI (flights/hotels), OpenWeatherMap, Google Maps |
+| Frontend         | React 18 + Vite + React Router + Zustand                               |
+| UI               | shadcn/ui + Tailwind CSS                                               |
+| Voice I/O        | Web Speech API (ASR + TTS) + Gemini Live (WebSocket)                   |
+| Proxy            | SOCKS5 proxy support for LLM calls (optional VPN routing)              |
 
 ---
 
@@ -25,29 +26,32 @@ GoGoGo is a travel agent AI app. Users chat with an AI to plan trips, receiving 
 
 ```
 backend/
-├── main.py                     # FastAPI app, lifespan, router registration
+├── main.py                       # FastAPI app, lifespan, router registration
 ├── core/
-│   ├── config.py                # pydantic-settings (env vars)
-│   ├── security.py             # JWT encode/decode, password hashing
-│   ├── logging.py              # Loguru setup
-│   └── middleware.py            # CORS
+│   ├── config.py                 # pydantic-settings (env vars, backup models, proxy)
+│   ├── security.py               # JWT encode/decode, bcrypt password hashing
+│   ├── logging.py                # Loguru setup
+│   └── middleware.py              # CORS
 ├── api/
-│   ├── deps.py                  # get_db, get_current_user (JWT)
+│   ├── deps.py                   # get_db, get_current_user, get_current_user_optional
 │   └── routes/
-│       ├── auth.py              # POST /auth/register, POST /auth/login
-│       ├── chat.py              # POST /chat/stream (SSE)
-│       ├── chat_sessions.py     # GET /chat/sessions/{id}/messages
-│       ├── health.py            # GET /health
-│       ├── trips.py             # GET/POST/DELETE /trips
-│       └── users.py             # GET/PATCH /users/me
+│       ├── auth.py               # POST /auth/register, POST /auth/login
+│       ├── chat.py               # POST /chat/stream (SSE)
+│       ├── chat_sessions.py      # GET /chat/sessions/{id}/messages
+│       ├── live.py                # WebSocket /live/ws (Gemini Live proxy)
+│       ├── health.py             # GET /health
+│       ├── trips.py              # GET/POST/DELETE /trips
+│       └── users.py              # GET/PATCH /users/me
 ├── db/
-│   ├── base.py                  # SQLAlchemy Base
+│   ├── base.py                   # SQLAlchemy Base
+│   ├── session.py                # get_db dependency
 │   └── models/
-│       ├── user.py              # User (id, username, email, hashed_password, created_at)
-│       ├── chat_session.py       # ChatSession (id, user_id, created_at)
-│       ├── message.py            # Message (id, session_id, role, content, created_at)
-│       ├── trip.py               # Trip (id, user_id, session_id, itinerary_json, created_at)
-│       └── preference.py         # UserPreference (id, user_id, preferences_json)
+│       ├── user.py               # User (id, username, email, hashed_password, created_at)
+│       ├── guest.py              # Guest (id, created_at) — anonymous sessions
+│       ├── chat_session.py       # ChatSession (id, user_id, guest_id, created_at)
+│       ├── message.py            # Message (id, session_id, role, content, message_type)
+│       ├── trip.py               # Trip (id, user_id, session_id, itinerary_json)
+│       └── preference.py         # UserPreference (id, user_id, preferences_json, updated_at)
 ├── repositories/
 │   ├── user_repo.py
 │   ├── session_repo.py
@@ -55,39 +59,45 @@ backend/
 │   ├── trip_repo.py
 │   └── preference_repo.py
 ├── services/
-│   ├── streaming_service.py     # SSE agent loop, stream_agent_response(), TOOL_MAP
-│   ├── message_service.py       # Append user/agent/trip messages
+│   ├── streaming_service.py      # SSE agent loop, stream_agent_response()
+│   ├── message_service.py        # Append user/assistant/trip messages
 │   ├── preference_service.py     # Extract preferences via Gemini Flash-Lite
-│   ├── trip_service.py          # Save/list trips
-│   └── user_service.py          # Get/update user profile
+│   ├── trip_service.py           # Save/list trips
+│   └── user_service.py           # Get/update user profile
 ├── agent/
-│   ├── __init__.py              # Empty shim with lazy-import comment
-│   ├── schemas.py               # Lightweight Pydantic models for tool responses
-│   ├── callbacks.py             # Logging helpers (defined but unused)
+│   ├── schemas.py                # Lightweight Pydantic models for tool responses
+│   ├── callbacks.py              # Logging helpers
 │   └── tools/
-│       ├── __init__.py          # Tool registration, _make_sync wrapper, ALL_TOOLS, TOOL_MAP
-│       ├── search.py            # Tavily + SerpAPI fallback
-│       ├── flights.py           # SerpAPI Google Flights
-│       ├── hotels.py            # SerpAPI Google Hotels
-│       ├── weather.py           # OpenWeatherMap
-│       ├── maps.py              # Google Maps URL builder
-│       ├── transport.py         # SerpAPI Google Maps (route/transport)
-│       └── attractions.py       # Wikipedia REST API
-└── schemas/
-    ├── chat.py                  # ChatStreamRequest, ChatMessage
-    ├── user.py                  # UserCreate, UserUpdate, UserResponse, UserPreference
-    ├── enums.py                 # All enums (TravelStyle, HotelTier, etc.)
-    └── itinerary.py             # TripItinerary, DayPlan, FlightItem, HotelItem, etc.
+│       ├── __init__.py           # Tool registry, _make_sync wrapper, ALL_TOOLS, TOOL_MAP
+│       ├── search.py             # Tavily + SerpAPI fallback
+│       ├── flights.py            # SerpAPI Google Flights (round-trip with departure_token)
+│       ├── hotels.py             # SerpAPI Google Hotels
+│       ├── weather.py            # OpenWeatherMap
+│       ├── maps.py               # Google Maps URL builder (embed + static)
+│       ├── transport.py          # SerpAPI Google Maps (route/transport)
+│       └── attractions.py        # Wikipedia REST API
+├── schemas/
+│   ├── auth.py                   # RegisterRequest, LoginRequest, TokenResponse
+│   ├── chat.py                   # ChatRequest, ChatStreamRequest
+│   ├── user.py                   # UserCreate, UserUpdate, UserResponse
+│   ├── enums.py                 # All enums (TravelStyle, HotelTier, etc.)
+│   └── itinerary.py             # TripItinerary, DayPlan, FlightItem, HotelItem, etc.
+└── utils/
+    └── stream_utils.py           # Proxy reachability checks
 ```
 
 ### Database Schema
 
 ```
 users
-├── id (PK)
+├── id (PK, UUID)
 ├── username
 ├── email (unique)
 ├── hashed_password
+└── created_at
+
+guests
+├── id (PK, UUID)
 └── created_at
 
 user_preferences
@@ -98,18 +108,20 @@ user_preferences
 
 chat_sessions
 ├── id (PK)
-├── user_id (FK → users.id)
+├── user_id (FK → users.id, nullable)
+├── guest_id (FK → guests.id, nullable)
 └── created_at
 
 messages
 ├── id (PK)
 ├── session_id (FK → chat_sessions.id)
-├── role ("user" | "assistant")
+├── role ("user" | "assistant" | "function")
 ├── content
+├── message_type ("text" | "itinerary" | "tool_result", nullable)
 └── created_at
 
 trips
-├── id (PK)
+├── id (PK, UUID)
 ├── user_id (FK → users.id)
 ├── session_id (FK → chat_sessions.id)
 ├── itinerary_json (JSONB)
@@ -122,147 +134,148 @@ trips
 
 ```
 frontend/src/
-├── App.tsx                     # Router — BrowserRouter + Routes
-├── main.tsx                   # ReactDOM.createRoot
-├── index.css                  # Tailwind + CSS variables (light/dark)
-├── lib/utils.ts               # cn() utility
+├── App.tsx                      # Router — BrowserRouter + Routes
+├── main.tsx                    # ReactDOM.createRoot
+├── index.css                   # Tailwind + CSS variables (light/dark)
+├── lib/utils.ts                # cn() utility
 ├── services/
-│   ├── api.ts                 # Axios client with JWT interceptor
-│   └── tripService.ts         # GET/DELETE /trips
+│   ├── api.ts                  # Axios client with JWT interceptor
+│   ├── authService.ts          # Login/register
+│   └── tripService.ts          # GET/DELETE /trips
 ├── store/
-│   └── index.ts               # Zustand store (chat state + voice)
+│   ├── index.ts                # Zustand store (chat state + voice)
+│   └── authStore.ts            # Zustand auth store (token, user)
 ├── hooks/
-│   ├── useChat.ts             # POST /chat/stream (SSE), handle response
-│   ├── useASR.ts              # Web Speech API (mic → transcript)
-│   └── useTTS.ts              # Web Speech Synthesis (text → speech)
+│   ├── useChat.ts              # POST /chat/stream (SSE)
+│   ├── useASR.ts               # Web Speech API (mic → transcript)
+│   ├── useTTS.ts               # Web Speech Synthesis (text → speech)
+│   └── useLiveSession.ts       # WebSocket session for Gemini Live voice
 ├── components/
 │   ├── layout/
-│   │   └── Sidebar.tsx        # Left nav bar (fixed, 56px wide)
+│   │   ├── AppLayout.tsx       # Page wrapper with sidebar
+│   │   └── Sidebar.tsx         # Left nav (56px, icon-based)
 │   ├── chat/
-│   │   └── InputBar.tsx       # Text input + voice + send + generate plan
+│   │   ├── InputBar.tsx        # Text input + voice + send + generate plan
+│   │   └── TravelSettingsBar.tsx # Travel type selection bar
 │   ├── voice/
-│   │   ├── VoiceButton.tsx    # Mic toggle
-│   │   └── TTSPlayer.tsx      # Auto-play TTS on response
-│   └── ui/                    # shadcn/ui components (button, card, input, etc.)
+│   │   ├── VoiceButton.tsx     # Mic toggle
+│   │   └── TTSPlayer.tsx       # Auto-play TTS on response
+│   ├── trip/
+│   │   ├── FlightCard.tsx      # Flight details card
+│   │   ├── HotelCard.tsx        # Hotel details card
+│   │   ├── AttractionCard.tsx  # Attraction details card
+│   │   └── MapEmbed.tsx        # Google Maps embed iframe
+│   └── ui/                     # shadcn/ui components
 └── pages/
-    ├── ChatPage.tsx           # Sidebar + chat UI (messages + InputBar)
-    ├── LoginPage.tsx           # Full-screen login/register (no sidebar)
-    ├── ProfilePage.tsx         # Sidebar + User profile + preferences
-    └── TripPage.tsx           # Sidebar + Saved trips list + detail
+    ├── ChatPage.tsx            # Sidebar + chat UI
+    ├── LivePage.tsx            # Gemini Live voice chat
+    ├── TripPage.tsx            # Sidebar + saved trips list + detail
+    ├── ProfilePage.tsx         # Sidebar + user profile + preferences
+    ├── PreferencesPage.tsx     # User preferences editor
+    └── LoginPage.tsx           # Full-screen login/register
 ```
-
-### Layout Design Rule
-
-All main app pages (Chat, Trips, Profile) share a **single fixed sidebar on the left**:
-
-- Width: 56px
-- Top: black `GG` logo button (navigates to /chat)
-- Middle: icon nav (MessageSquare → /chat, Map → /trips, User → /profile)
-- Active route: filled black background; inactive: muted with hover states
-
-The remaining full-width area is the page's content. **LoginPage is full-screen with no sidebar.**
 
 ### Routing
 
-| Path       | Component   | Layout         |
-| ---------- | ----------- | -------------- |
-| `/`        | → redirect  | —              |
-| `/login`   | LoginPage   | Full-screen    |
-| `/chat`    | ChatPage    | Sidebar layout |
-| `/trips`   | TripPage    | Sidebar layout |
-| `/profile` | ProfilePage | Sidebar layout |
-| `*`        | → redirect  | —              |
-
-### API Client
-
-`apiClient` (Axios) sends requests directly to `VITE_API_URL || http://localhost:8000`. JWT token from `localStorage.getItem("token")` is attached via request interceptor as `Authorization: Bearer <token>`.
-
-### State Management
-
-Zustand store (`store/index.ts`) holds:
-
-- `ChatState`: `sessionId`, `messages[]`, `isLoading`, `voiceAvailable`
-- Actions: `setSessionId`, `addMessage`, `clearMessages`, `setLoading`
+| Path           | Component       | Layout         |
+| -------------- | --------------- | -------------- |
+| `/`            | → redirect      | —              |
+| `/login`       | LoginPage       | Full-screen    |
+| `/chat`        | ChatPage        | Sidebar layout |
+| `/live`        | LivePage        | Sidebar layout |
+| `/trips`       | TripPage        | Sidebar layout |
+| `/profile`     | ProfilePage     | Sidebar layout |
+| `/preferences` | PreferencesPage | Sidebar layout |
+| `*`            | → redirect      | —              |
 
 ---
 
 ## API Endpoints
 
-| Method | Path                           | Auth | Description                                    |
-| ------ | ------------------------------ | ---- | ---------------------------------------------- |
-| POST   | `/auth/register`               | —    | Register with email + username + password      |
-| POST   | `/auth/login`                  | —    | Login with email + password                    |
-| GET    | `/health`                      | —    | Health check                                   |
-| POST   | `/chat/stream`                 | JWT  | SSE stream: text chunks, tool calls, itinerary |
-| GET    | `/chat/sessions/{id}/messages` | JWT  | Get session message history                    |
-| GET    | `/users/me`                    | JWT  | Get current user profile                       |
-| PATCH  | `/users/me`                    | JWT  | Update username/preferences                    |
-| GET    | `/trips`                       | JWT  | List user's saved trips                        |
-| GET    | `/trips/{id}`                  | JWT  | Get single trip with full itinerary            |
-| DELETE | `/trips/{id}`                  | JWT  | Delete a saved trip                            |
+| Method | Path                           | Auth | Description                               |
+| ------ | ------------------------------ | ---- | ----------------------------------------- |
+| POST   | `/auth/register`               | —    | Register with email + username + password |
+| POST   | `/auth/login`                  | —    | Login with email + password               |
+| GET    | `/health`                      | —    | Health check                              |
+| POST   | `/chat/stream`                 | JWT  | SSE stream: text, tool calls, itinerary   |
+| GET    | `/chat/sessions/{id}/messages` | JWT  | Get session message history               |
+| WS     | `/live/ws`                     | JWT  | Gemini Live voice (WebSocket proxy)       |
+| GET    | `/users/me`                    | JWT  | Get current user profile                  |
+| PATCH  | `/users/me`                    | JWT  | Update username/preferences               |
+| GET    | `/trips`                       | JWT  | List user's saved trips                   |
+| GET    | `/trips/{id}`                  | JWT  | Get single trip with full itinerary       |
+| DELETE | `/trips/{id}`                  | JWT  | Delete a saved trip                       |
 
 ---
 
 ## Agent Loop
 
 ```
-User message
+User message → POST /chat/stream
     ↓
-POST /chat/stream → SSE streaming endpoint
+stream_agent_response() — up to MAX_TOOL_ROUNDS=20 or 120s timeout
     ↓
-stream_agent_response() in streaming_service.py
+Gemini 3 Flash (default) or user-selected model
     ↓
-[Loop up to MAX_TOOL_ROUNDS=20 or 120s timeout]
+[Loop]
+    ├─ Stream text chunks → SSE {"chunk": text}
+    ├─ Extract function_call parts
+    └─ If tool call:
+        ├─ finalize_trip_plan (intercepted locally):
+        │   → Validate all required tools called
+        │   → generate_content with response_json_schema=TripItinerary
+        │   → Yield SSE {"message_type": "itinerary", ...}
+        │   → Auto-save trip to DB if authenticated
+        │
+        └─ Regular tool (TOOL_MAP):
+            → await tool_fn(**args)
+            → Yield SSE {"tool_result": tool_name, "result": {...}}
+            → Persist to DB for cross-request context
+            → Continue loop
     ↓
-Gemini 3 Flash with automatic_function_calling=DISABLED
-    ↓
-Gemini generates content → stream chunks to client as SSE {"chunk": text}
-    ↓
-Extract function_call parts from response
-    ↓
-    ├─ finalize_trip_plan called:
-    │   → Intercept locally (NOT in TOOL_MAP)
-    │   → Validate all 4 required tools were called
-    │   → generate_content with response_json_schema=TripItinerary
-    │   → Yield SSE {"message_type": "itinerary", "itinerary": ...}
-    │   → Stream ends
-    │
-    └─ Regular tool (get_attraction, get_weather, search_web, etc.):
-        → Look up in TOOL_MAP
-        → await tool_fn(**args)
-        → Yield SSE {"tool_result": tool_name, "result": {...}}
-        → Append role="function" message to conversation
-        → Continue loop
-    ↓
-No function calls → Stream ends with {"done": True}
+No function calls → SSE {"done": True}
 ```
+
+### Tool Map
+
+| Tool               | Function                       |
+| ------------------ | ------------------------------ |
+| `get_attraction`   | Wikipedia REST API             |
+| `get_weather`      | OpenWeatherMap                 |
+| `search_web`       | Tavily + SerpAPI fallback      |
+| `search_flights`   | SerpAPI Google Flights         |
+| `search_hotels`    | SerpAPI Google Hotels          |
+| `get_transport`    | SerpAPI Google Maps transport  |
+| `build_embed_url`  | Google Maps embed URL builder  |
+| `build_static_url` | Google Maps static URL builder |
 
 ### SSE Event Types
 
 ```
-{"message_id": id}              # Assistant message ID on stream start
-{"chunk": text}                 # Streamed text content
-{"model_thought": thought}      # Gemini reasoning thoughts
-{"tool_call": name, "args": {}} # Tool call initiated
+{"message_id": id}                    # Assistant message ID on stream start
+{"chunk": text}                       # Streamed text content
+{"model_thought": thought}            # Gemini reasoning thoughts
+{"tool_call": name, "args": {}}       # Tool call initiated
 {"tool_result": name, "result": {}}  # Tool execution result
-{"message_type": "finalizing", "status": "generating_trip_plan"}
-{"message_type": "itinerary", "itinerary": {...}}
+{"message_type": "finalizing"}        # Trip plan generation started
+{"message_type": "itinerary", ...}    # Structured TripItinerary payload
 {"message_type": "error", "error": "..."}
-{"done": True}                  # Stream complete
+{"trip_saved": true}                  # Trip auto-saved to DB
+{"done": True}                        # Stream complete
 ```
 
 ---
 
 ## Key Design Decisions
 
-1. **Dict over Pydantic for mid-loop tool responses**: Tool functions return `dict` (not Pydantic models). The agent SDK serializes both equally, but Pydantic mid-loop adds validation overhead with no benefit since the agent doesn't enforce schemas on tool responses.
+1. **Dict over Pydantic for mid-loop tool responses**: Tool functions return `dict`. The agent SDK serializes both equally, but Pydantic mid-loop adds validation overhead with no benefit.
 
 2. **Module-level dict cache for transport**: `lru_cache` does NOT work on async functions. Use `_cache: dict[tuple, dict] = {}` pattern.
 
-3. **No redirects for auth**: Pages show their content first without backend calls when unauthenticated. No React Router redirects — users see the page and a sign-in prompt if needed.
+3. **finalize_trip_plan interception**: The `finalize_trip_plan` function is declared as a Gemini tool but intercepted locally (not in `TOOL_MAP`). It triggers a separate `generate_content` call with `response_json_schema=TripItinerary`.
 
-4. **Direct API calls over Vite proxy**: The `apiClient` points directly to the backend URL. The Vite proxy only handles `/auth` and `/health` (actual backend prefixes) — frontend routes like `/chat` are not proxied.
+4. **Thinking config**: Only enabled for 3.x model series. Disabled for 2.x (gemini-2.5-flash).
 
-5. **Manual tool dispatch over AutomaticFunctionCalling**: `automatic_function_calling` is disabled in Gemini config. Tool calls are manually extracted from the stream and dispatched via `TOOL_MAP` for full control over execution and DB persistence.
+5. **Guest sessions**: Anonymous users can chat but cannot save trips. Guest ID stored in `chat_sessions.guest_id`.
 
-6. **`finalize_trip_plan` interception**: The `finalize_trip_plan` function declaration is known to the model but is intercepted by name in the loop (not in `TOOL_MAP`). It triggers a separate `generate_content` call with `response_json_schema=TripItinerary` to produce structured output.
+6. **SOCKS5 proxy**: Optional VPN routing for LLM calls via `LLM_PROXY_ENABLED` + `SOCKS5_PROXY_URL` config.
