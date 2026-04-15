@@ -398,14 +398,12 @@ export function LivePage() {
                 New Live Chat
               </button>
             )}
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-semibold truncate">
-                {activeSection?.title ?? 'Live'}
-              </h1>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground max-w-xl">
-                One question at a time while the model speaks. Use Stop to end playback early;
-                transcript keeps the full text.
-              </p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {activeSection?.title ?? 'Live'}
+                </p>
+              </div>
             </div>
           </div>
 
