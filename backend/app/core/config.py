@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-3-flash-preview"
     GEMINI_LITE_MODEL: str = "gemini-3.1-flash-lite-preview"
     GEMINI_LIVE_MODEL: str = "gemini-3.1-flash-live-preview"
-    GEMINI_BACKUP_MODEL = "gemini-2.5-flash"
-    GEMINI_BACKUP_LITE_MODEL = "gemini-2.5-flash-lite"
-    GEMINI_BACKUP_LIVE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
+    GEMINI_BACKUP_MODEL: str = "gemini-2.5-flash"
+    GEMINI_BACKUP_LITE_MODEL: str = "gemini-2.5-flash-lite"
+    GEMINI_BACKUP_LIVE_MODEL: str = "gemini-2.5-flash-native-audio-preview-12-2025"
     SERPAPI_KEY: str
     TAVILY_API_KEY: str
     OPENWEATHER_API_KEY: str
