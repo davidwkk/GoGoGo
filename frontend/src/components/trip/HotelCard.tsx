@@ -2,6 +2,7 @@ import { Star, Building2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ImageLightbox } from '../common/ImageLightbox';
 import { MapEmbed } from './MapEmbed';
+import { getBackendImageUrl } from '@/utils/wikiImage';
 
 // --- ULTIMATE WIKI THROTTLE & RETRY SYSTEM ---
 const win = window as any;
@@ -128,10 +129,12 @@ export function HotelCard({ hotel }: { hotel: any }) {
       setLoading(true);
 
       // 1. Use backend image_url directly if available
-      if (hotel.image_url) {
-        const works = await checkImageWorks(hotel.image_url);
+      // Transform relative /images/ paths to full backend URLs
+      const backendImageUrl = getBackendImageUrl(hotel.image_url);
+      if (backendImageUrl) {
+        const works = await checkImageWorks(backendImageUrl);
         if (works && isMounted) {
-          setImgSrc(hotel.image_url);
+          setImgSrc(backendImageUrl);
           setLoading(false);
           return;
         }

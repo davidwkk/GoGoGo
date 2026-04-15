@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import type { Activity } from '@/types/trip';
 import { ImageLightbox } from '../common/ImageLightbox';
 import { MapEmbed } from './MapEmbed';
-import { checkImageWorks, getWikiImage } from '@/utils/wikiImage';
+import { checkImageWorks, getWikiImage, getBackendImageUrl } from '@/utils/wikiImage';
 
 const ActivityImage = ({
   imageUrl,
@@ -27,10 +27,12 @@ const ActivityImage = ({
       setLoading(true);
 
       // 1. Try provided backend image first
-      if (imageUrl) {
-        const works = await checkImageWorks(imageUrl);
+      // Transform relative /images/ paths to full backend URLs
+      const backendImageUrl = getBackendImageUrl(imageUrl);
+      if (backendImageUrl) {
+        const works = await checkImageWorks(backendImageUrl);
         if (works && isMounted) {
-          setImgSrc(imageUrl);
+          setImgSrc(backendImageUrl);
           setLoading(false);
           return;
         }
