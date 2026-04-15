@@ -355,7 +355,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
               </p>
             </div>
             <a
-              href={hotel.booking_link || '#'}
+              href={hotel.booking_url || '#'}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-xl active:scale-95 uppercase tracking-widest text-center inline-block"
