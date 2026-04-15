@@ -78,7 +78,7 @@ export function TravelSettingsBar() {
             value={travelSettings.travel_style}
             onValueChange={value => setTravelSettings({ travel_style: value as TravelStyle })}
           >
-            <SelectTrigger id="travel_style" className="w-[140px]">
+            <SelectTrigger id="travel_style" className="w-[160px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

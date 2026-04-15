@@ -135,6 +135,13 @@ export function HotelCard({ hotel }: { hotel: any }) {
           setLoading(false);
           return;
         }
+        // image_url exists but broken — don't fetch Wikipedia, use fallback
+        if (isMounted) {
+          const safeName = encodeURIComponent(hotel.name || 'hotel');
+          setImgSrc(`https://picsum.photos/seed/${safeName}/800/400`);
+          setLoading(false);
+          return;
+        }
       }
 
       // 2. Fire BOTH Wikipedia searches in parallel (Queue protects us!)

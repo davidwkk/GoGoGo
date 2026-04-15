@@ -229,7 +229,7 @@ export const DEFAULT_TRAVEL_SETTINGS: TravelSettings = {
   hotel_tier: 'mid_range',
   budget_min_hkd: 5000,
   budget_max_hkd: 20000,
-  max_flight_stops: 1,
+  max_flight_stops: 0,
   destination: '',
   start_date: '',
   end_date: '',

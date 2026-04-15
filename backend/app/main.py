@@ -15,6 +15,9 @@ setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/images", StaticFiles(directory="images"), name="images")
     yield
 
 
