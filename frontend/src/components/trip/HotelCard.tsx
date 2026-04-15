@@ -248,7 +248,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
             {(hotel.guest_rating || hotel.star_rating) && (
               <div className="flex items-center gap-1 bg-blue-500/20 px-2 py-0.5 rounded-md">
                 <span className="text-xs font-bold text-blue-300">
-                  {hotel.guest_rating || hotel.star_rating}/10
+                  {(hotel.guest_rating || hotel.star_rating).toFixed(1)}/5
                 </span>
                 {hotel.reviews && (
                   <span className="text-[10px] text-blue-200 ml-1">({hotel.reviews} reviews)</span>
@@ -260,7 +260,7 @@ export function HotelCard({ hotel }: { hotel: any }) {
             {hotel.location_rating != null && (
               <div className="flex items-center gap-1 text-emerald-400">
                 <MapPin className="size-3" />
-                <span className="text-xs font-bold">{hotel.location_rating}/10</span>
+                <span className="text-xs font-bold">{hotel.location_rating.toFixed(1)}/5</span>
               </div>
             )}
           </div>
