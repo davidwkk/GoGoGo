@@ -409,7 +409,7 @@ export function LivePage() {
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Select value={live_model} onValueChange={handleModelChange}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[240px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
