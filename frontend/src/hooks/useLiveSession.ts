@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react';
 
 import { useChatStore } from '@/store';
 
@@ -8,6 +17,13 @@ export interface LiveTranscriptItem {
   id: string;
   role: 'user' | 'model' | 'system';
   text: string;
+}
+
+export interface UseLiveSessionOptions {
+  /** When this changes, the WebSocket is closed and audio/mic state is reset (switching live sections). */
+  sectionKey: string;
+  transcripts: LiveTranscriptItem[];
+  setTranscripts: Dispatch<SetStateAction<LiveTranscriptItem[]>>;
 }
 
 type ServerMsg =
@@ -151,28 +167,32 @@ function downsampleTo16k(input: Float32Array, inRate: number): Int16Array {
   return out;
 }
 
-export function useLiveSession() {
+function ensurePlaybackContext(audioCtxRef: MutableRefObject<AudioContext | null>) {
+  if (!audioCtxRef.current) {
+    audioCtxRef.current = new AudioContext({ sampleRate: 24000 });
+    return audioCtxRef.current;
+  }
+  return audioCtxRef.current;
+}
+
+export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseLiveSessionOptions) {
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [lastError, setLastError] = useState<string | null>(null);
-  const [transcripts, setTranscripts] = useState<LiveTranscriptItem[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isModelResponding, setIsModelResponding] = useState(false);
-  /**
-   * Track how many user turns we submitted vs how many the server finished.
-   * Stale `turn_complete` after Stop is ignored for UI busy state.
-   */
+
+  const setTranscriptsRef = useRef(setTranscripts);
+  setTranscriptsRef.current = setTranscripts;
+
   const sentTurnsRef = useRef(0);
   const completedTurnsRef = useRef(0);
-  /** After Stop, allow sending the next question even if the server turn is still finishing. */
   const userUnlockedAfterStopRef = useRef(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const playheadRef = useRef<number>(0);
-  /** After user clicks Stop, drop audio chunks until the server finishes the turn. */
   const discardAudioUntilTurnCompleteRef = useRef(false);
   const isRecordingRef = useRef(false);
-  /** If the model never sends audio/transcript, unlock the UI after this delay. */
   const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -254,8 +274,14 @@ export function useLiveSession() {
 
   const applyTranscriptChunk = useCallback((role: 'user' | 'model' | 'system', text: string) => {
     if (!text) return;
-    setTranscripts(prev => {
+    setTranscriptsRef.current(prev => {
       const last = prev[prev.length - 1];
+      // After optimistic text send, Gemini may echo the same user line via input_transcription — skip duplicate.
+      if (role === 'user' && last?.role === 'user') {
+        const a = collapseInnerWhitespace(last.text).toLowerCase();
+        const b = collapseInnerWhitespace(text).toLowerCase();
+        if (a === b) return prev;
+      }
       if (last && last.role === role) {
         const merged = mergeStreamingTranscript(last.text, text);
         const display = role === 'model' ? normalizeModelTranscriptDisplay(merged) : merged;
@@ -265,6 +291,29 @@ export function useLiveSession() {
       return [...prev, { id: crypto.randomUUID(), role, text: display }];
     });
   }, []);
+
+  const hardResetConnection = useCallback(() => {
+    clearStallTimer();
+    wsRef.current?.close();
+    wsRef.current = null;
+    stopMic();
+    stopAudio();
+    setIsRecording(false);
+    isRecordingRef.current = false;
+    setIsModelResponding(false);
+    sentTurnsRef.current = 0;
+    completedTurnsRef.current = 0;
+    userUnlockedAfterStopRef.current = false;
+    discardAudioUntilTurnCompleteRef.current = false;
+    setStatus('idle');
+  }, [clearStallTimer, stopAudio, stopMic]);
+
+  useEffect(() => {
+    hardResetConnection();
+    return () => {
+      hardResetConnection();
+    };
+  }, [sectionKey, hardResetConnection]);
 
   const connect = useCallback(() => {
     if (wsRef.current) return;
@@ -284,12 +333,19 @@ export function useLiveSession() {
           .replace(/\/$/, '') + `/live/ws?model=${encodeURIComponent(live_model)}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
-      ws.onopen = () => setStatus('connected');
+      ws.onopen = () => {
+        if (wsRef.current !== ws) return;
+        setStatus('connected');
+        const ctx = ensurePlaybackContext(audioCtxRef);
+        void ctx.resume().catch(() => {});
+      };
       ws.onerror = () => {
+        if (wsRef.current !== ws) return;
         setStatus('error');
         setLastError('Live connection error');
       };
       ws.onclose = () => {
+        if (wsRef.current !== ws) return;
         clearStallTimer();
         wsRef.current = null;
         stopMic();
@@ -304,6 +360,7 @@ export function useLiveSession() {
         setStatus('idle');
       };
       ws.onmessage = evt => {
+        if (wsRef.current !== ws) return;
         try {
           const msg = JSON.parse(String(evt.data)) as ServerMsg;
           if (msg.type === 'transcript' && msg.text) {
@@ -373,22 +430,12 @@ export function useLiveSession() {
   }, [applyTranscriptChunk, clearStallTimer, refreshRespondingUi, stopAudio, stopMic]);
 
   const disconnect = useCallback(() => {
-    clearStallTimer();
-    wsRef.current?.close();
-    wsRef.current = null;
-    stopMic();
-    stopAudio();
-    setIsRecording(false);
-    isRecordingRef.current = false;
-    setIsModelResponding(false);
-    sentTurnsRef.current = 0;
-    completedTurnsRef.current = 0;
-    userUnlockedAfterStopRef.current = false;
-    discardAudioUntilTurnCompleteRef.current = false;
-    setStatus('idle');
-  }, [clearStallTimer, stopAudio, stopMic]);
+    hardResetConnection();
+  }, [hardResetConnection]);
 
-  const clear = useCallback(() => setTranscripts([]), []);
+  const clear = useCallback(() => {
+    setTranscriptsRef.current([]);
+  }, []);
 
   const sendText = useCallback(
     (text: string) => {
@@ -399,7 +446,13 @@ export function useLiveSession() {
       userUnlockedAfterStopRef.current = false;
       sentTurnsRef.current += 1;
       discardAudioUntilTurnCompleteRef.current = false;
-      setTranscripts(prev => [...prev, { id: crypto.randomUUID(), role: 'user', text: t }]);
+      const ctx = ensurePlaybackContext(audioCtxRef);
+      void ctx.resume().catch(() => {});
+
+      setTranscriptsRef.current(prev => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'user', text: t },
+      ]);
       refreshRespondingUi();
       scheduleStallWatchdog();
       wsSend({ type: 'text', text: t });
@@ -490,8 +543,8 @@ export function useLiveSession() {
       lastError,
     }),
     [
-      status,
       transcripts,
+      status,
       isRecording,
       isModelResponding,
       connect,
