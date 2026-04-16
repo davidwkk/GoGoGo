@@ -8,8 +8,11 @@
 
 **Features:**
 
-- [ ] Remove 2.5 Flash Lite model from available models list — it's incapable of the required task
+- [ ] Remove 2.5 Flash Lite model from available models list, Add pro models
+- [ ] Implement revise trip by re-prompting
 - [ ] Add checklist section to both frontend and backend for better UX
+- [ ] Add route tool
+- [ ] Implement route planning
 
 ---
 
