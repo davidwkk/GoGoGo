@@ -22,9 +22,11 @@
 **Features:**
 
 - [ ] Add "Clear all live session" button — user can wipe all sessions with one click
-- [ ] Live page layout polish:
+- [ ] Live page UX upgrades:
   - Make layout more uniform and aesthetic (especially when no live history sessions exist)
   - 'Clear transcript' button should have border + filled color (like the 'Connect' button)
+- [ ] Implement function: the agent is able to guide the user to provide all information needed for travel plan generation
+- [ ] Add a "Plan" buttion after all infromation given
 
 ---
 
