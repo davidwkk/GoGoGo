@@ -7,7 +7,8 @@
 # Fast path: commit runs lint/format on changed files only.
 # Heavy checks (pyright, tsc) run on git push via pre-push.
 #
-# Skip all hooks once: git commit --no-verify
+# Skip commit hooks: git commit --no-verify
+# Skip push hooks (fastest sync): git push --no-verify
 # Skip selected hooks: SKIP=pyright,frontend-typecheck git commit
 
 default_language_version:
@@ -25,6 +26,7 @@ repos:
         types_or: [python]
         pass_filenames: true
         always_run: false
+        stages: [commit]
 
       - id: ruff-format
         name: ruff (format)
@@ -35,6 +37,7 @@ repos:
         pass_filenames: true
         require_serial: true
         always_run: false
+        stages: [commit]
 
       - id: pyright
         name: pyright (type check)
@@ -58,6 +61,7 @@ repos:
         types_or: [ts, tsx]
         pass_filenames: true
         always_run: false
+        stages: [commit]
 
       - id: frontend-typecheck
         name: frontend typecheck
@@ -79,6 +83,7 @@ repos:
         types_or: [ts, tsx]
         pass_filenames: true
         always_run: false
+        stages: [commit]
 
   # Prettier: non-Python text config (changed files only)
   - repo: local
@@ -93,3 +98,4 @@ repos:
         pass_filenames: true
         require_serial: true
         always_run: false
+        stages: [commit]
