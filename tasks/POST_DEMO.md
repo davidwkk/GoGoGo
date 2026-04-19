@@ -4,7 +4,7 @@
 
 **Bug Fix:**
 
-- [ ] Fix favorite/unmark behavior — after unmarking a live session, it should return to its original position, not stay at the top
+- [x] Fix favorite/unmark behavior — after unmarking a live session, it should return to its original position, not stay at the top
 
 **Features:**
 
