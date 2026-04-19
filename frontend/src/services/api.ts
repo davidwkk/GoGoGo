@@ -95,6 +95,12 @@ export const handleAuthError = async (status: number, _endpoint: string): Promis
   return false;
 };
 
+/** Single issue from FastAPI `422` `detail` array */
+interface FastAPIValidationIssue {
+  loc?: (string | number)[];
+  msg: string;
+}
+
 // THE BOUNCER: Handle all errors and format them into APIError
 apiClient.interceptors.response.use(
   response => response,
@@ -121,8 +127,8 @@ apiClient.interceptors.response.use(
       if (data && data.detail) {
         // FastAPI validation errors return an array of issues
         if (Array.isArray(data.detail)) {
-          apiError.detail = data.detail
-            .map((err: any) => {
+          apiError.detail = (data.detail as FastAPIValidationIssue[])
+            .map(err => {
               const field = err.loc?.[err.loc.length - 1];
               // Sanitize the specific error message
               const safeMsg = sanitizeHTML(err.msg);

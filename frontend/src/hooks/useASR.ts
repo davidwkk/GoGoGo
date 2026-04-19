@@ -29,9 +29,40 @@ interface Callbacks {
   onError?: (error: string) => void;
 }
 
+/** Minimal Web Speech API types (not in default TS `lib.dom` in this project). */
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onresult: ((ev: SpeechRecognitionResultEvent) => void) | null;
+  onerror: ((ev: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+}
+interface SpeechRecognitionResultEvent {
+  results: {
+    length: number;
+    [index: number]: {
+      readonly isFinal: boolean;
+      [index: number]: { transcript: string };
+    };
+  };
+}
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+type WindowWithSpeech = Window & {
+  SpeechRecognition?: SpeechRecognitionCtor;
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
+};
+
 export function useASR({ onTranscript, onError }: UseASROptions) {
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const callbacksRef = useRef<Callbacks>({ onTranscript, onError });
   callbacksRef.current = { onTranscript, onError };
 
@@ -83,8 +114,8 @@ export function useASR({ onTranscript, onError }: UseASROptions) {
   }, [endSession]);
 
   const startRecognitionInstance = useCallback(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const w = window as WindowWithSpeech;
+    const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SpeechRecognition || !shouldContinueRef.current) return;
 
     const elapsed = Date.now() - sessionStartedAtRef.current;
@@ -102,7 +133,7 @@ export function useASR({ onTranscript, onError }: UseASROptions) {
       setIsListening(true);
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionResultEvent) => {
       armSilenceDeadline();
       let piece = '';
       for (let i = 0; i < event.results.length; i++) {
@@ -119,7 +150,7 @@ export function useASR({ onTranscript, onError }: UseASROptions) {
       });
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error === 'aborted') return;
       if (event.error === 'not-allowed') {
         shouldContinueRef.current = false;

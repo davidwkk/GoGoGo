@@ -47,8 +47,9 @@ services:
     ports:
       - '8000:8000'
     volumes:
-      - ./backend:/app
-      - ./backend/scripts:/app/scripts
+      # :cached mitigates macOS Docker bind-mount read errors (errno -35 / EDEADLK) on pyproject.toml etc.
+      - ./backend:/app:cached
+      - ./backend/scripts:/app/scripts:cached
       - ./backend/app/logs:/app/logs
     depends_on:
       db:

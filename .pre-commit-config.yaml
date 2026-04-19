@@ -1,13 +1,20 @@
 # Pre-commit hooks for GoGoGo project
 #
-# Install: uv run pre-commit install
-# Run manually: uv run pre-commit run --all-files
+# Install (commit + pre-push):
+#   uv run pre-commit install
+#   uv run pre-commit install --hook-type pre-push
+#
+# Fast path: commit runs lint/format on changed files only.
+# Heavy checks (pyright, tsc) run on git push via pre-push.
+#
+# Skip all hooks once: git commit --no-verify
+# Skip selected hooks: SKIP=pyright,frontend-typecheck git commit
 
 default_language_version:
   python: python3
 
 repos:
-  # Python: pyright type check and ruff check/format
+  # Python: ruff on changed files (commit); full pyright on push
   - repo: local
     hooks:
       - id: ruff-check
@@ -22,29 +29,30 @@ repos:
       - id: ruff-format
         name: ruff (format)
         entry: uv run ruff format
-        description: Run ruff format on Python files
+        description: Format changed Python files with ruff
         language: system
         types_or: [python]
-        pass_filenames: false
+        pass_filenames: true
         require_serial: true
         always_run: false
 
       - id: pyright
         name: pyright (type check)
         entry: bash -c 'cd backend && uv run pyright'
-        description: Run pyright type check on Python files
+        description: Run pyright on the backend (pre-push)
         language: system
         types_or: [python]
         pass_filenames: false
         always_run: false
+        stages: [pre-push]
 
-  # Frontend: ESLint + Prettier (TypeScript/JavaScript)
+  # Frontend: ESLint/Prettier on changed files (commit); full tsc on push
   - repo: local
     hooks:
       - id: frontend-lint
         name: frontend lint
-        entry: bash -c 'cd frontend && npm run lint'
-        description: Run ESLint on frontend TypeScript files
+        entry: bash -c 'cd frontend && paths=(); for p in "$@"; do paths+=("${p#frontend/}"); done; exec ./node_modules/.bin/eslint --max-warnings 0 "${paths[@]}"' --
+        description: ESLint on changed frontend files only (uses frontend/node_modules)
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
@@ -54,31 +62,34 @@ repos:
       - id: frontend-typecheck
         name: frontend typecheck
         entry: bash -c 'cd frontend && npx tsc --noEmit'
-        description: Run TypeScript type check on frontend files
+        description: TypeScript project check (pre-push)
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
         pass_filenames: false
         always_run: false
+        stages: [pre-push]
 
       - id: frontend-format
         name: frontend format
-        entry: npx prettier --write
-        description: Format frontend files with Prettier
+        entry: bash -c 'cd frontend && paths=(); for p in "$@"; do paths+=("${p#frontend/}"); done; exec ./node_modules/.bin/prettier --write "${paths[@]}"' --
+        description: Format changed frontend TS/TSX with Prettier
         language: system
         files: ^frontend/src/
         types_or: [ts, tsx]
         pass_filenames: true
         always_run: false
 
-  # Prettier: format all other files (JSON, YAML, MD, etc.)
+  # Prettier: non-Python text config (changed files only)
   - repo: local
     hooks:
       - id: prettier-format
         name: prettier format
-        entry: npx prettier --write --ignore-unknown
-        description: Format non-Python files with Prettier
+        entry: bash -c 'exec ./frontend/node_modules/.bin/prettier --write --ignore-unknown "$@"' --
+        description: Format changed JSON/YAML/MD/etc. with Prettier
         language: system
-        pass_filenames: false
+        types_or: [yaml, json, markdown, toml]
+        exclude: ^package-lock\.json$
+        pass_filenames: true
         require_serial: true
         always_run: false
