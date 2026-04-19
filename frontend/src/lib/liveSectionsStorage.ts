@@ -6,6 +6,8 @@ export interface LiveSectionPersisted {
   id: string;
   title: string;
   pinned: boolean;
+  /** `updatedAt` before pin; used to restore sidebar order after unpin */
+  pinnedOrderRestoreAt?: number;
   transcripts: LiveTranscriptItem[];
   createdAt: number;
   updatedAt: number;
@@ -23,14 +25,20 @@ export function loadLiveSectionsSnapshot(): LiveSectionsSnapshot | null {
     if (!raw) return null;
     const data = JSON.parse(raw) as Partial<LiveSectionsSnapshot>;
     if (!Array.isArray(data.sections) || data.sections.length === 0) return null;
-    const sections = data.sections.map(s => ({
-      id: String(s.id),
-      title: String(s.title || 'Live'),
-      pinned: Boolean(s.pinned),
-      transcripts: Array.isArray(s.transcripts) ? s.transcripts : [],
-      createdAt: Number(s.createdAt) || Date.now(),
-      updatedAt: Number(s.updatedAt) || Date.now(),
-    }));
+    const sections = data.sections.map(s => {
+      const rawPin = (s as { pinnedOrderRestoreAt?: unknown }).pinnedOrderRestoreAt;
+      const pinnedOrderRestoreAt =
+        rawPin != null && !Number.isNaN(Number(rawPin)) ? Number(rawPin) : undefined;
+      return {
+        id: String(s.id),
+        title: String(s.title || 'Live'),
+        pinned: Boolean(s.pinned),
+        ...(pinnedOrderRestoreAt != null ? { pinnedOrderRestoreAt } : {}),
+        transcripts: Array.isArray(s.transcripts) ? s.transcripts : [],
+        createdAt: Number(s.createdAt) || Date.now(),
+        updatedAt: Number(s.updatedAt) || Date.now(),
+      };
+    });
     let activeSectionId = String(data.activeSectionId || sections[0].id);
     if (!sections.some(s => s.id === activeSectionId)) {
       activeSectionId = sections[0].id;
