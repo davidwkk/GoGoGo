@@ -184,9 +184,7 @@ export function LivePage() {
       }
       setSnapshot(prev => ({
         ...prev,
-        sections: prev.sections.map(s =>
-          s.id === id ? { ...s, title: next, updatedAt: Date.now() } : s
-        ),
+        sections: prev.sections.map(s => (s.id === id ? { ...s, title: next } : s)),
       }));
       setEditingSectionId(null);
     },
@@ -196,9 +194,23 @@ export function LivePage() {
   const togglePin = useCallback((id: string, pinned: boolean) => {
     setSnapshot(prev => ({
       ...prev,
-      sections: prev.sections.map(s =>
-        s.id === id ? { ...s, pinned: !pinned, updatedAt: Date.now() } : s
-      ),
+      sections: prev.sections.map(s => {
+        if (s.id !== id) return s;
+        if (pinned) {
+          return {
+            ...s,
+            pinned: false,
+            updatedAt: s.pinnedOrderRestoreAt ?? s.updatedAt,
+            pinnedOrderRestoreAt: undefined,
+          };
+        }
+        return {
+          ...s,
+          pinned: true,
+          pinnedOrderRestoreAt: s.updatedAt,
+          updatedAt: Date.now(),
+        };
+      }),
     }));
   }, []);
 
