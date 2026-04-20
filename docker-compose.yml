@@ -47,8 +47,9 @@ services:
     ports:
       - '8000:8000'
     volumes:
-      - ./backend:/app
-      - ./backend/scripts:/app/scripts
+      # :cached mitigates macOS Docker bind-mount read errors (errno -35 / EDEADLK) on pyproject.toml etc.
+      - ./backend:/app:cached
+      - ./backend/scripts:/app/scripts:cached
       - ./backend/app/logs:/app/logs
     depends_on:
       db:
@@ -68,10 +69,14 @@ services:
     command: npm run dev -- --host
     environment:
       VITE_API_URL: http://localhost:8000/api/v1
+      # Stable file watching / fewer FS glitches with Docker Desktop bind mounts on macOS
+      CHOKIDAR_USEPOLLING: 'true'
+      WATCHPACK_POLLING: 'true'
     ports:
       - '5173:5173'
     volumes:
-      - ./frontend:/app
+      # :cached reduces macOS Docker file-sharing read errors (esbuild/vite errno -35)
+      - ./frontend:/app:cached
       - /app/node_modules
     healthcheck:
       test: ['CMD-SHELL', 'curl -s http://localhost:5173/ > /dev/null && echo ok']

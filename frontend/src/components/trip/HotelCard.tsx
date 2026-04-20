@@ -3,22 +3,40 @@ import { useState, useEffect } from 'react';
 import { ImageLightbox } from '../common/ImageLightbox';
 import { MapEmbed } from './MapEmbed';
 import { getBackendImageUrl } from '@/utils/wikiImage';
+import type { Hotel } from '@/types/trip';
+
+type WikiQueueEntry = {
+  url: string;
+  resolve: (value: Response) => void;
+  reject: (reason?: unknown) => void;
+};
+
+type WikiQueueSystem = {
+  queue: WikiQueueEntry[];
+  isProcessing: boolean;
+  cache: Map<string, string | null | Promise<string | null>>;
+  process: () => Promise<void>;
+  fetch: (url: string) => Promise<Response>;
+};
+
+type WindowWithWikiQueue = Window & { __wikiQueueSystem?: WikiQueueSystem };
 
 // --- ULTIMATE WIKI THROTTLE & RETRY SYSTEM ---
-const win = window as any;
+const wikiWindow = window as WindowWithWikiQueue;
 
-if (!win.__wikiQueueSystem) {
-  win.__wikiQueueSystem = {
+if (!wikiWindow.__wikiQueueSystem) {
+  wikiWindow.__wikiQueueSystem = {
     queue: [],
     isProcessing: false,
     cache: new Map(),
 
     process: async () => {
-      if (win.__wikiQueueSystem.isProcessing) return;
-      win.__wikiQueueSystem.isProcessing = true;
+      const q = wikiWindow.__wikiQueueSystem!;
+      if (q.isProcessing) return;
+      q.isProcessing = true;
 
-      while (win.__wikiQueueSystem.queue.length > 0) {
-        const { url, resolve, reject } = win.__wikiQueueSystem.queue[0]; // Peek at next
+      while (q.queue.length > 0) {
+        const { url, resolve, reject } = q.queue[0]; // Peek at next
         try {
           const res = await fetch(url);
 
@@ -28,10 +46,10 @@ if (!win.__wikiQueueSystem) {
             continue; // Retry the exact same request!
           }
 
-          win.__wikiQueueSystem.queue.shift(); // Remove from queue
+          q.queue.shift(); // Remove from queue
           resolve(res);
         } catch (e) {
-          win.__wikiQueueSystem.queue.shift();
+          q.queue.shift();
           reject(e);
         }
 
@@ -39,17 +57,20 @@ if (!win.__wikiQueueSystem) {
         await new Promise(r => setTimeout(r, 500));
       }
 
-      win.__wikiQueueSystem.isProcessing = false;
+      q.isProcessing = false;
     },
 
     fetch: (url: string) => {
       return new Promise((resolve, reject) => {
-        win.__wikiQueueSystem.queue.push({ url, resolve, reject });
-        win.__wikiQueueSystem.process();
+        const q = wikiWindow.__wikiQueueSystem!;
+        q.queue.push({ url, resolve, reject });
+        q.process();
       });
     },
   };
 }
+
+const win = wikiWindow as WindowWithWikiQueue & { __wikiQueueSystem: WikiQueueSystem };
 
 const getWikiImage = async (searchQuery: string): Promise<string | null> => {
   if (!searchQuery) return null;
@@ -111,7 +132,15 @@ const checkImageWorks = (url: string): Promise<boolean> => {
   });
 };
 
-export function HotelCard({ hotel }: { hotel: any }) {
+/** Chat/SERP may attach extra display-only fields beyond `Hotel`. */
+export type HotelCardHotel = Hotel & {
+  location?: string | null;
+  city?: string | null;
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+};
+
+export function HotelCard({ hotel }: { hotel: HotelCardHotel }) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

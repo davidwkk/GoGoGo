@@ -13,6 +13,11 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    watch: {
+      // Docker Desktop (macOS) bind mounts: avoid flaky reads / missed events
+      usePolling: true,
+      interval: 1000,
+    },
     proxy: {
       '/api/v1': {
         target: 'http://localhost:8000',
