@@ -26,7 +26,7 @@ repos:
         types_or: [python]
         pass_filenames: true
         always_run: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: ruff-format
         name: ruff (format)
@@ -37,7 +37,7 @@ repos:
         pass_filenames: true
         require_serial: true
         always_run: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: pyright
         name: pyright (type check)
@@ -61,7 +61,7 @@ repos:
         types_or: [ts, tsx]
         pass_filenames: true
         always_run: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: frontend-typecheck
         name: frontend typecheck
@@ -83,7 +83,7 @@ repos:
         types_or: [ts, tsx]
         pass_filenames: true
         always_run: false
-        stages: [commit]
+        stages: [pre-commit]
 
   # Prettier: non-Python text config (changed files only)
   - repo: local
@@ -98,4 +98,4 @@ repos:
         pass_filenames: true
         require_serial: true
         always_run: false
-        stages: [commit]
+        stages: [pre-commit]
