@@ -8,7 +8,7 @@
 
 **Features:**
 
-- [ ] Implement function: the agent is able to guide the user to provide all information needed for travel plan generation
+- [x] Implement function: the agent is able to guide the user to provide all information needed for travel plan generation
 ---
 
 ## Xuan
