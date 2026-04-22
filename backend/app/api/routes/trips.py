@@ -1,7 +1,11 @@
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, verify_user_exists
+from app.schemas.trip import TripCreate
+from app.services.trip_service import save_trip
 from app.services.trip_service import get_trip, get_trips
 
 router = APIRouter()
@@ -16,6 +20,20 @@ def list_trips(
     user_id = current_user["user_id"]
     verify_user_exists(user_id, db)
     return get_trips(db, user_id)
+
+
+@router.post("")
+def create_trip(
+    body: TripCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create (save) a new trip itinerary for the current user."""
+    user_id = current_user["user_id"]
+    verify_user_exists(user_id, db)
+    trace_id = str(uuid4())
+    # session_id is optional here; Live uses manual save after plan generation
+    return save_trip(db, user_id, session_id=None, itinerary=body.itinerary, trace_id=trace_id)
 
 
 @router.get("/{trip_id}")
