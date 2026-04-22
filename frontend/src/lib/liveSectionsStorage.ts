@@ -1,4 +1,5 @@
 import type { LiveTranscriptItem } from '@/hooks/useLiveSession';
+import type { TripItinerary } from '@/types/trip';
 
 export const LIVE_SECTIONS_STORAGE_KEY = 'gogogo-live-sections-v1';
 
@@ -9,6 +10,11 @@ export interface LiveSectionPersisted {
   /** `updatedAt` before pin; used to restore sidebar order after unpin */
   pinnedOrderRestoreAt?: number;
   transcripts: LiveTranscriptItem[];
+  /** Last generated trip plan (from SSE planning endpoint), if any */
+  lastItinerary?: TripItinerary | Record<string, unknown> | null;
+  /** Planning/tool steps for the most recent plan generation (UI-only). */
+  planningSteps?: string[];
+  planningExpanded?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -35,6 +41,15 @@ export function loadLiveSectionsSnapshot(): LiveSectionsSnapshot | null {
         pinned: Boolean(s.pinned),
         ...(pinnedOrderRestoreAt != null ? { pinnedOrderRestoreAt } : {}),
         transcripts: Array.isArray(s.transcripts) ? s.transcripts : [],
+        lastItinerary:
+          (s as { lastItinerary?: unknown }).lastItinerary &&
+          typeof (s as { lastItinerary?: unknown }).lastItinerary === 'object'
+            ? ((s as { lastItinerary?: unknown }).lastItinerary as Record<string, unknown>)
+            : null,
+        planningSteps: Array.isArray((s as { planningSteps?: unknown }).planningSteps)
+          ? ((s as { planningSteps?: unknown }).planningSteps as string[])
+          : [],
+        planningExpanded: Boolean((s as { planningExpanded?: unknown }).planningExpanded),
         createdAt: Number(s.createdAt) || Date.now(),
         updatedAt: Number(s.updatedAt) || Date.now(),
       };
@@ -68,6 +83,9 @@ export function createDefaultLiveSnapshot(): LiveSectionsSnapshot {
         title: 'New Live Chat 1',
         pinned: false,
         transcripts: [],
+        lastItinerary: null,
+        planningSteps: [],
+        planningExpanded: false,
         createdAt: now,
         updatedAt: now,
       },

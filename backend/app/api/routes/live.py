@@ -14,12 +14,19 @@ import json
 import traceback
 import time
 from typing import Any, Literal, TypedDict
+from uuid import uuid4
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from google.genai import Client, types
 from loguru import logger
 
 from app.core.config import settings
+from app.db.session import get_db
+from app.api.deps import get_current_user_optional, verify_user_exists
+from app.schemas.chat import ChatRequest
+from app.services.message_service import append_message, resolve_session
+from app.services.streaming_service import stream_agent_response
 
 router = APIRouter()
 
@@ -67,6 +74,27 @@ _CTX_LOCK = asyncio.Lock()
 _CTX_STORE: dict[str, list[_CtxMsg]] = {}
 
 
+# ── System prompt for Live sessions ─────────────────────────────────────────────
+#
+# Live mode returns transcripts (often from audio). To keep behavior consistent
+# with the Chat page, we inject a compact system instruction into the first user
+# turn for each WebSocket connection (and also include any replayed context).
+#
+# IMPORTANT: Keep instructions short to avoid token blowups.
+_LIVE_SYSTEM_PROMPT = "\n".join(
+    [
+        "System: You are GoGoGo, a travel-agent assistant.",
+        "System: Your goal is to plot a travel plan for Hong Kong users.",
+        "System: Departure defaults to Hong Kong unless user specifies otherwise.",
+        "System: Transport preference order: Flight first, then High Speed Railway.",
+        "System: When information is missing, ask for: Destination, Dates, Purpose, Group size, Budget (HKD), and special preferences.",
+        "System: You may include useful links (hotels/attractions), and maps when relevant.",
+        "System: Output can be plain text or Markdown.",
+        "System: If you output structured data, put it in a fenced code block like ```json ... ``` to preserve formatting.",
+    ]
+)
+
+
 def _ctx_prune(now: float) -> None:
     expired_keys: list[str] = []
     for k, msgs in _CTX_STORE.items():
@@ -80,29 +108,38 @@ def _ctx_prune(now: float) -> None:
 
 
 def _ctx_compose_prompt(msgs: list[_CtxMsg]) -> str:
-    # Keep it short-ish to avoid blowing up tokens; newest messages matter most.
+    """
+    Compose a *minimal* reconnect context.
+
+    We intentionally avoid replaying the full transcript, because Gemini Live
+    often responds by recapping it. Instead, we provide only the most recent
+    user/model exchanges and instruct the model NOT to recap.
+    """
+    # newest messages matter most
+    user_msgs = [m for m in msgs if m["role"] == "user"]
+    model_msgs = [m for m in msgs if m["role"] == "model"]
+
+    last_users = user_msgs[-4:] if user_msgs else []
+    last_model = model_msgs[-1:] if model_msgs else []
+
     lines: list[str] = [
-        "System: You are continuing an existing live chat session.",
-        "System: Use the following transcript as context and respond to the user's next input naturally.",
-        "System: If the transcript is incomplete, ask a brief clarifying question.",
+        "System: Reconnect context for an ongoing live travel-planning session.",
+        "System: CRITICAL: Do NOT recap, summarize, or repeat the context below unless the user explicitly asks.",
+        "System: Use it silently to answer the next user message or ask one short clarifying question if needed.",
         "",
-        "Transcript:",
+        "Context (do not repeat):",
     ]
-    for m in msgs:
-        role = (
-            "User"
-            if m["role"] == "user"
-            else ("Assistant" if m["role"] == "model" else "System")
-        )
+    for m in (last_users + last_model):
+        role = "User" if m["role"] == "user" else "Assistant"
         t = (m["text"] or "").strip()
         if not t:
             continue
-        # keep each line bounded
-        if len(t) > 800:
-            t = t[:800] + "…"
-        lines.append(f"{role}: {t}")
+        if len(t) > 500:
+            t = t[:500] + "…"
+        lines.append(f"- {role}: {t}")
+
     lines.append("")
-    lines.append("System: End transcript. Await the user's next message.")
+    lines.append("System: End context.")
     return "\n".join(lines)
 
 
@@ -263,15 +300,22 @@ async def live_ws(
                             text = str(msg.get("text") or "").strip()
                             if not text:
                                 continue
+                            # Inject system prompt on the first user turn for this WS.
                             send_text = text
+                            if not injected_context_for_this_ws:
+                                send_text = _LIVE_SYSTEM_PROMPT + "\nUser: " + text
+                                injected_context_for_this_ws = True
                             # If this is a reconnect (history exists), inject context
                             # into the first user turn we forward upstream.
-                            if sid and not injected_context_for_this_ws:
+                            # Note: we already injected system prompt above; if we also
+                            # have replayable context, prepend it too.
+                            if sid:
                                 ctx_msgs = await _ctx_get(sid)
                                 if ctx_msgs:
-                                    injected_context_for_this_ws = True
                                     send_text = (
-                                        _ctx_compose_prompt(ctx_msgs)
+                                        _LIVE_SYSTEM_PROMPT
+                                        + "\n"
+                                        + _ctx_compose_prompt(ctx_msgs)
                                         + "\nUser: "
                                         + text
                                     )
@@ -596,3 +640,50 @@ async def live_ws(
         except Exception:
             pass
         raise
+
+
+@router.post("/plan/stream")
+async def live_plan_stream(
+    body: ChatRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db=Depends(get_db),
+):
+    """
+    POST /live/plan/stream — tool-enriched travel planning for Live page (SSE).
+
+    Rationale: Gemini Live WS is optimized for audio + transcript, but does not
+    execute our tool pipeline. This endpoint reuses the existing chat streaming
+    agent loop (tools + TripItinerary schema) and returns SSE events.
+
+    NOTE: auto_save_trip is disabled here. The Live UI saves explicitly via
+    POST /trips after the user confirms.
+    """
+    user_id = current_user["user_id"] if current_user else None
+    trace_id = str(uuid4())
+
+    verify_user_exists(user_id, db)
+
+    session = await resolve_session(
+        db, body.session_id, user_id, force_new_session=body.force_new_session
+    )
+    append_message(db, session_id=session.id, role="user", content=body.message)
+    prefs_dict = body.user_preferences.model_dump() if body.user_preferences else None
+
+    return StreamingResponse(
+        stream_agent_response(
+            message=body.message,
+            session_id=session.id,
+            db=db,
+            preferences=prefs_dict,
+            trace_id=trace_id,
+            user_id=user_id,
+            model=body.llm_model,
+            auto_save_trip=False,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

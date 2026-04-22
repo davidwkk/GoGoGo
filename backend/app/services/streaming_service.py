@@ -599,6 +599,8 @@ async def stream_agent_response(
     trace_id: str | None = None,
     user_id: UUID | None = None,
     model: str | None = None,
+    *,
+    auto_save_trip: bool = True,
 ) -> AsyncIterator[str]:
     """
     Unified streaming loop — replaces all three previous agent paths.
@@ -1030,9 +1032,9 @@ async def stream_agent_response(
                         message_type="itinerary",
                     )
 
-                    # Auto-save trip if user is authenticated.
+                    # Auto-save trip if user is authenticated and this endpoint enables it.
                     # Guests (user_id is None) are not allowed to save trips.
-                    if user_id is not None:
+                    if auto_save_trip and user_id is not None:
                         try:
                             itinerary_model = TripItinerary.model_validate(
                                 result["itinerary"]
@@ -1055,11 +1057,19 @@ async def stream_agent_response(
                             ).warning(f"Failed to auto-save trip: {e}")
                     else:
                         logger.bind(
-                            event="trip_auto_save_skipped_guest",
+                            event="trip_auto_save_skipped",
                             service="chat",
                             trace_id=trace_id,
                             session_id=session_id,
-                        ).info("Trip auto-save skipped for guest user")
+                            reason=(
+                                "disabled"
+                                if not auto_save_trip
+                                else "guest_user"
+                            ),
+                        ).info(
+                            "Trip auto-save skipped"
+                            + (" (disabled)" if not auto_save_trip else " (guest user)")
+                        )
 
                     logger.bind(
                         event="stream_complete",

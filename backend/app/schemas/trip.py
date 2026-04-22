@@ -3,6 +3,8 @@ from typing import Any
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.itinerary import TripItinerary
+
 
 # Lightweight schema for the list view (hides the heavy AI JSON)
 class TripSummary(BaseModel):
@@ -21,3 +23,9 @@ class TripOut(TripSummary):
     user_id: UUID
     session_id: int | None = None
     itinerary_json: dict[str, Any]  # This holds the generated AI plan
+
+
+class TripCreate(BaseModel):
+    """Create a new saved trip from a validated TripItinerary payload."""
+
+    itinerary: TripItinerary

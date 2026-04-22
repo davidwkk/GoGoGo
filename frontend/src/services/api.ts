@@ -405,6 +405,139 @@ export const chatService = {
   },
 };
 
+export const livePlanService = {
+  /**
+   * Stream a tool-enriched trip planning response for the Live page.
+   * Endpoint: POST /live/plan/stream (SSE).
+   *
+   * Yields the same special markers as chatService.streamMessage so callers can reuse parsing.
+   */
+  async *streamPlan(req: ChatRequest, signal?: AbortSignal): AsyncGenerator<string, void, unknown> {
+    const MAX_RETRIES = 4; // 1 initial + up to 3 retries
+    const BASE_DELAY_MS = 500;
+    let attempt = 0;
+
+    while (attempt <= MAX_RETRIES) {
+      attempt++;
+      if (signal?.aborted) return;
+      if (attempt > 1) {
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 2);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        if (signal?.aborted) return;
+      }
+
+      let response: Response;
+      try {
+        const token = localStorage.getItem('access_token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        response = await fetch(`${API_BASE}/live/plan/stream`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(req),
+          signal,
+        });
+      } catch (fetchErr) {
+        if (attempt >= MAX_RETRIES)
+          throw {
+            detail: 'Connection failed. Please check your network and try again.',
+            statusCode: 0,
+            code: 'NETWORK_ERROR',
+          };
+        continue;
+      }
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          await handleAuthError(response.status, '/live/plan/stream');
+          throw {
+            detail: 'Authentication required. Please log in to continue.',
+            statusCode: response.status,
+            code: 'AUTH_ERROR',
+          };
+        }
+        const errorText = await response.text();
+        let errorMessage: string | null = null;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage =
+            errorJson?.error?.message ||
+            errorJson?.message ||
+            (typeof errorJson === 'string' ? errorJson : null);
+        } catch {
+          errorMessage = errorText || null;
+        }
+        if (attempt >= MAX_RETRIES) {
+          throw {
+            detail: errorMessage || `Server error (${response.status}). Please try again later.`,
+            statusCode: response.status,
+            code: 'STREAM_ERROR',
+          };
+        }
+        continue;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        if (attempt >= MAX_RETRIES)
+          throw { detail: 'No response from server. Please try again.', statusCode: 0 };
+        continue;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) return;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.chunk) yield data.chunk;
+              else if (data.thought) yield `__THOUGHT__:${data.thought}`;
+              else if (data.model_thought) yield `__MODEL_THOUGHT__:${data.model_thought}`;
+              else if (data.tool_call) yield `__TOOL_CALL__:${data.tool_call}`;
+              else if (data.tool_result) yield `__TOOL_RESULT__:${data.tool_result}`;
+              else if (data.status) yield `__STATUS__:${data.status}`;
+              else if (data.error && !data.retry_info) {
+                const errorMsg =
+                  typeof data.error === 'string'
+                    ? data.error
+                    : data.error?.message || JSON.stringify(data.error);
+                yield `__ERROR__:${errorMsg}`;
+              } else if (data.retry_info) {
+                yield `__RETRYINFO__:${data.retry_info}`;
+              } else if (data.message_id !== undefined) {
+                yield `__MESSAGE_ID__:${data.message_id}`;
+              } else if (data.message_type === 'finalizing') {
+                yield `__FINALIZING__:${data.status}`;
+              } else if (data.message_type === 'itinerary' && data.itinerary) {
+                yield `__ITINERARY__:${JSON.stringify(data.itinerary)}`;
+              } else if (data.trip_saved) {
+                yield `__TRIP_SAVED__:true`;
+              } else if (data.done) {
+                return;
+              }
+            } catch {
+              yield `__ERROR__:Failed to parse server response`;
+            }
+          }
+        }
+      } catch {
+        reader.cancel().catch(() => {});
+        if (attempt >= MAX_RETRIES) {
+          throw { detail: 'Connection lost. Please try again.', statusCode: 0, code: 'NETWORK_ERROR' };
+        }
+        continue;
+      }
+    }
+  },
+};
+
 export type ChatSessionListItem = {
   id: number;
   title: string;

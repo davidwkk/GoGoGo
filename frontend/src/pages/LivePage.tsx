@@ -33,6 +33,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useChatStore } from '@/store';
+import { livePlanService } from '@/services/api';
+import { tripService } from '@/services/tripService';
+import { useAuthStore } from '@/store';
+import { ItineraryDisplay } from '@/components/trip/ItineraryDisplay';
 
 const LIVE_MODELS: { value: string; label: string }[] = [
   { value: 'gemini-3.1-flash-live-preview', label: '3.1 Flash Live (Default)' },
@@ -58,6 +62,96 @@ function sortLiveSectionsForSidebar(list: LiveSectionPersisted[]): LiveSectionPe
     if (pa !== pb) return pb - pa;
     return b.updatedAt - a.updatedAt;
   });
+}
+
+function tryExtractJsonBlock(text: string): { jsonText: string; restText: string } | null {
+  const s = text.trim();
+  // Prefer fenced JSON blocks: ```json ... ```
+  const fence = /```json\s*([\s\S]*?)\s*```/i.exec(s);
+  if (fence?.[1]) {
+    const jsonText = fence[1].trim();
+    const restText = (s.slice(0, fence.index) + s.slice(fence.index + fence[0].length)).trim();
+    return { jsonText, restText };
+  }
+  // Fallback: whole-message JSON
+  if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+    return { jsonText: s, restText: '' };
+  }
+  return null;
+}
+
+function StructuredPayload({ text }: { text: string }) {
+  const extracted = useMemo(() => tryExtractJsonBlock(text), [text]);
+  if (!extracted) return null;
+
+  let pretty = extracted.jsonText;
+  try {
+    pretty = JSON.stringify(JSON.parse(extracted.jsonText), null, 2);
+  } catch {
+    // keep raw jsonText
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border bg-background/50 overflow-hidden">
+      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b">
+        Structured output
+      </div>
+      <pre className="p-3 text-xs overflow-x-auto whitespace-pre">{pretty}</pre>
+      {extracted.restText && (
+        <div className="px-3 pb-3 pt-0.5 text-xs text-muted-foreground">
+          <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {DOMPurify.sanitize(extracted.restText)}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function looksLikeGeneratePlanIntent(s: string): boolean {
+  const t = s.trim().toLowerCase();
+  if (!t) return false;
+  return (
+    t === 'generate plan' ||
+    t.includes('generate the plan') ||
+    t.includes('now give me a travel plan') ||
+    t.includes('give me a travel plan') ||
+    t.includes('now give me a plan') ||
+    t.includes('travel plan') ||
+    t === '/plan'
+  );
+}
+
+function isYesIntent(s: string): boolean {
+  const t = s.trim().toLowerCase();
+  if (!t) return false;
+  // Accept common variants: "yes", "yes.", "yes please", "yes, save it", etc.
+  return /^(yes|y)\b/.test(t);
+}
+
+function isNoIntent(s: string): boolean {
+  const t = s.trim().toLowerCase();
+  if (!t) return false;
+  return /^(no|n)\b/.test(t);
+}
+
+function buildPlanPromptFromTranscripts(transcripts: LiveTranscriptItem[], userAsk: string): string {
+  const recent = transcripts.slice(-12);
+  const lines = recent
+    .filter(t => t.role === 'user' || t.role === 'model' || t.role === 'system')
+    .map(t => `${t.role.toUpperCase()}: ${t.text}`.slice(0, 1200));
+  return [
+    'System: You are generating a trip plan based on the following context.',
+    'System: DO NOT restate or recap this context. Use it silently and only output the trip plan content needed.',
+    '',
+    'Context (do not repeat):',
+    ...lines,
+    '',
+    `User request: ${userAsk}`,
+    'System: The user confirms: yes. Proceed with tool calls and finalize the plan.',
+  ].join('\n');
 }
 
 export function LivePage() {
@@ -96,6 +190,47 @@ export function LivePage() {
     }));
   }, []);
 
+  const patchActiveItinerary = useCallback((itinerary: LiveSectionPersisted['lastItinerary']) => {
+    setSnapshot(prev => ({
+      ...prev,
+      sections: prev.sections.map(sec =>
+        sec.id === prev.activeSectionId
+          ? {
+              ...sec,
+              lastItinerary: itinerary ?? null,
+              updatedAt: Date.now(),
+            }
+          : sec
+      ),
+    }));
+  }, []);
+
+  const patchActivePlanningSteps = useCallback((u: SetStateAction<string[]>) => {
+    setSnapshot(prev => ({
+      ...prev,
+      sections: prev.sections.map(sec =>
+        sec.id === prev.activeSectionId
+          ? {
+              ...sec,
+              planningSteps: typeof u === 'function' ? u(sec.planningSteps ?? []) : u,
+              updatedAt: Date.now(),
+            }
+          : sec
+      ),
+    }));
+  }, []);
+
+  const setPlanningExpanded = useCallback((expanded: boolean) => {
+    setSnapshot(prev => ({
+      ...prev,
+      sections: prev.sections.map(sec =>
+        sec.id === prev.activeSectionId
+          ? { ...sec, planningExpanded: expanded, updatedAt: Date.now() }
+          : sec
+      ),
+    }));
+  }, []);
+
   const {
     status,
     transcripts,
@@ -112,6 +247,13 @@ export function LivePage() {
     transcripts: activeSection?.transcripts ?? [],
     setTranscripts: patchActiveTranscripts,
   });
+
+  const token = useAuthStore(s => s.token);
+
+  const [isPlanMode, setIsPlanMode] = useState(false);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [pendingSavePrompt, setPendingSavePrompt] = useState(false);
+  const planAbortRef = useRef<AbortController | null>(null);
 
   const live_model = useChatStore(s => s.live_model);
   const setLiveModel = useChatStore(s => s.setLiveModel);
@@ -251,9 +393,217 @@ export function LivePage() {
   }, [deleteSectionId]);
 
   const canSend = useMemo(
-    () => status === 'connected' && text.trim().length > 0 && !isModelResponding,
-    [status, text, isModelResponding]
+    () =>
+      status === 'connected' &&
+      text.trim().length > 0 &&
+      !isModelResponding &&
+      !planBusy,
+    [status, text, isModelResponding, planBusy]
   );
+
+  const appendTranscript = useCallback((role: LiveTranscriptItem['role'], text: string) => {
+    patchActiveTranscripts(prev => [...prev, { id: crypto.randomUUID(), role, text }]);
+  }, [patchActiveTranscripts]);
+
+  const runPlanTurn = useCallback(
+    async (
+      {
+        displayText,
+        sseText,
+      }: {
+        displayText: string;
+        sseText: string;
+      },
+      { forceNew }: { forceNew: boolean }
+    ) => {
+      const t = displayText.trim();
+      if (!t) return;
+
+      // Stop WS response audio stream UI while we’re doing SSE planning
+      stopResponse();
+
+      // Optimistically add user message to transcript
+      appendTranscript('user', t);
+
+      // Reset planning steps UI for this run
+      patchActivePlanningSteps([]);
+      setPlanningExpanded(true);
+
+      setPlanBusy(true);
+      const abort = new AbortController();
+      planAbortRef.current = abort;
+
+      let fullText = '';
+      let gotItinerary: unknown | null = null;
+      let streamingMsgId: string | null = null;
+
+      const req = {
+        message: sseText,
+        // Important: if logged in, DO NOT send a UUID session_id (backend rejects it).
+        // Guests can send guest_uid to maintain continuity.
+        session_id: (() => {
+          if (token) return undefined;
+          let guestUid = localStorage.getItem('guest_uid');
+          if (!guestUid) {
+            guestUid = crypto.randomUUID();
+            localStorage.setItem('guest_uid', guestUid);
+          }
+          return guestUid;
+        })(),
+        force_new_session: forceNew || undefined,
+        generate_plan: false,
+      };
+
+      try {
+        for await (const chunk of livePlanService.streamPlan(req, abort.signal)) {
+          if (typeof chunk === 'string') {
+            if (chunk.startsWith('__ERROR__:')) {
+              const err = chunk.slice('__ERROR__:'.length);
+              appendTranscript('system', `Error: ${err}`);
+              break;
+            }
+            if (chunk.startsWith('__ITINERARY__:')) {
+              const raw = chunk.slice('__ITINERARY__:'.length);
+              try {
+                gotItinerary = JSON.parse(raw);
+              } catch {
+                gotItinerary = null;
+              }
+              continue;
+            }
+            if (chunk.startsWith('__FINALIZING__:')) {
+              patchActivePlanningSteps(prev => [...prev, 'Finalizing trip plan…']);
+              continue;
+            }
+            if (chunk.startsWith('__TOOL_CALL__:')) {
+              patchActivePlanningSteps(prev => [
+                ...prev,
+                `Calling tool: ${chunk.slice('__TOOL_CALL__:'.length)}`,
+              ]);
+              continue;
+            }
+            if (chunk.startsWith('__TOOL_RESULT__:')) {
+              patchActivePlanningSteps(prev => [
+                ...prev,
+                `Tool done: ${chunk.slice('__TOOL_RESULT__:'.length)}`,
+              ]);
+              continue;
+            }
+            if (chunk.startsWith('__RETRYINFO__:')) {
+              patchActivePlanningSteps(prev => [
+                ...prev,
+                `Retrying… ${chunk.slice('__RETRYINFO__:'.length)}`,
+              ]);
+              continue;
+            }
+            if (chunk.startsWith('__MESSAGE_ID__:')) continue;
+          }
+
+          // Plain text chunk
+          fullText += chunk;
+          if (streamingMsgId === null) {
+            streamingMsgId = crypto.randomUUID();
+            patchActiveTranscripts(prev => [...prev, { id: streamingMsgId!, role: 'model', text: fullText }]);
+          } else {
+            patchActiveTranscripts(prev => {
+              const last = prev.findIndex(x => x.id === streamingMsgId);
+              if (last === -1) return prev;
+              const next = [...prev];
+              next[last] = { ...next[last], text: fullText };
+              return next;
+            });
+          }
+        }
+      } catch (e) {
+        const msg = e && typeof e === 'object' && 'detail' in e ? String((e as any).detail) : 'Plan stream failed';
+        appendTranscript('system', `Error: ${msg}`);
+      } finally {
+        planAbortRef.current = null;
+        setPlanBusy(false);
+      }
+
+      if (gotItinerary && typeof gotItinerary === 'object') {
+        patchActiveItinerary(gotItinerary as Record<string, unknown>);
+        appendTranscript('model', 'Plan generated. Do you need to save this plan? Reply "yes" to save.');
+        setPendingSavePrompt(true);
+        setIsPlanMode(false); // exit plan mode after generation
+      }
+    },
+    [
+      appendTranscript,
+      patchActiveItinerary,
+      patchActivePlanningSteps,
+      patchActiveTranscripts,
+      setPlanningExpanded,
+      stopResponse,
+      token,
+    ]
+  );
+
+  const handleSendFromInput = useCallback(async () => {
+    const trimmed = text.trim();
+    if (!trimmed || !canSend) return;
+    setText('');
+
+    // Save flow: user confirms saving
+    if (pendingSavePrompt && isYesIntent(trimmed)) {
+      const itinerary = activeSection?.lastItinerary;
+      setPendingSavePrompt(false);
+      if (!token) {
+        appendTranscript('model', 'Please sign in to save trip plans to My Trips.');
+        toast.error('Please sign in to save.');
+        return;
+      }
+      if (!itinerary) {
+        appendTranscript('system', 'Error: no itinerary found to save.');
+        return;
+      }
+      try {
+        appendTranscript('user', trimmed);
+        await tripService.createTrip(itinerary);
+        appendTranscript('model', 'Saved. You can view it in My Trips.');
+        toast.success('Trip saved to My Trips');
+      } catch (e) {
+        appendTranscript('system', `Error: ${(e as any)?.detail ?? 'Failed to save trip'}`);
+        toast.error('Failed to save trip');
+      }
+      return;
+    }
+    if (pendingSavePrompt && isNoIntent(trimmed)) {
+      setPendingSavePrompt(false);
+      appendTranscript('user', trimmed);
+      appendTranscript('model', 'Okay — I won’t save it. Tell me what you want to change, or type “generate plan” to regenerate.');
+      return;
+    }
+
+    // Enter plan mode on intent and run a plan generation turn
+    if (!isPlanMode && looksLikeGeneratePlanIntent(trimmed)) {
+      setIsPlanMode(true);
+      const prompt = buildPlanPromptFromTranscripts(transcripts, trimmed);
+      await runPlanTurn({ displayText: trimmed, sseText: prompt }, { forceNew: true });
+      return;
+    }
+
+    // If we’re currently in plan mode (follow-up answers), route to SSE planner.
+    if (isPlanMode) {
+      await runPlanTurn({ displayText: trimmed, sseText: trimmed }, { forceNew: false });
+      return;
+    }
+
+    // Default: normal Gemini Live WS chat
+    sendText(trimmed);
+  }, [
+    activeSection?.lastItinerary,
+    appendTranscript,
+    canSend,
+    isPlanMode,
+    pendingSavePrompt,
+    runPlanTurn,
+    sendText,
+    text,
+    token,
+    transcripts,
+  ]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden relative">
@@ -440,6 +790,36 @@ export function LivePage() {
         </header>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-6 py-4">
+          {/* Planning / tools panel */}
+          {(planBusy || (activeSection?.planningSteps?.length ?? 0) > 0) && (
+            <div className="mb-5 max-w-4xl">
+              <button
+                type="button"
+                onClick={() => setPlanningExpanded(!(activeSection?.planningExpanded ?? false))}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span>💭 Thinking process</span>
+                <span
+                  className={`transition-transform ${(activeSection?.planningExpanded ?? false) ? 'rotate-90' : ''}`}
+                >
+                  ▶
+                </span>
+              </button>
+              {(activeSection?.planningExpanded ?? false) && (
+                <div className="mt-2 rounded-xl border bg-muted/30 p-3 space-y-1.5">
+                  {(activeSection?.planningSteps ?? []).map((s, i) => (
+                    <div key={i} className="text-xs text-muted-foreground break-words">
+                      {s}
+                    </div>
+                  ))}
+                  {planBusy && (
+                    <div className="text-xs text-muted-foreground">Working…</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {transcripts.length === 0 ? (
             <div className="text-sm text-muted-foreground">No messages yet.</div>
           ) : (
@@ -452,14 +832,24 @@ export function LivePage() {
                   {t.role === 'user' ? (
                     <div className="whitespace-pre-wrap break-words text-foreground">{t.text}</div>
                   ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {DOMPurify.sanitize(t.text)}
-                      </ReactMarkdown>
+                    <div>
+                      <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {DOMPurify.sanitize(t.text)}
+                        </ReactMarkdown>
+                      </div>
+                      {t.role === 'model' && <StructuredPayload text={t.text} />}
                     </div>
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Trip plan cards inside Live */}
+          {activeSection?.lastItinerary && typeof activeSection.lastItinerary === 'object' && (
+            <div className="mt-8">
+              <ItineraryDisplay itinerary={activeSection.lastItinerary as any} isGenerated />
             </div>
           )}
         </div>
@@ -524,8 +914,7 @@ export function LivePage() {
                   if (e.shiftKey) return; // Shift+Enter: manual newline
                   e.preventDefault(); // Enter: send
                   if (!canSend) return;
-                  sendText(text.trim());
-                  setText('');
+                  void handleSendFromInput();
                 }}
                 className="min-h-10 max-h-48 flex-1 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -538,9 +927,7 @@ export function LivePage() {
                 <Button
                   className="shrink-0"
                   onClick={() => {
-                    if (!canSend) return;
-                    sendText(text.trim());
-                    setText('');
+                    void handleSendFromInput();
                   }}
                   disabled={!canSend}
                 >
@@ -551,7 +938,7 @@ export function LivePage() {
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant={isRecording ? 'destructive' : 'default'}
-                disabled={status !== 'connected' || isModelResponding}
+                disabled={status !== 'connected' || isModelResponding || planBusy}
                 onClick={() => {
                   if (status !== 'connected' || isModelResponding) return;
                   if (isRecording) stopRecording();
@@ -562,6 +949,7 @@ export function LivePage() {
               </Button>
               <div className="text-xs text-muted-foreground">
                 Status: <span className="font-medium">{status}</span>
+                {planBusy && <span className="text-foreground">{' · Planning (tools)…'}</span>}
                 {isModelResponding && (
                   <span className="text-foreground tabular-nums">
                     {' · Thinking'}

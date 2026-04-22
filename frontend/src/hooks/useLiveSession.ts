@@ -42,6 +42,13 @@ function collapseInnerWhitespace(s: string): string {
  * Light cleanup for display — does not guess arbitrary word boundaries.
  */
 function normalizeModelTranscriptDisplay(text: string): string {
+  // If the model is emitting structured output, do NOT try to "fix spacing".
+  // Live transcripts can include JSON/code fences; punctuation spacing can corrupt JSON.
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[') || trimmed.includes('```')) {
+    return text;
+  }
+
   let s = text;
   for (let i = 0; i < 6; i++) {
     const before = s;

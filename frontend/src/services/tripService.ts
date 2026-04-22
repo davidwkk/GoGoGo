@@ -22,6 +22,12 @@ export const tripService = {
     await apiClient.delete(`/trips/${tripId}`);
   },
 
+  /** Create (save) a trip from a generated itinerary */
+  async createTrip(itinerary: unknown): Promise<TripSummary> {
+    const { data } = await apiClient.post<TripSummary>('/trips', { itinerary });
+    return data;
+  },
+
   /** Get the seeded demo trip (no auth required) */
   async getDemoTrip(): Promise<TripDetail> {
     const { data } = await apiClient.post<TripDetail>('/trips/demo');
