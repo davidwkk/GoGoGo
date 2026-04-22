@@ -12,7 +12,8 @@ import asyncio
 import base64
 import json
 import traceback
-from typing import Any
+import time
+from typing import Any, Literal, TypedDict
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from google.genai import Client, types
@@ -43,6 +44,92 @@ def _b64_data(data: Any) -> str | None:
     return None
 
 
+# ── In-memory session context (best-effort) ────────────────────────────────────
+#
+# Gemini Live sessions are not resumable. To keep continuity across reconnects
+# within the same "live chat session", we store a lightweight text transcript
+# (user/model/system) keyed by `session_id`, and replay it as a compact context
+# prompt when a client reconnects.
+#
+# This is intentionally in-memory (per backend process). For production / multi-
+# replica, move to Redis or DB.
+
+
+class _CtxMsg(TypedDict):
+    role: Literal["user", "model", "system"]
+    text: str
+    ts: float
+
+
+_CTX_TTL_S = 60 * 60  # 1 hour
+_CTX_MAX_MESSAGES = 80
+_CTX_LOCK = asyncio.Lock()
+_CTX_STORE: dict[str, list[_CtxMsg]] = {}
+
+
+def _ctx_prune(now: float) -> None:
+    expired_keys: list[str] = []
+    for k, msgs in _CTX_STORE.items():
+        if not msgs:
+            expired_keys.append(k)
+            continue
+        if now - msgs[-1]["ts"] > _CTX_TTL_S:
+            expired_keys.append(k)
+    for k in expired_keys:
+        _CTX_STORE.pop(k, None)
+
+
+def _ctx_compose_prompt(msgs: list[_CtxMsg]) -> str:
+    # Keep it short-ish to avoid blowing up tokens; newest messages matter most.
+    lines: list[str] = [
+        "System: You are continuing an existing live chat session.",
+        "System: Use the following transcript as context and respond to the user's next input naturally.",
+        "System: If the transcript is incomplete, ask a brief clarifying question.",
+        "",
+        "Transcript:",
+    ]
+    for m in msgs:
+        role = (
+            "User"
+            if m["role"] == "user"
+            else ("Assistant" if m["role"] == "model" else "System")
+        )
+        t = (m["text"] or "").strip()
+        if not t:
+            continue
+        # keep each line bounded
+        if len(t) > 800:
+            t = t[:800] + "…"
+        lines.append(f"{role}: {t}")
+    lines.append("")
+    lines.append("System: End transcript. Await the user's next message.")
+    return "\n".join(lines)
+
+
+async def _ctx_append(
+    session_id: str, role: Literal["user", "model", "system"], text: str
+) -> None:
+    t = (text or "").strip()
+    if not session_id or not t:
+        return
+    now = time.time()
+    async with _CTX_LOCK:
+        _ctx_prune(now)
+        msgs = _CTX_STORE.setdefault(session_id, [])
+        msgs.append({"role": role, "text": t, "ts": now})
+        if len(msgs) > _CTX_MAX_MESSAGES:
+            _CTX_STORE[session_id] = msgs[-_CTX_MAX_MESSAGES:]
+
+
+async def _ctx_get(session_id: str) -> list[_CtxMsg]:
+    if not session_id:
+        return []
+    now = time.time()
+    async with _CTX_LOCK:
+        _ctx_prune(now)
+        return list(_CTX_STORE.get(session_id, []))
+
+
 # ── WebSocket endpoint ─────────────────────────────────────────────────────────
 
 
@@ -50,15 +137,18 @@ def _b64_data(data: Any) -> str | None:
 async def live_ws(
     ws: WebSocket,
     model: str | None = Query(default=None, alias="model"),
+    session_id: str | None = Query(default=None, alias="session_id"),
 ) -> None:
     # ── Resolve model ───────────────────────────────────────────────────────────
     live_model = model or settings.GEMINI_LIVE_MODEL
     user_selected = model is not None and model != settings.GEMINI_LIVE_MODEL
     connection_id = f"live_{id(ws)}"
+    sid = (session_id or "").strip() or None
 
     logger.bind(
         event="live_connect_start",
         connection_id=connection_id,
+        session_id=sid,
         requested_model=model,
         effective_model=live_model,
         default_model=settings.GEMINI_LIVE_MODEL,
@@ -74,6 +164,7 @@ async def live_ws(
     logger.bind(
         event="live_ws_accepted",
         connection_id=connection_id,
+        session_id=sid,
         model=live_model,
     ).info(f"[{connection_id}] WS accepted, connecting to Gemini Live")
 
@@ -94,6 +185,7 @@ async def live_ws(
     logger.bind(
         event="live_session_connecting",
         connection_id=connection_id,
+        session_id=sid,
         model=live_model,
         config_response_modalities=["AUDIO"],
         config_input_transcription=True,
@@ -115,12 +207,19 @@ async def live_ws(
             logger.bind(
                 event="live_session_connected",
                 connection_id=connection_id,
+                session_id=sid,
                 model=live_model,
             ).info(f"[{connection_id}] ✅ Gemini Live session connected")
+
+            # NOTE: Gemini Live sessions are not resumable. We keep an in-memory
+            # transcript and inject it into the *first user turn* after a reconnect,
+            # which is more reliable than trying to "replay" it as a standalone input.
+            injected_context_for_this_ws = False
 
             # ── pump: client → gemini ─────────────────────────────────────────
             async def pump_client_to_gemini() -> None:
                 nonlocal stats
+                nonlocal injected_context_for_this_ws
                 try:
                     while True:
                         raw = await ws.receive_text()
@@ -138,14 +237,39 @@ async def live_ws(
                             text = str(msg.get("text") or "").strip()
                             if not text:
                                 continue
+                            send_text = text
+                            # If this is a reconnect (history exists), inject context
+                            # into the first user turn we forward upstream.
+                            if sid and not injected_context_for_this_ws:
+                                ctx_msgs = await _ctx_get(sid)
+                                if ctx_msgs:
+                                    injected_context_for_this_ws = True
+                                    send_text = (
+                                        _ctx_compose_prompt(ctx_msgs)
+                                        + "\nUser: "
+                                        + text
+                                    )
+                                    logger.bind(
+                                        event="live_context_injected_first_turn",
+                                        connection_id=connection_id,
+                                        session_id=sid,
+                                        context_messages=len(ctx_msgs),
+                                        injected_chars=len(send_text),
+                                    ).info(
+                                        f"[{connection_id}] Injected context into first turn ({len(ctx_msgs)} msgs)"
+                                    )
+                            if sid:
+                                await _ctx_append(sid, "user", text)
                             # Use realtime input for text as well (not send_client_content)
-                            await session.send_realtime_input(text=text)
+                            await session.send_realtime_input(text=send_text)
                             stats["text_messages_sent"] += 1
                             logger.bind(
                                 event="live_text_sent",
                                 connection_id=connection_id,
+                                session_id=sid,
                                 text_preview=text[:80],
                                 text_length=len(text),
+                                forwarded_length=len(send_text),
                                 total_text_sent=stats["text_messages_sent"],
                             ).debug(f"[{connection_id}] → sent text: {text[:60]}")
 
@@ -175,6 +299,7 @@ async def live_ws(
                             logger.bind(
                                 event="live_audio_stream_end",
                                 connection_id=connection_id,
+                                session_id=sid,
                             ).debug(f"[{connection_id}] → audio stream end sent")
 
                         elif mtype == "ping":
@@ -182,6 +307,7 @@ async def live_ws(
                             logger.bind(
                                 event="live_pong_sent",
                                 connection_id=connection_id,
+                                session_id=sid,
                             ).debug(f"[{connection_id}] → pong replied")
 
                         else:
@@ -249,9 +375,12 @@ async def live_ws(
                                 )
                                 if user_text:
                                     stats["user_transcripts_received"] += 1
+                                    if sid:
+                                        await _ctx_append(sid, "user", user_text)
                                     logger.bind(
                                         event="live_user_transcript",
                                         connection_id=connection_id,
+                                        session_id=sid,
                                         transcript_preview=user_text[:80],
                                         total_user_transcripts=stats[
                                             "user_transcripts_received"
@@ -276,9 +405,12 @@ async def live_ws(
                                 )
                                 if model_text:
                                     stats["model_transcripts_received"] += 1
+                                    if sid:
+                                        await _ctx_append(sid, "model", model_text)
                                     logger.bind(
                                         event="live_model_transcript",
                                         connection_id=connection_id,
+                                        session_id=sid,
                                         transcript_preview=model_text[:80],
                                         total_model_transcripts=stats[
                                             "model_transcripts_received"
@@ -320,6 +452,7 @@ async def live_ws(
                                             logger.bind(
                                                 event="live_audio_received",
                                                 connection_id=connection_id,
+                                                session_id=sid,
                                                 mime_type=mime,
                                                 audio_size_b64=len(audio_b64),
                                                 total_audio_received=stats[
@@ -345,6 +478,7 @@ async def live_ws(
                                 logger.bind(
                                     event="live_turn_complete",
                                     connection_id=connection_id,
+                                    session_id=sid,
                                     turns_completed=stats["turns_completed"],
                                 ).info(
                                     f"[{connection_id}] ← turn_complete #{stats['turns_completed']}"
