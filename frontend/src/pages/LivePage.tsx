@@ -137,7 +137,10 @@ function isNoIntent(s: string): boolean {
   return /^(no|n)\b/.test(t);
 }
 
-function buildPlanPromptFromTranscripts(transcripts: LiveTranscriptItem[], userAsk: string): string {
+function buildPlanPromptFromTranscripts(
+  transcripts: LiveTranscriptItem[],
+  userAsk: string
+): string {
   const recent = transcripts.slice(-12);
   const lines = recent
     .filter(t => t.role === 'user' || t.role === 'model' || t.role === 'system')
@@ -393,17 +396,16 @@ export function LivePage() {
   }, [deleteSectionId]);
 
   const canSend = useMemo(
-    () =>
-      status === 'connected' &&
-      text.trim().length > 0 &&
-      !isModelResponding &&
-      !planBusy,
+    () => status === 'connected' && text.trim().length > 0 && !isModelResponding && !planBusy,
     [status, text, isModelResponding, planBusy]
   );
 
-  const appendTranscript = useCallback((role: LiveTranscriptItem['role'], text: string) => {
-    patchActiveTranscripts(prev => [...prev, { id: crypto.randomUUID(), role, text }]);
-  }, [patchActiveTranscripts]);
+  const appendTranscript = useCallback(
+    (role: LiveTranscriptItem['role'], text: string) => {
+      patchActiveTranscripts(prev => [...prev, { id: crypto.randomUUID(), role, text }]);
+    },
+    [patchActiveTranscripts]
+  );
 
   const runPlanTurn = useCallback(
     async (
@@ -503,7 +505,10 @@ export function LivePage() {
           fullText += chunk;
           if (streamingMsgId === null) {
             streamingMsgId = crypto.randomUUID();
-            patchActiveTranscripts(prev => [...prev, { id: streamingMsgId!, role: 'model', text: fullText }]);
+            patchActiveTranscripts(prev => [
+              ...prev,
+              { id: streamingMsgId!, role: 'model', text: fullText },
+            ]);
           } else {
             patchActiveTranscripts(prev => {
               const last = prev.findIndex(x => x.id === streamingMsgId);
@@ -515,7 +520,10 @@ export function LivePage() {
           }
         }
       } catch (e) {
-        const msg = e && typeof e === 'object' && 'detail' in e ? String((e as any).detail) : 'Plan stream failed';
+        const msg =
+          e && typeof e === 'object' && 'detail' in e
+            ? String((e as { detail?: string }).detail)
+            : 'Plan stream failed';
         appendTranscript('system', `Error: ${msg}`);
       } finally {
         planAbortRef.current = null;
@@ -524,7 +532,10 @@ export function LivePage() {
 
       if (gotItinerary && typeof gotItinerary === 'object') {
         patchActiveItinerary(gotItinerary as Record<string, unknown>);
-        appendTranscript('model', 'Plan generated. Do you need to save this plan? Reply "yes" to save.');
+        appendTranscript(
+          'model',
+          'Plan generated. Do you need to save this plan? Reply "yes" to save.'
+        );
         setPendingSavePrompt(true);
         setIsPlanMode(false); // exit plan mode after generation
       }
@@ -564,7 +575,10 @@ export function LivePage() {
         appendTranscript('model', 'Saved. You can view it in My Trips.');
         toast.success('Trip saved to My Trips');
       } catch (e) {
-        appendTranscript('system', `Error: ${(e as any)?.detail ?? 'Failed to save trip'}`);
+        appendTranscript(
+          'system',
+          `Error: ${(e as { detail?: string })?.detail ?? 'Failed to save trip'}`
+        );
         toast.error('Failed to save trip');
       }
       return;
@@ -572,7 +586,10 @@ export function LivePage() {
     if (pendingSavePrompt && isNoIntent(trimmed)) {
       setPendingSavePrompt(false);
       appendTranscript('user', trimmed);
-      appendTranscript('model', 'Okay — I won’t save it. Tell me what you want to change, or type “generate plan” to regenerate.');
+      appendTranscript(
+        'model',
+        'Okay — I won’t save it. Tell me what you want to change, or type “generate plan” to regenerate.'
+      );
       return;
     }
 
@@ -812,9 +829,7 @@ export function LivePage() {
                       {s}
                     </div>
                   ))}
-                  {planBusy && (
-                    <div className="text-xs text-muted-foreground">Working…</div>
-                  )}
+                  {planBusy && <div className="text-xs text-muted-foreground">Working…</div>}
                 </div>
               )}
             </div>
@@ -849,7 +864,10 @@ export function LivePage() {
           {/* Trip plan cards inside Live */}
           {activeSection?.lastItinerary && typeof activeSection.lastItinerary === 'object' && (
             <div className="mt-8">
-              <ItineraryDisplay itinerary={activeSection.lastItinerary as any} isGenerated />
+              <ItineraryDisplay
+                itinerary={activeSection.lastItinerary as TripItinerary}
+                isGenerated
+              />
             </div>
           )}
         </div>

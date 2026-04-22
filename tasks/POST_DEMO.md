@@ -9,10 +9,3 @@
 **Features:**
 
 - [x] Implement function: the agent is able to guide the user to provide all information needed for travel plan generation
----
-
-## Xuan
-
-**Bug Fix:**
-
-- [ ] Fix 'Your trip plan is ready below' not showing on first render — only appears after refreshing the chat session

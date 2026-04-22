@@ -1,0 +1,3923 @@
+{
+  "meta": {
+    "repo": "GoGoGo",
+    "branch": "main",
+    "generated": "2026-04-23T06:09:17.929280"
+  },
+  "authors": {
+    "mencare": {
+      "email": "1155191548@link.cuhk.edu.hk",
+      "total_commits": 5,
+      "total_additions": 1215,
+      "total_deletions": 282,
+      "net_lines": 933,
+      "total_files_changed": 21,
+      "first_commit": "2026-04-21T23:42:46+08:00",
+      "last_commit": "2026-04-22T20:40:51+08:00",
+      "commits": [
+        {
+          "hash": "ea7556b65b062f9f30ee5ab8e51410a5ca4b601b",
+          "short_hash": "ea7556b",
+          "date": "2026-04-22T20:40:51+08:00",
+          "subject": "Update POST_DEMO.md, finish Minqi's tasks",
+          "additions": 1,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "b886848deb0d4965ccdeae0a6eed3edb4f8ac771",
+          "short_hash": "b886848",
+          "date": "2026-04-22T20:01:27+08:00",
+          "subject": "feat(live): implement prompts and travel plan generation 1. UI upgrades for model thinking process and travel plan display. However, responses from model are still texts. 2. Model is able to guide users to provide information needed, like    dates, purpose, group size, budget, special preference. 3. Trip can be saved to MY TRIPS now. 4. some bugs: texts translated from audio may be disordered. 5. I do not have time to fix other bugs I don't find",
+          "additions": 917,
+          "deletions": 233,
+          "files_changed": 11,
+          "net_lines": 684
+        },
+        {
+          "hash": "611b3dbe8af06b19cc6ed91177984c3224a1ca27",
+          "short_hash": "611b3db",
+          "date": "2026-04-22T17:50:36+08:00",
+          "subject": "feat(live): gather all settings to preference 1. move all settings to preference 2. add voice preference",
+          "additions": 87,
+          "deletions": 14,
+          "files_changed": 4,
+          "net_lines": 73
+        },
+        {
+          "hash": "9b0b60262a39f7f0e2998a7f833462fba1e3bdb1",
+          "short_hash": "9b0b602",
+          "date": "2026-04-22T16:48:18+08:00",
+          "subject": "feat(live): autoconnect to live model and retain contexts",
+          "additions": 202,
+          "deletions": 21,
+          "files_changed": 3,
+          "net_lines": 181
+        },
+        {
+          "hash": "3ebddc60bace4ec9b30ec29bd7a339bfe2c6dec8",
+          "short_hash": "3ebddc6",
+          "date": "2026-04-21T23:42:46+08:00",
+          "subject": "restore docker and pre-commit config",
+          "additions": 8,
+          "deletions": 13,
+          "files_changed": 2,
+          "net_lines": -5
+        }
+      ]
+    },
+    "mencaire": {
+      "email": "1155191548@link.cuhk.edu.hk",
+      "total_commits": 20,
+      "total_additions": 3312,
+      "total_deletions": 563,
+      "net_lines": 2749,
+      "total_files_changed": 68,
+      "first_commit": "2026-03-31T00:30:39+08:00",
+      "last_commit": "2026-04-21T22:06:00+08:00",
+      "commits": [
+        {
+          "hash": "9dbc558ac0391936083b7e5e6db9d2e0fc78eae3",
+          "short_hash": "9dbc558",
+          "date": "2026-04-21T22:06:00+08:00",
+          "subject": "Update tasks: remove features not mentioned in presentation",
+          "additions": 0,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": -2
+        },
+        {
+          "hash": "26ecc9f31be5279da2971875bee863364a5ef8d6",
+          "short_hash": "26ecc9f",
+          "date": "2026-04-20T02:24:20+08:00",
+          "subject": "Change pre-commit. Fuck commit checking",
+          "additions": 7,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 6
+        },
+        {
+          "hash": "cf737ebe947c26594dab7a13e4181d1f2dd78e0d",
+          "short_hash": "cf737eb",
+          "date": "2026-04-20T01:04:27+08:00",
+          "subject": "fix(var): remove \"any\" keyword from variables I do not know why the peers freaking choose to use pre-commit fuck pre-commit, fuck ruff, fuck pyright, fuck eslint, fuck prettier, fuck all of you why fucking using pre-commit, why fucking using ruff, why fucking using pyright, why fucking using eslint, why fucking using prettier, why fucking using all of you",
+          "additions": 116,
+          "deletions": 38,
+          "files_changed": 5,
+          "net_lines": 78
+        },
+        {
+          "hash": "22181e290ae3fedf512dcbbcbe2d3ea23d5c8d6f",
+          "short_hash": "22181e2",
+          "date": "2026-04-19T22:12:30+08:00",
+          "subject": "fix(LivePage): change top behavior of live history 1. After cancelling the favorite live session, it should return to its original position, not stay at the top 2. After renaming the live session, it should stay at its position.",
+          "additions": 35,
+          "deletions": 15,
+          "files_changed": 3,
+          "net_lines": 20
+        },
+        {
+          "hash": "d2657835c47967944a8cd8d6abe6c6fa7fdad53f",
+          "short_hash": "d265783",
+          "date": "2026-04-19T21:26:59+08:00",
+          "subject": "Fix(Docker):Docker compose file & frontend config Peers could not accept the changes. This changes are for Mac users.",
+          "additions": 10,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 9
+        },
+        {
+          "hash": "0d64baae2b66c5279d4044e7810bd4bfbf0d49aa",
+          "short_hash": "0d64baa",
+          "date": "2026-04-16T08:49:01+08:00",
+          "subject": "feat(POST_DEMO): add two new features to tasks",
+          "additions": 3,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 2
+        },
+        {
+          "hash": "6ec1f6f7feb1039063647eb975d03b565cffd6e3",
+          "short_hash": "6ec1f6f",
+          "date": "2026-04-16T03:05:26+08:00",
+          "subject": "feat(live): UI improvements 1. Title size matches with chat page 2. Delete Hint text displayed under the title",
+          "additions": 6,
+          "deletions": 8,
+          "files_changed": 1,
+          "net_lines": -2
+        },
+        {
+          "hash": "a88fe9857dcd6f05449844c91ac8757e6fbb042d",
+          "short_hash": "a88fe98",
+          "date": "2026-04-16T02:55:52+08:00",
+          "subject": "feat(live): add live chat history and UI upgrades 1. add live chat history same as chat history 2. Transcript and Input UI upgrades",
+          "additions": 598,
+          "deletions": 151,
+          "files_changed": 3,
+          "net_lines": 447
+        },
+        {
+          "hash": "dbcc9aaa460185266f243a4c5f46fd094a1969d4",
+          "short_hash": "dbcc9aa",
+          "date": "2026-04-10T00:53:24+08:00",
+          "subject": "feat(chat): add chat session is favorite (pin) 1. user can pin a chat session to the top of the chat history bar 2. user can open a new chat session when LLM call is in progress",
+          "additions": 312,
+          "deletions": 94,
+          "files_changed": 8,
+          "net_lines": 218
+        },
+        {
+          "hash": "af77038d17f79ea73676a712a59de6f84b2512a6",
+          "short_hash": "af77038",
+          "date": "2026-04-09T22:41:57+08:00",
+          "subject": "Update TASKS.md complete Live Page",
+          "additions": 1,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "68888aece1308f0e273d601302803ed62a88db2a",
+          "short_hash": "68888ae",
+          "date": "2026-04-09T22:26:57+08:00",
+          "subject": "feat(live): add Gemini Live API route, frontend session hook and Live page",
+          "additions": 926,
+          "deletions": 10,
+          "files_changed": 12,
+          "net_lines": 916
+        },
+        {
+          "hash": "a43bafbf52d18c63b8828ef7ece44b2b118a2908",
+          "short_hash": "a43bafb",
+          "date": "2026-04-08T17:50:19+08:00",
+          "subject": "feat(GuestAccess): Guest Access to Chat History",
+          "additions": 230,
+          "deletions": 24,
+          "files_changed": 6,
+          "net_lines": 206
+        },
+        {
+          "hash": "ff11cea24a1b8b8c75ac868d509d82494db00f94",
+          "short_hash": "ff11cea",
+          "date": "2026-04-08T17:38:51+08:00",
+          "subject": "feat(chatpage): Update ChatPage UI",
+          "additions": 121,
+          "deletions": 99,
+          "files_changed": 3,
+          "net_lines": 22
+        },
+        {
+          "hash": "d91b15c3645da06ff9606afe80fe97611aee769d",
+          "short_hash": "d91b15c",
+          "date": "2026-04-02T02:45:14+08:00",
+          "subject": "implement(chat): save and finish trip button 1. add a save and finish trip button to the chat page 2. add a delete button to a trip in the MY TRIP page",
+          "additions": 96,
+          "deletions": 16,
+          "files_changed": 4,
+          "net_lines": 80
+        },
+        {
+          "hash": "3ad32de40a005393e4d1255161ac5186496673fc",
+          "short_hash": "3ad32de",
+          "date": "2026-04-02T02:23:06+08:00",
+          "subject": "fix(chat): fix chat history for sessions 1. add a chat history endpoint to get the active session messages 2. user can rename a session 3. user can delete a session",
+          "additions": 594,
+          "deletions": 27,
+          "files_changed": 9,
+          "net_lines": 567
+        },
+        {
+          "hash": "7fbd287d91a32e816b8219325169b52bc92ef8ab",
+          "short_hash": "7fbd287",
+          "date": "2026-04-02T01:44:03+08:00",
+          "subject": "Update TASKS.md",
+          "additions": 3,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "a2acee8e443a967a74d3fa61d0d567da408969bb",
+          "short_hash": "a2acee8",
+          "date": "2026-04-02T01:15:23+08:00",
+          "subject": "implement(TTS): implement TTS with Browser TTSAPI",
+          "additions": 64,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": 60
+        },
+        {
+          "hash": "f08696163e9e24caffb492473e9c4c82de95b29f",
+          "short_hash": "f086961",
+          "date": "2026-03-31T01:08:20+08:00",
+          "subject": "fix (chat): a scrollable, auto-expanding textarea",
+          "additions": 19,
+          "deletions": 7,
+          "files_changed": 1,
+          "net_lines": 12
+        },
+        {
+          "hash": "7582d08c8495091fa39814fd1f19ae40398ea3e9",
+          "short_hash": "7582d08",
+          "date": "2026-03-31T01:01:38+08:00",
+          "subject": "implement (STT): add record duration limit 1. the max duration of recording is 60 seconds 2. a silence duration of 20 seconds will end the recording 3. second click on the voice button will end the recording early",
+          "additions": 143,
+          "deletions": 26,
+          "files_changed": 1,
+          "net_lines": 117
+        },
+        {
+          "hash": "1adf44c7424e5b51d0f090f6c3088598e71bf237",
+          "short_hash": "1adf44c",
+          "date": "2026-03-31T00:30:39+08:00",
+          "subject": "fix (STT): fix voice input and add .DS_Store to .gitignore",
+          "additions": 28,
+          "deletions": 35,
+          "files_changed": 3,
+          "net_lines": -7
+        }
+      ]
+    },
+    "DavidWongLinux": {
+      "email": "david20030701@gmail.com",
+      "total_commits": 194,
+      "total_additions": 44611,
+      "total_deletions": 10450,
+      "net_lines": 34161,
+      "total_files_changed": 891,
+      "first_commit": "2026-03-19T16:41:00+08:00",
+      "last_commit": "2026-04-18T01:56:37+08:00",
+      "commits": [
+        {
+          "hash": "5ee1e8c37b169d7ae0e454d490d475ca92d6324c",
+          "short_hash": "5ee1e8c",
+          "date": "2026-04-18T01:56:37+08:00",
+          "subject": "feat(report): add comprehensive documentation for GoGoGo travel agent application",
+          "additions": 223,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 223
+        },
+        {
+          "hash": "adf658156c811aae9096732f201d9788cea5996a",
+          "short_hash": "adf6581",
+          "date": "2026-04-15T03:24:42+08:00",
+          "subject": "feat(chat): add dompurify dependency and update copy message behavior",
+          "additions": 25,
+          "deletions": 13,
+          "files_changed": 3,
+          "net_lines": 12
+        },
+        {
+          "hash": "8071cf2d3688983e0317266ab8895f823b8a2e77",
+          "short_hash": "8071cf2",
+          "date": "2026-04-10T21:59:34+08:00",
+          "subject": "refactor(docs): update architecture documentation link in README and tidy up ChatPage component",
+          "additions": 3,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 1
+        },
+        {
+          "hash": "87fabcc7e4541bd1610cd64d7ff00a3d47d54f79",
+          "short_hash": "87fabcc",
+          "date": "2026-04-09T22:03:00+08:00",
+          "subject": "remove google TTS todo",
+          "additions": 1,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "e52db290366141ccc6620ec1859dde39c5f2dc30",
+          "short_hash": "e52db29",
+          "date": "2026-04-09T22:02:41+08:00",
+          "subject": "Update TASKS.md to reorganize remaining tasks and clarify features",
+          "additions": 4,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 2
+        },
+        {
+          "hash": "7525c0794f673a512fabbaebb3fa638166d86696",
+          "short_hash": "7525c07",
+          "date": "2026-04-09T22:00:12+08:00",
+          "subject": "Update TASKS.md with new feature requests and bug fixes",
+          "additions": 4,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 4
+        },
+        {
+          "hash": "61e46c4a1befb7c0be78f422938dbeddf3869e17",
+          "short_hash": "61e46c4",
+          "date": "2026-04-09T21:48:28+08:00",
+          "subject": "Enhance streaming service and chat functionality with retry handling",
+          "additions": 16,
+          "deletions": 2,
+          "files_changed": 3,
+          "net_lines": 14
+        },
+        {
+          "hash": "97f91361a92cb216c03b5eb5541883ccdb1f380b",
+          "short_hash": "97f9136",
+          "date": "2026-04-09T21:37:37+08:00",
+          "subject": "Enhance flight search functionality with city code resolution",
+          "additions": 59,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 58
+        },
+        {
+          "hash": "223f16b63635ece1f8ed8a0984bc91c75967b8e2",
+          "short_hash": "223f16b",
+          "date": "2026-04-09T21:33:15+08:00",
+          "subject": "Refactor round-trip flight search logic and update timeout settings",
+          "additions": 36,
+          "deletions": 176,
+          "files_changed": 2,
+          "net_lines": -140
+        },
+        {
+          "hash": "2495440c6b8a3d71b8f6e1090a4c539bb972c6ab",
+          "short_hash": "2495440",
+          "date": "2026-04-09T21:23:53+08:00",
+          "subject": "Enhance flight search functionality and update tool instructions",
+          "additions": 357,
+          "deletions": 124,
+          "files_changed": 3,
+          "net_lines": 233
+        },
+        {
+          "hash": "8377f6c6704ca3911701918323632ad0af461431",
+          "short_hash": "8377f6c",
+          "date": "2026-04-09T20:52:55+08:00",
+          "subject": "Change trips.session_id foreign key to SET NULL on delete",
+          "additions": 45,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 44
+        },
+        {
+          "hash": "0fae269e3ae93dc51f6547bf23cd2a9712b8a2b5",
+          "short_hash": "0fae269",
+          "date": "2026-04-09T20:49:42+08:00",
+          "subject": "Refactor logging in flight, hotel, transport, search, and weather tools",
+          "additions": 11,
+          "deletions": 13,
+          "files_changed": 5,
+          "net_lines": -2
+        },
+        {
+          "hash": "c2337d7d0e0018bc64d848b9cfb09d63406bec8e",
+          "short_hash": "c2337d7",
+          "date": "2026-04-09T20:45:52+08:00",
+          "subject": "Enhance logging across authentication and user services",
+          "additions": 422,
+          "deletions": 12,
+          "files_changed": 6,
+          "net_lines": 410
+        },
+        {
+          "hash": "0c633edf78554aa208d1d5528b7990061d6c977c",
+          "short_hash": "0c633ed",
+          "date": "2026-04-09T20:36:55+08:00",
+          "subject": "Add CASCADE delete to trips.session_id foreign key",
+          "additions": 100,
+          "deletions": 4,
+          "files_changed": 3,
+          "net_lines": 96
+        },
+        {
+          "hash": "e4df206102c1f5ede4b7e370e5a454d9ae3877cc",
+          "short_hash": "e4df206",
+          "date": "2026-04-09T20:14:26+08:00",
+          "subject": "Enhance logging across various tools for improved debugging",
+          "additions": 137,
+          "deletions": 75,
+          "files_changed": 8,
+          "net_lines": 62
+        },
+        {
+          "hash": "f8e35240cc8fd91fc3533b369e680a82c6dcd8e7",
+          "short_hash": "f8e3524",
+          "date": "2026-04-09T19:55:35+08:00",
+          "subject": "Enhance logging for LLM requests and responses in streaming service",
+          "additions": 158,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 158
+        },
+        {
+          "hash": "e59002769e87e3ffe1033d432fe0e55cd48a094a",
+          "short_hash": "e590027",
+          "date": "2026-04-09T19:41:20+08:00",
+          "subject": "Enhance chat functionality with itinerary restoration and timeout handling",
+          "additions": 29,
+          "deletions": 3,
+          "files_changed": 2,
+          "net_lines": 26
+        },
+        {
+          "hash": "e6f6439db7ed41d84c383cc71cb97dc4e929a441",
+          "short_hash": "e6f6439",
+          "date": "2026-04-09T19:26:16+08:00",
+          "subject": "Update tool rules in streaming service instructions",
+          "additions": 4,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 2
+        },
+        {
+          "hash": "13337ac7ca2dddfa0481f9e1193070b49bd2068e",
+          "short_hash": "13337ac",
+          "date": "2026-04-09T19:25:03+08:00",
+          "subject": "Enhance logging in streaming service for debugging",
+          "additions": 29,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 29
+        },
+        {
+          "hash": "cf249c456ff61485d80d61e8147300c2ec11444c",
+          "short_hash": "cf249c4",
+          "date": "2026-04-09T19:20:09+08:00",
+          "subject": "Update streaming service timeout and enhance error handling",
+          "additions": 11,
+          "deletions": 10,
+          "files_changed": 2,
+          "net_lines": 1
+        },
+        {
+          "hash": "ca51814bc788e4d7ea7e2cf2ade5f3de03066a9d",
+          "short_hash": "ca51814",
+          "date": "2026-04-09T19:17:42+08:00",
+          "subject": "Refactor streaming service: adjust timeout and enhance logging",
+          "additions": 24,
+          "deletions": 4,
+          "files_changed": 1,
+          "net_lines": 20
+        },
+        {
+          "hash": "cde6415b9e86d88af44770bffd543c594d140ccf",
+          "short_hash": "cde6415",
+          "date": "2026-04-09T19:05:04+08:00",
+          "subject": "Enhance streaming service with retry logic and timeout settings",
+          "additions": 59,
+          "deletions": 32,
+          "files_changed": 2,
+          "net_lines": 27
+        },
+        {
+          "hash": "e15bd13285a08823d086e86930dd02fa71a2b404",
+          "short_hash": "e15bd13",
+          "date": "2026-04-09T16:59:31+08:00",
+          "subject": "Remove NordVPN setup script",
+          "additions": 0,
+          "deletions": 93,
+          "files_changed": 1,
+          "net_lines": -93
+        },
+        {
+          "hash": "ec0a2e56a97e2a57fdb38c3b67c52c180579470d",
+          "short_hash": "ec0a2e5",
+          "date": "2026-04-08T17:10:36+08:00",
+          "subject": "feat(TASKS.md, ChatPage): update task status and enhance chat history UI",
+          "additions": 123,
+          "deletions": 123,
+          "files_changed": 2,
+          "net_lines": 0
+        },
+        {
+          "hash": "648df69a4918a10abb786855c58c9bd1bc427c37",
+          "short_hash": "648df69",
+          "date": "2026-04-08T16:40:15+08:00",
+          "subject": "feat(ProfilePage): add trip planning preferences section for user customization",
+          "additions": 25,
+          "deletions": 25,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "127b3ff6bbf9e1b976176dfd85cf96563f7d87e1",
+          "short_hash": "127b3ff",
+          "date": "2026-04-08T16:29:02+08:00",
+          "subject": "feat(auth): implement authentication state management with Zustand",
+          "additions": 150,
+          "deletions": 45,
+          "files_changed": 10,
+          "net_lines": 105
+        },
+        {
+          "hash": "af712680c4336c06f8a26678c4c8e0d8f7d392a4",
+          "short_hash": "af71268",
+          "date": "2026-04-08T15:57:16+08:00",
+          "subject": "fix(ChatPage): improve error handling for chat session deletion and history clearing",
+          "additions": 6,
+          "deletions": 5,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "9e135300616b4cf2d3197a43a336fd0341e3084d",
+          "short_hash": "9e13530",
+          "date": "2026-04-08T15:54:13+08:00",
+          "subject": "feat(chat): add endpoints to clear chat messages and history",
+          "additions": 130,
+          "deletions": 57,
+          "files_changed": 6,
+          "net_lines": 73
+        },
+        {
+          "hash": "9fced98cd3703bbfed1b784eb1bcaff7137230de",
+          "short_hash": "9fced98",
+          "date": "2026-04-08T15:29:32+08:00",
+          "subject": "fix(deps): verify user existence before returning user_id",
+          "additions": 4,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 2
+        },
+        {
+          "hash": "18552449cecdcb6591cd49569eba2ff01f896ebe",
+          "short_hash": "1855244",
+          "date": "2026-04-08T15:16:12+08:00",
+          "subject": "fix(Sidebar): update logout button behavior to navigate to login if no access token is present",
+          "additions": 7,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 6
+        },
+        {
+          "hash": "c3ee442530a699560b74ec4fc5d6b19e20e7b130",
+          "short_hash": "c3ee442",
+          "date": "2026-04-08T15:15:53+08:00",
+          "subject": "feat(user): add trip planning commands to user preferences and update profile handling",
+          "additions": 42,
+          "deletions": 2,
+          "files_changed": 4,
+          "net_lines": 40
+        },
+        {
+          "hash": "8bf57e6a52e9e6db1ae5c24a106f49d4bb7f3cfd",
+          "short_hash": "8bf57e6",
+          "date": "2026-04-08T15:06:57+08:00",
+          "subject": "feat(TASKS.md): update remaining tasks and enhance user experience features",
+          "additions": 5,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": 2
+        },
+        {
+          "hash": "be41f30ae6d84b38a1a0a400bff74b53f3af040b",
+          "short_hash": "be41f30",
+          "date": "2026-04-08T14:35:24+08:00",
+          "subject": "feat(LoginPage, ProfilePage): enhance password validation and user feedback",
+          "additions": 145,
+          "deletions": 62,
+          "files_changed": 2,
+          "net_lines": 83
+        },
+        {
+          "hash": "ab9b170a00d6e3c2abd66dd851adfe99eec4e6a2",
+          "short_hash": "ab9b170",
+          "date": "2026-04-08T14:28:00+08:00",
+          "subject": "feat(user): implement password change functionality and validation",
+          "additions": 278,
+          "deletions": 4,
+          "files_changed": 7,
+          "net_lines": 274
+        },
+        {
+          "hash": "2ead6582d7ed09281e513337ae48d7dc1e0b9650",
+          "short_hash": "2ead658",
+          "date": "2026-04-08T14:18:32+08:00",
+          "subject": "refactor(ChatPage): enhance session initialization logic and prevent double-creation",
+          "additions": 11,
+          "deletions": 8,
+          "files_changed": 1,
+          "net_lines": 3
+        },
+        {
+          "hash": "0099a82ee37a8e0e637d69d14775a3d8d4ecf1be",
+          "short_hash": "0099a82",
+          "date": "2026-04-08T14:15:16+08:00",
+          "subject": "refactor(TripPage): improve layout and messaging for itinerary selection",
+          "additions": 10,
+          "deletions": 13,
+          "files_changed": 1,
+          "net_lines": -3
+        },
+        {
+          "hash": "716520ef9debf4ec8df6e3b83ebb1514124bb65e",
+          "short_hash": "716520e",
+          "date": "2026-04-08T14:09:18+08:00",
+          "subject": "refactor(ChatPage): streamline chat session initialization logic",
+          "additions": 15,
+          "deletions": 29,
+          "files_changed": 1,
+          "net_lines": -14
+        },
+        {
+          "hash": "fe8de5034f965c0904ad00ef24ad6cb7633f5dbb",
+          "short_hash": "fe8de50",
+          "date": "2026-04-08T13:40:27+08:00",
+          "subject": "feat(ChatPage, LoginPage): implement session management on login and chat initialization",
+          "additions": 23,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 22
+        },
+        {
+          "hash": "c6fb859ec701428804ce6728272d38316d3feeaa",
+          "short_hash": "c6fb859",
+          "date": "2026-04-08T13:37:08+08:00",
+          "subject": "feat(Sidebar, ConfirmDialog): implement logout confirmation dialog and enhance error handling in chat service",
+          "additions": 63,
+          "deletions": 21,
+          "files_changed": 3,
+          "net_lines": 42
+        },
+        {
+          "hash": "476f2729aca2b338bc00563b173cfcdba9d73acb",
+          "short_hash": "476f272",
+          "date": "2026-04-08T13:22:05+08:00",
+          "subject": "feat(LoginPage): enhance authentication experience with password visibility toggle and error handling",
+          "additions": 33,
+          "deletions": 21,
+          "files_changed": 2,
+          "net_lines": 12
+        },
+        {
+          "hash": "beef76aa41a0f99cca33a4918057499468f7312a",
+          "short_hash": "beef76a",
+          "date": "2026-04-08T00:51:03+08:00",
+          "subject": "feat(auth): integrate toast notifications for session management and error handling",
+          "additions": 67,
+          "deletions": 15,
+          "files_changed": 3,
+          "net_lines": 52
+        },
+        {
+          "hash": "602a6b10fcef8d9392ef58cd10475ca020843632",
+          "short_hash": "602a6b1",
+          "date": "2026-04-08T00:27:45+08:00",
+          "subject": "feat(streaming_service, chat): implement auto-save for trip itineraries during chat sessions",
+          "additions": 48,
+          "deletions": 58,
+          "files_changed": 7,
+          "net_lines": -10
+        },
+        {
+          "hash": "6d5c47612f52ffd56c0208a21326e62464754458",
+          "short_hash": "6d5c476",
+          "date": "2026-04-08T00:01:53+08:00",
+          "subject": "feat(architecture): update API endpoints and service structure for chat streaming",
+          "additions": 59,
+          "deletions": 32,
+          "files_changed": 1,
+          "net_lines": 27
+        },
+        {
+          "hash": "839151aefab7643c161ae969df0f2a0a82f69148",
+          "short_hash": "839151a",
+          "date": "2026-04-03T06:28:12+08:00",
+          "subject": "feat(docs): update TASKS.md to reflect completed tasks and clarify ongoing issues",
+          "additions": 10,
+          "deletions": 9,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "de814f97e1b933c091a35760e5f57244c895f956",
+          "short_hash": "de814f9",
+          "date": "2026-04-03T06:24:17+08:00",
+          "subject": "feat(backend, frontend): enhance message update functionality for guest users",
+          "additions": 29,
+          "deletions": 8,
+          "files_changed": 4,
+          "net_lines": 21
+        },
+        {
+          "hash": "1f8c36ba970382630886b6df7c4a61e4bf614ede",
+          "short_hash": "1f8c36b",
+          "date": "2026-04-03T06:09:54+08:00",
+          "subject": "feat(backend, frontend): add thinking_steps functionality to messages",
+          "additions": 273,
+          "deletions": 37,
+          "files_changed": 9,
+          "net_lines": 236
+        },
+        {
+          "hash": "a73916cf449d05218d5279a075789be47b41a354",
+          "short_hash": "a73916c",
+          "date": "2026-04-03T05:29:57+08:00",
+          "subject": "feat(backend): streamline trip planning instructions and enhance flexibility",
+          "additions": 26,
+          "deletions": 88,
+          "files_changed": 1,
+          "net_lines": -62
+        },
+        {
+          "hash": "74f3e9fcacbaa7f245a0d044b72325900182da19",
+          "short_hash": "74f3e9f",
+          "date": "2026-04-03T05:24:45+08:00",
+          "subject": "feat(backend): refine tool call rules in streaming service instructions",
+          "additions": 7,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 7
+        },
+        {
+          "hash": "f992bb818fa6bfa62ad2a4680c38399b38ebbb22",
+          "short_hash": "f992bb8",
+          "date": "2026-04-03T05:20:05+08:00",
+          "subject": "feat(backend): enhance streaming service with keepalive functionality and updated search defaults",
+          "additions": 33,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 33
+        },
+        {
+          "hash": "0b3d0f6e8ff9cc23a467e2a4ccac49ba3b69b5c4",
+          "short_hash": "0b3d0f6",
+          "date": "2026-04-03T05:11:40+08:00",
+          "subject": "feat(backend): enhance flight and hotel search parameters and error handling",
+          "additions": 82,
+          "deletions": 26,
+          "files_changed": 5,
+          "net_lines": 56
+        },
+        {
+          "hash": "89177e29f0ff5c833a4519b5c699090b8ad92bf1",
+          "short_hash": "89177e2",
+          "date": "2026-04-03T04:54:26+08:00",
+          "subject": "fix(backend): update logging levels for error handling in tools",
+          "additions": 53,
+          "deletions": 40,
+          "files_changed": 6,
+          "net_lines": 13
+        },
+        {
+          "hash": "497ba80a5890545e895c90bc4312b8a7b86e3c4b",
+          "short_hash": "497ba80",
+          "date": "2026-04-03T04:44:42+08:00",
+          "subject": "feat(frontend): simplify InputBar by removing trip plan generation button",
+          "additions": 3,
+          "deletions": 16,
+          "files_changed": 1,
+          "net_lines": -13
+        },
+        {
+          "hash": "1377d8c02785c65b7bbb823291d37b4195d6a40e",
+          "short_hash": "1377d8c",
+          "date": "2026-04-03T04:39:53+08:00",
+          "subject": "feat(backend): enhance trip planning confirmation instructions",
+          "additions": 35,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 35
+        },
+        {
+          "hash": "4795ba4904126956096a5b87f985b1ed6dc919c1",
+          "short_hash": "4795ba4",
+          "date": "2026-04-03T04:34:05+08:00",
+          "subject": "feat(frontend): update TravelSettingsBar component to streamline travel preferences",
+          "additions": 117,
+          "deletions": 220,
+          "files_changed": 2,
+          "net_lines": -103
+        },
+        {
+          "hash": "1d977e46e86c8e2292d74b0da17208b49edef056",
+          "short_hash": "1d977e4",
+          "date": "2026-04-03T04:13:12+08:00",
+          "subject": "feat(frontend, backend): refine chat session title handling and improve UI interactions",
+          "additions": 33,
+          "deletions": 17,
+          "files_changed": 3,
+          "net_lines": 16
+        },
+        {
+          "hash": "7286af96a46379f53be6d0dffeaa97b4cc27fed3",
+          "short_hash": "7286af9",
+          "date": "2026-04-03T03:54:08+08:00",
+          "subject": "feat(frontend): enhance chat session loading and UI interactions",
+          "additions": 32,
+          "deletions": 12,
+          "files_changed": 1,
+          "net_lines": 20
+        },
+        {
+          "hash": "e9efca73a0a8379339c689e7c95afe56c73a5182",
+          "short_hash": "e9efca7",
+          "date": "2026-04-03T03:47:20+08:00",
+          "subject": "feat(backend): enhance attraction API client and improve logging for itinerary generation",
+          "additions": 27,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 25
+        },
+        {
+          "hash": "119772f0141df76c335fd79279d6934e264e8cd3",
+          "short_hash": "119772f",
+          "date": "2026-04-03T03:36:21+08:00",
+          "subject": "fix(backend): clarify trip planning instructions and improve user prompts",
+          "additions": 14,
+          "deletions": 6,
+          "files_changed": 3,
+          "net_lines": 8
+        },
+        {
+          "hash": "1c407f5c8c1cfefdd80440f119b1db856e728abd",
+          "short_hash": "1c407f5",
+          "date": "2026-04-03T03:27:30+08:00",
+          "subject": "feat(backend): enhance trip planning instructions and streamline system prompts",
+          "additions": 47,
+          "deletions": 19,
+          "files_changed": 1,
+          "net_lines": 28
+        },
+        {
+          "hash": "56aed95ae0288ef6defca195d65b947ca1c5d574",
+          "short_hash": "56aed95",
+          "date": "2026-04-03T03:05:58+08:00",
+          "subject": "refactor(backend): streamline chat streaming and enhance logging",
+          "additions": 58,
+          "deletions": 137,
+          "files_changed": 2,
+          "net_lines": -79
+        },
+        {
+          "hash": "b12e3a1fd91ee4d9c332f8c26b531d061ab77850",
+          "short_hash": "b12e3a1",
+          "date": "2026-04-03T02:31:16+08:00",
+          "subject": "feat(backend, frontend): enhance error handling and message updates in chat streaming",
+          "additions": 72,
+          "deletions": 12,
+          "files_changed": 6,
+          "net_lines": 60
+        },
+        {
+          "hash": "62a3ddceeecf9bf7a7d45d418bb9f245ac6cda34",
+          "short_hash": "62a3ddc",
+          "date": "2026-04-03T02:25:39+08:00",
+          "subject": "docs: add proxy/async gotcha warning to Gemini API reference",
+          "additions": 30,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 29
+        },
+        {
+          "hash": "74b1cb81f67c3e6f1cd0a5bece8d4e13dce66d5b",
+          "short_hash": "74b1cb8",
+          "date": "2026-04-03T02:24:03+08:00",
+          "subject": "fix(backend): use sync client for chat streaming to fix SOCKS5 proxy issue",
+          "additions": 28,
+          "deletions": 15,
+          "files_changed": 1,
+          "net_lines": 13
+        },
+        {
+          "hash": "554c5474797cfbd9d41d1f301b6a63c47cddc076",
+          "short_hash": "554c547",
+          "date": "2026-04-03T02:16:55+08:00",
+          "subject": "feat(backend): implement simple chat streaming and enhance message handling",
+          "additions": 215,
+          "deletions": 45,
+          "files_changed": 5,
+          "net_lines": 170
+        },
+        {
+          "hash": "b84535cad34c367f1a6d35c81c6cc576169e2864",
+          "short_hash": "b84535c",
+          "date": "2026-04-03T01:32:20+08:00",
+          "subject": "feat(backend): unify streaming loop with agent-directs trip generation",
+          "additions": 442,
+          "deletions": 1563,
+          "files_changed": 9,
+          "net_lines": -1121
+        },
+        {
+          "hash": "c7f52704c947834677703ec692ad08710974acfa",
+          "short_hash": "c7f5270",
+          "date": "2026-04-03T00:43:49+08:00",
+          "subject": "docs: update agent-decides-generation.md with comprehensive implementation plan",
+          "additions": 558,
+          "deletions": 33,
+          "files_changed": 1,
+          "net_lines": 525
+        },
+        {
+          "hash": "11a92fc4959b6750c09bb85a4498423960baeedf",
+          "short_hash": "11a92fc",
+          "date": "2026-04-03T00:31:45+08:00",
+          "subject": "refactor(ui): reorganize imports in TripPage component for improved readability",
+          "additions": 22,
+          "deletions": 21,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "264688a24621054289b2fcce6fa88f434ea27d5d",
+          "short_hash": "264688a",
+          "date": "2026-03-31T18:26:20+08:00",
+          "subject": "feat(agent, logging): enhance token usage logging and error handling; set timezone to Hong Kong",
+          "additions": 74,
+          "deletions": 20,
+          "files_changed": 5,
+          "net_lines": 54
+        },
+        {
+          "hash": "154c52cc8e40f17e6dbb284038d94863dd1d09fe",
+          "short_hash": "154c52c",
+          "date": "2026-03-31T18:04:05+08:00",
+          "subject": "refactor(chat): simplify login button layout in ChatPage component",
+          "additions": 7,
+          "deletions": 16,
+          "files_changed": 1,
+          "net_lines": -9
+        },
+        {
+          "hash": "12917579fccba30794e1d6cb94402188df3ca7fb",
+          "short_hash": "1291757",
+          "date": "2026-03-31T18:02:06+08:00",
+          "subject": "feat(travel): introduce travel settings management and enhance trip parameter handling",
+          "additions": 454,
+          "deletions": 25,
+          "files_changed": 13,
+          "net_lines": 429
+        },
+        {
+          "hash": "cbe2d4c6c1afb8606a8bdd0fa982518a541afb01",
+          "short_hash": "cbe2d4c",
+          "date": "2026-03-31T17:16:57+08:00",
+          "subject": "feat(agent): increase MAX_ITERATIONS and enhance system prompt with current datetime",
+          "additions": 34,
+          "deletions": 8,
+          "files_changed": 3,
+          "net_lines": 26
+        },
+        {
+          "hash": "8e312e86d0a2c41491dc1532455f7f6b8f4901fa",
+          "short_hash": "8e312e8",
+          "date": "2026-03-31T16:55:36+08:00",
+          "subject": "feat(logging): enhance logging across agent tools for better traceability",
+          "additions": 825,
+          "deletions": 96,
+          "files_changed": 12,
+          "net_lines": 729
+        },
+        {
+          "hash": "f22ae454d0f07f19b6975a796e11a9c8302514aa",
+          "short_hash": "f22ae45",
+          "date": "2026-03-31T16:20:14+08:00",
+          "subject": "fix(agents): standardize description formatting across agent files",
+          "additions": 222,
+          "deletions": 25,
+          "files_changed": 10,
+          "net_lines": 197
+        },
+        {
+          "hash": "d4f9a6b4daa5451c0a9f7ea60f971cded90d8318",
+          "short_hash": "d4f9a6b",
+          "date": "2026-03-31T16:06:44+08:00",
+          "subject": "feat(agents): add new agents for enhanced development capabilities",
+          "additions": 2348,
+          "deletions": 0,
+          "files_changed": 10,
+          "net_lines": 2348
+        },
+        {
+          "hash": "c79db86d8350362bd3715113529f735cf3b22b62",
+          "short_hash": "c79db86",
+          "date": "2026-03-31T15:48:15+08:00",
+          "subject": "feat(api, frontend): improve user authentication handling and error messaging",
+          "additions": 89,
+          "deletions": 16,
+          "files_changed": 4,
+          "net_lines": 73
+        },
+        {
+          "hash": "b1c11c3d9de0c55c11bef72cc93d670727d13beb",
+          "short_hash": "b1c11c3",
+          "date": "2026-03-31T15:16:51+08:00",
+          "subject": "feat(itinerary): enhance demo itinerary with pricing and category details",
+          "additions": 18,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 16
+        },
+        {
+          "hash": "50b95458cdf4e4cdbfda0e68f03661d4087e447f",
+          "short_hash": "50b9545",
+          "date": "2026-03-31T15:04:33+08:00",
+          "subject": "refactor(itinerary): update flight and hotel schemas for improved pricing structure",
+          "additions": 24,
+          "deletions": 29,
+          "files_changed": 4,
+          "net_lines": -5
+        },
+        {
+          "hash": "6b0cfb8d5410184c23f703b865df52ff6ef23c85",
+          "short_hash": "6b0cfb8",
+          "date": "2026-03-31T14:56:27+08:00",
+          "subject": "fix(flights, hotels): update currency from USD to HKD in API requests and response handling",
+          "additions": 14,
+          "deletions": 22,
+          "files_changed": 3,
+          "net_lines": -8
+        },
+        {
+          "hash": "0a4569d60663afea1422c7930606a2fb754ded47",
+          "short_hash": "0a4569d",
+          "date": "2026-03-31T14:39:38+08:00",
+          "subject": "feat(itinerary): enhance trip and activity schemas with new fields and extraction logic",
+          "additions": 146,
+          "deletions": 5,
+          "files_changed": 7,
+          "net_lines": 141
+        },
+        {
+          "hash": "b50dab5b7262d0887b986b0dcba4a7410ec44c1d",
+          "short_hash": "b50dab5",
+          "date": "2026-03-31T14:28:59+08:00",
+          "subject": "feat(types): enhance trip and activity schemas with additional fields and categories",
+          "additions": 134,
+          "deletions": 42,
+          "files_changed": 6,
+          "net_lines": 92
+        },
+        {
+          "hash": "7e07851dda1a32664b66e7a6fb8e3a49e89e5f7a",
+          "short_hash": "7e07851",
+          "date": "2026-03-31T02:58:30+08:00",
+          "subject": "feat(attractions, flights, hotels, maps): enhance response schemas and improve functionality",
+          "additions": 1479,
+          "deletions": 223,
+          "files_changed": 9,
+          "net_lines": 1256
+        },
+        {
+          "hash": "f80888b7ea4d0854ad6fbb23d9100838a9b6486f",
+          "short_hash": "f80888b",
+          "date": "2026-03-31T02:24:53+08:00",
+          "subject": "feat(search): enhance response schema and include relevance scoring",
+          "additions": 110,
+          "deletions": 7,
+          "files_changed": 1,
+          "net_lines": 103
+        },
+        {
+          "hash": "0d3f492b7a0ae3c0112bf11f62874d448b9c1849",
+          "short_hash": "0d3f492",
+          "date": "2026-03-31T02:12:37+08:00",
+          "subject": "feat(streaming): add Markdown formatting guideline for agent responses",
+          "additions": 145,
+          "deletions": 94,
+          "files_changed": 3,
+          "net_lines": 51
+        },
+        {
+          "hash": "92083cb2fa9a3ed2121babca21300755071e82e8",
+          "short_hash": "92083cb",
+          "date": "2026-03-31T01:58:38+08:00",
+          "subject": "refactor(streaming): improve logging and metadata handling in stream_agent_response",
+          "additions": 62,
+          "deletions": 224,
+          "files_changed": 2,
+          "net_lines": -162
+        },
+        {
+          "hash": "6b52e55e027356ed4014e279e8a5d8ad371f061f",
+          "short_hash": "6b52e55",
+          "date": "2026-03-31T01:50:57+08:00",
+          "subject": "feat(chat): enhance thinking step display with user-friendly labels",
+          "additions": 430,
+          "deletions": 14,
+          "files_changed": 9,
+          "net_lines": 416
+        },
+        {
+          "hash": "3f30ffd74510a3980ce225c540a006323e4148f4",
+          "short_hash": "3f30ffd",
+          "date": "2026-03-31T01:28:23+08:00",
+          "subject": "feat(chat): integrate Markdown rendering in ChatPage",
+          "additions": 1560,
+          "deletions": 68,
+          "files_changed": 5,
+          "net_lines": 1492
+        },
+        {
+          "hash": "d1a642ac531dd46f40f0cd0ebf88cacd1e5873ba",
+          "short_hash": "d1a642a",
+          "date": "2026-03-31T01:20:07+08:00",
+          "subject": "refactor(docs): update TASKS.md to reflect ownership changes and enhance clarity",
+          "additions": 176,
+          "deletions": 252,
+          "files_changed": 1,
+          "net_lines": -76
+        },
+        {
+          "hash": "088d8b51cc1e0a30b4978c9826eb435e050cd59d",
+          "short_hash": "088d8b5",
+          "date": "2026-03-31T00:53:20+08:00",
+          "subject": "refactor(chat): remove obsolete refactor plan and state tracking files",
+          "additions": 0,
+          "deletions": 73,
+          "files_changed": 2,
+          "net_lines": -73
+        },
+        {
+          "hash": "303557162f8dc9d6d6051086ccd7a6f2d710926e",
+          "short_hash": "3035571",
+          "date": "2026-03-31T00:46:43+08:00",
+          "subject": "fix(chat): refine thinking bubble rendering logic in ChatPage",
+          "additions": 1,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "2e3eb6ec65376dfb387f652f48144255c9a87bb7",
+          "short_hash": "2e3eb6e",
+          "date": "2026-03-31T00:45:32+08:00",
+          "subject": "refactor(chat): update thinking bubble management in ChatPage",
+          "additions": 16,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": 10
+        },
+        {
+          "hash": "565a09ddd4b80f83f3d38ab19711e64f1e4b01d2",
+          "short_hash": "565a09d",
+          "date": "2026-03-31T00:40:10+08:00",
+          "subject": "feat(chat): implement partial thought handling and streaming thought display",
+          "additions": 227,
+          "deletions": 94,
+          "files_changed": 3,
+          "net_lines": 133
+        },
+        {
+          "hash": "5d36c91eb5ba8e61f60539b9ad72262805729333",
+          "short_hash": "5d36c91",
+          "date": "2026-03-30T23:59:21+08:00",
+          "subject": "refactor(streaming): adjust thinking level and remove unused functions",
+          "additions": 2,
+          "deletions": 10,
+          "files_changed": 3,
+          "net_lines": -8
+        },
+        {
+          "hash": "ce375ae6cbcecdab1e0a3cc9e4e09493b4b19d76",
+          "short_hash": "ce375ae",
+          "date": "2026-03-30T23:20:19+08:00",
+          "subject": "refactor(schemas): standardize datetime imports and enhance trip title generation",
+          "additions": 42,
+          "deletions": 19,
+          "files_changed": 5,
+          "net_lines": 23
+        },
+        {
+          "hash": "45f3c43845d54d316c9169d302dd9d6f50c9893d",
+          "short_hash": "45f3c43",
+          "date": "2026-03-30T23:01:12+08:00",
+          "subject": "refactor(logging): improve response preview logging in agent and streaming service",
+          "additions": 21,
+          "deletions": 23,
+          "files_changed": 3,
+          "net_lines": -2
+        },
+        {
+          "hash": "140d84aece5c327826592a6a2718d65b750a3b70",
+          "short_hash": "140d84a",
+          "date": "2026-03-30T22:53:59+08:00",
+          "subject": "refactor(schemas): rename datetime imports for clarity and consistency",
+          "additions": 47,
+          "deletions": 37,
+          "files_changed": 4,
+          "net_lines": 10
+        },
+        {
+          "hash": "8235ef7c06a03cda4b4c1e0dd8c0a55949e34bbe",
+          "short_hash": "8235ef7",
+          "date": "2026-03-30T22:47:15+08:00",
+          "subject": "feat(schemas): update data models for improved type safety and validation",
+          "additions": 141,
+          "deletions": 70,
+          "files_changed": 8,
+          "net_lines": 71
+        },
+        {
+          "hash": "67eb406123296229b0df5ecbb41576bf2ef917c3",
+          "short_hash": "67eb406",
+          "date": "2026-03-30T21:30:55+08:00",
+          "subject": "feat(tasks): update task list for streaming UI and observability enhancements",
+          "additions": 21,
+          "deletions": 15,
+          "files_changed": 1,
+          "net_lines": 6
+        },
+        {
+          "hash": "28fb9f4abc62a8288de082f579bf1c59cd20b896",
+          "short_hash": "28fb9f4",
+          "date": "2026-03-30T21:25:52+08:00",
+          "subject": "feat(agent, frontend): update schemas and components to support image URLs for activities",
+          "additions": 11,
+          "deletions": 7,
+          "files_changed": 4,
+          "net_lines": 4
+        },
+        {
+          "hash": "b705458ae592fc1afeeffc88c528654a169fc09f",
+          "short_hash": "b705458",
+          "date": "2026-03-30T21:11:23+08:00",
+          "subject": "feat(streaming): implement early exit for LLM completion in streaming response",
+          "additions": 26,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 26
+        },
+        {
+          "hash": "e98feeaedbffc47f2e1bb0d5785de46ac414e3ea",
+          "short_hash": "e98feea",
+          "date": "2026-03-30T20:58:31+08:00",
+          "subject": "feat(chat): enhance InputBar and ChatPage with dynamic thinking messages and textarea adjustments",
+          "additions": 201,
+          "deletions": 25,
+          "files_changed": 3,
+          "net_lines": 176
+        },
+        {
+          "hash": "0b74a969c58b187069f2cc0ec41e6d7ba9d0dd16",
+          "short_hash": "0b74a96",
+          "date": "2026-03-30T20:36:21+08:00",
+          "subject": "feat(streaming): add elapsed time logging for tool rounds and chunk processing",
+          "additions": 38,
+          "deletions": 17,
+          "files_changed": 1,
+          "net_lines": 21
+        },
+        {
+          "hash": "335d3c4ef00c630c3a10207f1e964b8e35e03fb2",
+          "short_hash": "335d3c4",
+          "date": "2026-03-30T20:31:03+08:00",
+          "subject": "feat(streaming): enhance error logging and improve VSCode settings",
+          "additions": 38,
+          "deletions": 7,
+          "files_changed": 2,
+          "net_lines": 31
+        },
+        {
+          "hash": "ff42759ac9c35c406e36036faada9a8be70e44bb",
+          "short_hash": "ff42759",
+          "date": "2026-03-30T20:03:31+08:00",
+          "subject": "feat(chat): refactor chat router and enhance user verification",
+          "additions": 849,
+          "deletions": 767,
+          "files_changed": 8,
+          "net_lines": 82
+        },
+        {
+          "hash": "539766e7c26cf23bacd1ed0a59d60cf4e9234efc",
+          "short_hash": "539766e",
+          "date": "2026-03-30T19:49:57+08:00",
+          "subject": "feat(chat): improve token tracking and logging in agent thought streaming",
+          "additions": 56,
+          "deletions": 18,
+          "files_changed": 1,
+          "net_lines": 38
+        },
+        {
+          "hash": "01ccf09ce546c1f85480e796f99ddbcbf8f7eab9",
+          "short_hash": "01ccf09",
+          "date": "2026-03-30T19:31:29+08:00",
+          "subject": "feat(agent): enhance tool result handling and logging",
+          "additions": 427,
+          "deletions": 40,
+          "files_changed": 10,
+          "net_lines": 387
+        },
+        {
+          "hash": "6615a8d26e5b9e81aa8ef5d831b6fcd96685b645",
+          "short_hash": "6615a8d",
+          "date": "2026-03-30T18:51:26+08:00",
+          "subject": "feat(samples): add new travel itineraries for Tokyo and Hong Kong",
+          "additions": 134,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 134
+        },
+        {
+          "hash": "13de7475f7a8343a28f593f8bc01d714ac9d0735",
+          "short_hash": "13de747",
+          "date": "2026-03-30T18:32:44+08:00",
+          "subject": "feat(logging): enhance logging in agent and chat services with traceability",
+          "additions": 557,
+          "deletions": 151,
+          "files_changed": 5,
+          "net_lines": 406
+        },
+        {
+          "hash": "2ed7cb99d18012b3842047a58f4ef301566236d2",
+          "short_hash": "2ed7cb9",
+          "date": "2026-03-30T18:12:46+08:00",
+          "subject": "feat(logging): integrate logging setup and enhance chat service logging",
+          "additions": 57,
+          "deletions": 38,
+          "files_changed": 7,
+          "net_lines": 19
+        },
+        {
+          "hash": "843d7adac5f6a5f9008b0768886cd3da45c69c35",
+          "short_hash": "843d7ad",
+          "date": "2026-03-30T17:40:39+08:00",
+          "subject": "fix(TASKS): update logging task description for clarity and adjust typewriter effect speed in ChatPage component",
+          "additions": 6,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": 2
+        },
+        {
+          "hash": "4f99f954a324aa9cef70f43a014b7f4a89bfffc5",
+          "short_hash": "4f99f95",
+          "date": "2026-03-30T17:24:02+08:00",
+          "subject": "refactor(TripPage): reorder imports and update itinerary header text",
+          "additions": 6,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "b745fd2081eb193dfc1acdb8ec29ba75a821843d",
+          "short_hash": "b745fd2",
+          "date": "2026-03-30T17:16:23+08:00",
+          "subject": "feat(chat): enhance session management and user verification in chat API",
+          "additions": 96,
+          "deletions": 65,
+          "files_changed": 2,
+          "net_lines": 31
+        },
+        {
+          "hash": "45eab79fc91d85d5216af3ec0d3b1c9b1c35ec30",
+          "short_hash": "45eab79",
+          "date": "2026-03-30T17:04:08+08:00",
+          "subject": "feat(tests): add chat streaming endpoint tests and enhance message service",
+          "additions": 388,
+          "deletions": 325,
+          "files_changed": 7,
+          "net_lines": 63
+        },
+        {
+          "hash": "71a09db1e99bd8dee4556119aa4bf1ff3c3cb7af",
+          "short_hash": "71a09db",
+          "date": "2026-03-30T16:16:38+08:00",
+          "subject": "docs: refine function calling and streaming documentation",
+          "additions": 86,
+          "deletions": 83,
+          "files_changed": 2,
+          "net_lines": 3
+        },
+        {
+          "hash": "dd17d46527cb0b37752398b25e5b1e741aab52fd",
+          "short_hash": "dd17d46",
+          "date": "2026-03-30T16:01:12+08:00",
+          "subject": "feat(docs): add comprehensive documentation for function calling and streaming applications",
+          "additions": 2210,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 2210
+        },
+        {
+          "hash": "2838b0e69a61c1ede5a012c5461626781df57dde",
+          "short_hash": "2838b0e",
+          "date": "2026-03-30T15:49:52+08:00",
+          "subject": "refactor(logging): enhance logging setup and remove redundant initialization",
+          "additions": 22,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": 18
+        },
+        {
+          "hash": "c545ae118b94e33d4de705c3d2748e1bb5f0fed9",
+          "short_hash": "c545ae1",
+          "date": "2026-03-30T14:41:33+08:00",
+          "subject": "Change back the thought effort to minimal",
+          "additions": 1,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "4870c0aba8ba9f9359965dfa75849b5b0cc515db",
+          "short_hash": "4870c0a",
+          "date": "2026-03-30T14:41:17+08:00",
+          "subject": "refactor(shadcn): standardize code formatting and improve documentation",
+          "additions": 101,
+          "deletions": 75,
+          "files_changed": 9,
+          "net_lines": 26
+        },
+        {
+          "hash": "2e023c1bed4bb0b9eb1ba68acb38057233afc71f",
+          "short_hash": "2e023c1",
+          "date": "2026-03-30T14:29:40+08:00",
+          "subject": "feat(shadcn): add shadcn CLI documentation and configuration files",
+          "additions": 1870,
+          "deletions": 23,
+          "files_changed": 21,
+          "net_lines": 1847
+        },
+        {
+          "hash": "f1db10af4448ebd7ae29330d26fe92734b19df6f",
+          "short_hash": "f1db10a",
+          "date": "2026-03-30T01:01:43+08:00",
+          "subject": "feat: update authentication token handling and enhance UI components",
+          "additions": 95,
+          "deletions": 52,
+          "files_changed": 11,
+          "net_lines": 43
+        },
+        {
+          "hash": "d3c4dd2bd5a01b74878ae69af576fe620ebb4704",
+          "short_hash": "d3c4dd2",
+          "date": "2026-03-27T01:03:46+08:00",
+          "subject": "refactor: remove confirmation prompt from cleanup script",
+          "additions": 0,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": -3
+        },
+        {
+          "hash": "078f0d0696ffad41d140f3bd1fb6c5bdba42117a",
+          "short_hash": "078f0d0",
+          "date": "2026-03-27T01:01:07+08:00",
+          "subject": "fix: update retry logic and comments in chat streaming",
+          "additions": 5,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": 2
+        },
+        {
+          "hash": "ea1d3fede45c7503deb6c8fcaeaf4f4a733a21a9",
+          "short_hash": "ea1d3fe",
+          "date": "2026-03-27T00:50:52+08:00",
+          "subject": "feat: enhance flight booking functionality and chat interaction",
+          "additions": 511,
+          "deletions": 144,
+          "files_changed": 13,
+          "net_lines": 367
+        },
+        {
+          "hash": "c5aa88615424666848aa2c30625c4822cd961e7b",
+          "short_hash": "c5aa886",
+          "date": "2026-03-27T00:21:20+08:00",
+          "subject": "docs: update GEMINI documentation for temperature settings and output recommendations",
+          "additions": 13,
+          "deletions": 13,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "c6f938271fb34d83fa0ab9da1565e43123e1d23a",
+          "short_hash": "c6f9382",
+          "date": "2026-03-27T00:15:37+08:00",
+          "subject": "feat: add thinking configuration to content generation",
+          "additions": 196,
+          "deletions": 1,
+          "files_changed": 3,
+          "net_lines": 195
+        },
+        {
+          "hash": "ddf7e598532c8edcf8e5db6318e88fee4220b0b0",
+          "short_hash": "ddf7e59",
+          "date": "2026-03-26T23:59:28+08:00",
+          "subject": "feat: update documentation and improve formatting consistency",
+          "additions": 394,
+          "deletions": 384,
+          "files_changed": 25,
+          "net_lines": 10
+        },
+        {
+          "hash": "d0c59affd8a0829ad1b61cbe9bccac1a3cc2cfb3",
+          "short_hash": "d0c59af",
+          "date": "2026-03-26T23:45:19+08:00",
+          "subject": "feat: update command hooks for code quality tools",
+          "additions": 12,
+          "deletions": 9,
+          "files_changed": 1,
+          "net_lines": 3
+        },
+        {
+          "hash": "29cdfbf91017380d169af729680578a0f7b179dd",
+          "short_hash": "29cdfbf",
+          "date": "2026-03-26T23:37:54+08:00",
+          "subject": "feat: add GEMINI_CASUAL_MODEL for improved chat streaming",
+          "additions": 26,
+          "deletions": 9,
+          "files_changed": 4,
+          "net_lines": 17
+        },
+        {
+          "hash": "0827c19aac4610ff3f84470082d91ce665ed7200",
+          "short_hash": "0827c19",
+          "date": "2026-03-26T23:31:22+08:00",
+          "subject": "feat: implement streaming message display in ChatPage",
+          "additions": 72,
+          "deletions": 16,
+          "files_changed": 3,
+          "net_lines": 56
+        },
+        {
+          "hash": "687f897a6846fad912e3d5a48c8420c68048e3e5",
+          "short_hash": "687f897",
+          "date": "2026-03-26T23:24:53+08:00",
+          "subject": "feat: improve error handling and user feedback in chat services",
+          "additions": 99,
+          "deletions": 24,
+          "files_changed": 3,
+          "net_lines": 75
+        },
+        {
+          "hash": "83b0b8896bc3062b6e1bfb994d38508ecc56126c",
+          "short_hash": "83b0b88",
+          "date": "2026-03-26T22:50:00+08:00",
+          "subject": "feat: enhance chat functionality with thinking state management",
+          "additions": 39,
+          "deletions": 19,
+          "files_changed": 2,
+          "net_lines": 20
+        },
+        {
+          "hash": "77cbf8b354aba69ac18327f9215335bf6a78aec2",
+          "short_hash": "77cbf8b",
+          "date": "2026-03-26T22:39:44+08:00",
+          "subject": "feat: enhance logging and error handling in agent and chat services",
+          "additions": 137,
+          "deletions": 38,
+          "files_changed": 6,
+          "net_lines": 99
+        },
+        {
+          "hash": "c63484a77eb401aff01b85e429af6ea855a8c76f",
+          "short_hash": "c63484a",
+          "date": "2026-03-26T22:07:16+08:00",
+          "subject": "chore: clean up pre-commit configuration",
+          "additions": 0,
+          "deletions": 4,
+          "files_changed": 1,
+          "net_lines": -4
+        },
+        {
+          "hash": "ac39c1c843f46790f6ac1875ab1c62db31a0366b",
+          "short_hash": "ac39c1c",
+          "date": "2026-03-26T21:59:12+08:00",
+          "subject": "feat: implement abort controller for chat streaming",
+          "additions": 31,
+          "deletions": 3,
+          "files_changed": 4,
+          "net_lines": 28
+        },
+        {
+          "hash": "8ee8af17b47b6c18ba19c5b2f0cc836fe9e7d657",
+          "short_hash": "8ee8af1",
+          "date": "2026-03-26T21:54:44+08:00",
+          "subject": "feat: add new chat functionality and UI enhancements",
+          "additions": 19,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 17
+        },
+        {
+          "hash": "8cb204ed3b3b54c98b85861c1884d5d4679acfc9",
+          "short_hash": "8cb204e",
+          "date": "2026-03-26T21:51:43+08:00",
+          "subject": "fix: improve error handling and logging in chat services",
+          "additions": 14,
+          "deletions": 4,
+          "files_changed": 3,
+          "net_lines": 10
+        },
+        {
+          "hash": "4e948f8d82bd1c5df3aec1b57d51d48dc2f66ca7",
+          "short_hash": "4e948f8",
+          "date": "2026-03-26T21:13:41+08:00",
+          "subject": "chore: update pre-commit configuration and dependencies",
+          "additions": 231,
+          "deletions": 57,
+          "files_changed": 16,
+          "net_lines": 174
+        },
+        {
+          "hash": "93ab6470693adaecc299d20ceb3ced601d46f238",
+          "short_hash": "93ab647",
+          "date": "2026-03-26T21:08:05+08:00",
+          "subject": "feat: implement streaming chat response and enhance logging",
+          "additions": 424,
+          "deletions": 86,
+          "files_changed": 12,
+          "net_lines": 338
+        },
+        {
+          "hash": "0eb9df3ba7493b5b0e4d09f90c83655cdcf263b5",
+          "short_hash": "0eb9df3",
+          "date": "2026-03-26T20:53:15+08:00",
+          "subject": "feat: add thinking indicator to chat input and state management",
+          "additions": 19,
+          "deletions": 0,
+          "files_changed": 3,
+          "net_lines": 19
+        },
+        {
+          "hash": "240635cae7e6c534b24d664494ef12c5e48afc4a",
+          "short_hash": "240635c",
+          "date": "2026-03-26T20:49:51+08:00",
+          "subject": "fix: update Gemini model configuration and enhance chat input handling",
+          "additions": 8,
+          "deletions": 3,
+          "files_changed": 3,
+          "net_lines": 5
+        },
+        {
+          "hash": "d6e8fa7cebf39f60e079d1c3df526e680300551e",
+          "short_hash": "d6e8fa7",
+          "date": "2026-03-26T20:42:41+08:00",
+          "subject": "feat: update API endpoints and health check configuration",
+          "additions": 61,
+          "deletions": 55,
+          "files_changed": 7,
+          "net_lines": 6
+        },
+        {
+          "hash": "41b1f8420ab362656d91571b41f78ccb2e93c0f8",
+          "short_hash": "41b1f84",
+          "date": "2026-03-26T20:12:05+08:00",
+          "subject": "feat: add preferences management and UI enhancements",
+          "additions": 272,
+          "deletions": 200,
+          "files_changed": 8,
+          "net_lines": 72
+        },
+        {
+          "hash": "b8de34bae92e17dfefb5a0de64ba53179f12811e",
+          "short_hash": "b8de34b",
+          "date": "2026-03-26T19:09:39+08:00",
+          "subject": "feat: enhance user management and session handling",
+          "additions": 67,
+          "deletions": 19,
+          "files_changed": 7,
+          "net_lines": 48
+        },
+        {
+          "hash": "6dfdc60f1e39f338904eb783b20a2da036dc281e",
+          "short_hash": "6dfdc60",
+          "date": "2026-03-26T18:57:16+08:00",
+          "subject": "feat: enhance chat session security and user management",
+          "additions": 41,
+          "deletions": 24,
+          "files_changed": 4,
+          "net_lines": 17
+        },
+        {
+          "hash": "bee1de4f891d79c677e14583efd96318d4b263d7",
+          "short_hash": "bee1de4",
+          "date": "2026-03-26T18:44:03+08:00",
+          "subject": "fix: update proxy reachability logic in chat.py",
+          "additions": 9,
+          "deletions": 4,
+          "files_changed": 1,
+          "net_lines": 5
+        },
+        {
+          "hash": "0927d650e65cdf6dd4644840694a50d5f6c5978d",
+          "short_hash": "0927d65",
+          "date": "2026-03-26T18:41:57+08:00",
+          "subject": "feat: implement guest user functionality and UUID integration",
+          "additions": 374,
+          "deletions": 184,
+          "files_changed": 25,
+          "net_lines": 190
+        },
+        {
+          "hash": "f02974685c61a7fa6af18557402acfcd5caf2dc0",
+          "short_hash": "f029746",
+          "date": "2026-03-26T17:53:10+08:00",
+          "subject": "refactor: improve cleanup script for Docker container management",
+          "additions": 106,
+          "deletions": 95,
+          "files_changed": 1,
+          "net_lines": 11
+        },
+        {
+          "hash": "80b0b332122553381fe3141d02b3b8fa1a115f3f",
+          "short_hash": "80b0b33",
+          "date": "2026-03-26T17:34:15+08:00",
+          "subject": "feat: enhance development scripts and backend functionality",
+          "additions": 283,
+          "deletions": 29,
+          "files_changed": 7,
+          "net_lines": 254
+        },
+        {
+          "hash": "e5ee928343ed348e9048753dda13a3c3b37629ff",
+          "short_hash": "e5ee928",
+          "date": "2026-03-26T11:15:21+08:00",
+          "subject": "feat: enhance chat message handling and add trip service",
+          "additions": 310,
+          "deletions": 27,
+          "files_changed": 5,
+          "net_lines": 283
+        },
+        {
+          "hash": "422138f0261593b7fded4ead5f19475016ddf0e5",
+          "short_hash": "422138f",
+          "date": "2026-03-26T11:10:25+08:00",
+          "subject": "feat: enhance trip management and user authentication flow",
+          "additions": 312,
+          "deletions": 55,
+          "files_changed": 10,
+          "net_lines": 257
+        },
+        {
+          "hash": "d963b6180efb2c2af20df22d1012225524f0dec7",
+          "short_hash": "d963b61",
+          "date": "2026-03-26T11:06:09+08:00",
+          "subject": "feat: enhance authentication and UI with Sidebar component",
+          "additions": 290,
+          "deletions": 32,
+          "files_changed": 4,
+          "net_lines": 258
+        },
+        {
+          "hash": "7b5c52ba45aa26c18da04aad99cfccbb846367da",
+          "short_hash": "7b5c52b",
+          "date": "2026-03-26T10:54:40+08:00",
+          "subject": "chore: remove unused proxy configurations from vite.config.ts",
+          "additions": 0,
+          "deletions": 12,
+          "files_changed": 1,
+          "net_lines": -12
+        },
+        {
+          "hash": "3138672c7d4d9deed276f7b8dfea83df5dbdbfc1",
+          "short_hash": "3138672",
+          "date": "2026-03-26T10:50:28+08:00",
+          "subject": "chore: remove stale logs/.gitkeep and docs/claude/execution_1.md",
+          "additions": 0,
+          "deletions": 63,
+          "files_changed": 2,
+          "net_lines": -63
+        },
+        {
+          "hash": "7f332a3dca974a29d6e84593b886d9fb45ded7f7",
+          "short_hash": "7f332a3",
+          "date": "2026-03-26T10:50:24+08:00",
+          "subject": "feat: add ProfilePage and update ChatPage, LoginPage, App, api, vite",
+          "additions": 466,
+          "deletions": 22,
+          "files_changed": 7,
+          "net_lines": 444
+        },
+        {
+          "hash": "062505995c5a75df1fc2f44bb183f8da57c24524",
+          "short_hash": "0625059",
+          "date": "2026-03-26T10:50:18+08:00",
+          "subject": "feat: add shadcn/ui base components (card, input, label, select, separator)",
+          "additions": 362,
+          "deletions": 0,
+          "files_changed": 5,
+          "net_lines": 362
+        },
+        {
+          "hash": "7b17922b4216c61f3d5fe9de87b82c2130eb9f91",
+          "short_hash": "7b17922",
+          "date": "2026-03-26T10:49:51+08:00",
+          "subject": "feat: add user repository and service layer for profile management",
+          "additions": 152,
+          "deletions": 15,
+          "files_changed": 5,
+          "net_lines": 137
+        },
+        {
+          "hash": "3b13bcc82039da5a546745bc04b019b71e837985",
+          "short_hash": "3b13bcc",
+          "date": "2026-03-26T10:22:58+08:00",
+          "subject": "docs: update TASKS.md — mark Phase 1A/1B/1C/2 items done, add open issues",
+          "additions": 29,
+          "deletions": 27,
+          "files_changed": 1,
+          "net_lines": 2
+        },
+        {
+          "hash": "4d75c4d5802ab311457c1803a5b94e497d152040",
+          "short_hash": "4d75c4d",
+          "date": "2026-03-26T10:20:28+08:00",
+          "subject": "feat: add test_trip_itinerary.py, InputBar with Generate Trip Plan button",
+          "additions": 260,
+          "deletions": 2,
+          "files_changed": 3,
+          "net_lines": 258
+        },
+        {
+          "hash": "7fbb0c72d9d89540f147dfab81151cf8a5a98cc3",
+          "short_hash": "7fbb0c7",
+          "date": "2026-03-26T10:15:41+08:00",
+          "subject": "style: apply ruff format to all backend app files",
+          "additions": 121,
+          "deletions": 58,
+          "files_changed": 20,
+          "net_lines": 63
+        },
+        {
+          "hash": "f80f34323f8179b32a50bd17ca4cd56f0a96f8a5",
+          "short_hash": "f80f343",
+          "date": "2026-03-26T10:14:43+08:00",
+          "subject": "fix: correct Client initialization and remove dead imports",
+          "additions": 2,
+          "deletions": 5,
+          "files_changed": 2,
+          "net_lines": -3
+        },
+        {
+          "hash": "950aea84601896851802b9a61d14b395078884e5",
+          "short_hash": "950aea8",
+          "date": "2026-03-26T10:06:41+08:00",
+          "subject": "feat: implement Phase 2 preference extraction",
+          "additions": 169,
+          "deletions": 1,
+          "files_changed": 4,
+          "net_lines": 168
+        },
+        {
+          "hash": "c8ce3204a33d42c3402c955f80f6c9af96b9579d",
+          "short_hash": "c8ce320",
+          "date": "2026-03-26T04:02:15+08:00",
+          "subject": "feat: implement Phase 1A voice UI — useASR, useTTS, VoiceButton, TTSPlayer, chatSlice",
+          "additions": 385,
+          "deletions": 2,
+          "files_changed": 7,
+          "net_lines": 383
+        },
+        {
+          "hash": "1d722cd4750464644b2da92551fda18f2a371ffb",
+          "short_hash": "1d722cd",
+          "date": "2026-03-26T03:59:38+08:00",
+          "subject": "fix: correct Client import in agent.py and update lockfile",
+          "additions": 104,
+          "deletions": 240,
+          "files_changed": 3,
+          "net_lines": -136
+        },
+        {
+          "hash": "e5496c256307245d00db5cf4deff5d7816c97620",
+          "short_hash": "e5496c2",
+          "date": "2026-03-26T03:45:50+08:00",
+          "subject": "feat: implement Phase 1B tools, agent loop, and MOCK_ITINERARY fixture",
+          "additions": 1423,
+          "deletions": 47,
+          "files_changed": 20,
+          "net_lines": 1376
+        },
+        {
+          "hash": "d534213b3d9bf2796c9fba7c12f008a2b3767c01",
+          "short_hash": "d534213",
+          "date": "2026-03-26T03:17:47+08:00",
+          "subject": "feat: add initial database setup and migration scripts",
+          "additions": 191,
+          "deletions": 4,
+          "files_changed": 6,
+          "net_lines": 187
+        },
+        {
+          "hash": "408f544d9293cc4672018b09c8fd76ea5aa23eea",
+          "short_hash": "408f544",
+          "date": "2026-03-26T02:58:01+08:00",
+          "subject": "feat: implement Phase 1 chat session management with generate_plan gate",
+          "additions": 135,
+          "deletions": 29,
+          "files_changed": 14,
+          "net_lines": 106
+        },
+        {
+          "hash": "5bdeb26da590b3163c6a82750f7d6be06741a5fd",
+          "short_hash": "5bdeb26",
+          "date": "2026-03-26T02:14:38+08:00",
+          "subject": "Update TASKS.md to clarify ownership and implementation details for project components",
+          "additions": 42,
+          "deletions": 27,
+          "files_changed": 1,
+          "net_lines": 15
+        },
+        {
+          "hash": "02b6ce8d3469c0b091c26b7641d343742ed71783",
+          "short_hash": "02b6ce8",
+          "date": "2026-03-26T01:55:50+08:00",
+          "subject": "Add mandatory_features.png and update TASKS.md for tool implementation details",
+          "additions": 102,
+          "deletions": 43,
+          "files_changed": 2,
+          "net_lines": 59
+        },
+        {
+          "hash": "3c768611542ddb48fc3a8bceb786f07e219b7323",
+          "short_hash": "3c76861",
+          "date": "2026-03-26T01:31:45+08:00",
+          "subject": "Remove INFRA_PLAN.md to streamline documentation and eliminate outdated infrastructure details. This change aims to enhance clarity and focus on current project architecture, ensuring that documentation remains relevant and concise.",
+          "additions": 0,
+          "deletions": 560,
+          "files_changed": 1,
+          "net_lines": -560
+        },
+        {
+          "hash": "824a9edd159889fbc61f0bf692ceaf6e919d491f",
+          "short_hash": "824a9ed",
+          "date": "2026-03-26T01:29:51+08:00",
+          "subject": "Update CLAUDE.md, INFRA_PLAN.md, and TASKS.md to reflect new chat session management and structured output handling",
+          "additions": 43,
+          "deletions": 19,
+          "files_changed": 3,
+          "net_lines": 24
+        },
+        {
+          "hash": "401a77a2895b40609eed7acbfaefdffc22a9bd94",
+          "short_hash": "401a77a",
+          "date": "2026-03-26T01:23:51+08:00",
+          "subject": "Update INFRA_PLAN.md and TASKS.md to include references for Gemini Function Calling and structured outputs",
+          "additions": 7,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 7
+        },
+        {
+          "hash": "04046f730681ab6ac0452a44e2797b0c4983ee08",
+          "short_hash": "04046f7",
+          "date": "2026-03-26T01:21:06+08:00",
+          "subject": "Update INFRA_PLAN.md and TASKS.md to reflect changes in agent loop structure and documentation clarity",
+          "additions": 3,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": -1
+        },
+        {
+          "hash": "3fb2c0e29178ee3f7e0bcf02ea7ee80e885361cf",
+          "short_hash": "3fb2c0e",
+          "date": "2026-03-26T01:17:31+08:00",
+          "subject": "Refine INFRA_PLAN.md to clarify API interactions and agent loop structure",
+          "additions": 28,
+          "deletions": 12,
+          "files_changed": 1,
+          "net_lines": 16
+        },
+        {
+          "hash": "c93a7969a99781e5c99cd2e2ae5930136a0e338a",
+          "short_hash": "c93a796",
+          "date": "2026-03-26T01:15:39+08:00",
+          "subject": "Update INFRA_PLAN.md and TASKS.md for improved clarity and task assignments",
+          "additions": 72,
+          "deletions": 71,
+          "files_changed": 2,
+          "net_lines": 1
+        },
+        {
+          "hash": "c6795e52fd6c3d013e9d61dc4fda4efa14696650",
+          "short_hash": "c6795e5",
+          "date": "2026-03-26T01:02:18+08:00",
+          "subject": "Enhance dev.sh script with cleanup function and default choices",
+          "additions": 23,
+          "deletions": 10,
+          "files_changed": 1,
+          "net_lines": 13
+        },
+        {
+          "hash": "0ce3d7f9093dfec26b03aef19f4c3bb04e8685b5",
+          "short_hash": "0ce3d7f",
+          "date": "2026-03-25T00:42:05+08:00",
+          "subject": "Update service management and documentation for improved usability",
+          "additions": 30,
+          "deletions": 27,
+          "files_changed": 3,
+          "net_lines": 3
+        },
+        {
+          "hash": "c78af9e7ca0c5e8bcb6b5681f26e569c06a9d7e8",
+          "short_hash": "c78af9e",
+          "date": "2026-03-25T00:19:55+08:00",
+          "subject": "Update health check configurations in docker-compose.yml",
+          "additions": 2,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "449081d9ff4027c13aaef3342c2120b842b126b8",
+          "short_hash": "449081d",
+          "date": "2026-03-25T00:15:49+08:00",
+          "subject": "Add dev.sh script for service management and logging",
+          "additions": 296,
+          "deletions": 607,
+          "files_changed": 13,
+          "net_lines": -311
+        },
+        {
+          "hash": "54643ba89c5fad6b2e14dd48fd6114b189991f98",
+          "short_hash": "54643ba",
+          "date": "2026-03-24T16:41:45+08:00",
+          "subject": "Add new schemas for chat, user, and itinerary management",
+          "additions": 277,
+          "deletions": 13,
+          "files_changed": 5,
+          "net_lines": 264
+        },
+        {
+          "hash": "4f1dccbc825ac4c4f1de7ff4be2ff663e70599d9",
+          "short_hash": "4f1dccb",
+          "date": "2026-03-24T15:37:24+08:00",
+          "subject": "Enhance documentation in INFRA_PLAN.md and TASKS.md with risk mitigation strategies for ASR, TTS, and SSE implementations. Added recommendations for handling feedback loops, API error management, and database session management during streaming. These updates aim to improve system reliability and user experience.",
+          "additions": 15,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 15
+        },
+        {
+          "hash": "dd3260291c4dfd3932ee0d76b7e1edb108872554",
+          "short_hash": "dd32602",
+          "date": "2026-03-24T15:34:10+08:00",
+          "subject": "Update backend and frontend configurations, enhance chat functionality, and refine database handling",
+          "additions": 44,
+          "deletions": 52,
+          "files_changed": 11,
+          "net_lines": -8
+        },
+        {
+          "hash": "985a8fef09b912ef646d2ded5160fe8eb16a3d11",
+          "short_hash": "985a8fe",
+          "date": "2026-03-24T15:21:29+08:00",
+          "subject": "Refactor backend functions to synchronous execution and update documentation",
+          "additions": 34,
+          "deletions": 29,
+          "files_changed": 13,
+          "net_lines": 5
+        },
+        {
+          "hash": "4f0359055f3f9cd69b4db73d96a295215a77b195",
+          "short_hash": "4f03590",
+          "date": "2026-03-24T15:05:03+08:00",
+          "subject": "Update environment configuration and refine backend database handling",
+          "additions": 111,
+          "deletions": 67,
+          "files_changed": 12,
+          "net_lines": 44
+        },
+        {
+          "hash": "1b61a38d6f9b05172045d84c055334ee0447d7b3",
+          "short_hash": "1b61a38",
+          "date": "2026-03-24T13:57:08+08:00",
+          "subject": "Refactor authentication routes by removing unused imports and updating password hashing variable for clarity. The `register` function now uses a temporary variable `_hashed` to indicate pending database save.",
+          "additions": 3,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": -1
+        },
+        {
+          "hash": "a7130c47a7e4354ed380071e8755152a09cb5326",
+          "short_hash": "a7130c4",
+          "date": "2026-03-24T13:51:20+08:00",
+          "subject": "Refactor chat service and update infrastructure plan for agent integration",
+          "additions": 208,
+          "deletions": 50,
+          "files_changed": 6,
+          "net_lines": 158
+        },
+        {
+          "hash": "8a411f452537c736a7a337c15e9f8eca5c0e3731",
+          "short_hash": "8a411f4",
+          "date": "2026-03-24T12:34:31+08:00",
+          "subject": "Add task assignment document and implement initial frontend structure",
+          "additions": 1586,
+          "deletions": 9,
+          "files_changed": 11,
+          "net_lines": 1577
+        },
+        {
+          "hash": "79b811eff9fe602375f09fc98b58806f9c54d105",
+          "short_hash": "79b811e",
+          "date": "2026-03-20T03:25:13+08:00",
+          "subject": "Update environment configuration and refine agent documentation",
+          "additions": 88,
+          "deletions": 53,
+          "files_changed": 8,
+          "net_lines": 35
+        },
+        {
+          "hash": "7d7657f3997f4d04bc1c6b31393d154940a6c87e",
+          "short_hash": "7d7657f",
+          "date": "2026-03-20T02:59:46+08:00",
+          "subject": "Refine agent design documentation with two-phase approach and update environment variables",
+          "additions": 32,
+          "deletions": 10,
+          "files_changed": 2,
+          "net_lines": 22
+        },
+        {
+          "hash": "58f77f119cdfd7ff50e589bb7730cd2e63f67693",
+          "short_hash": "58f77f1",
+          "date": "2026-03-20T02:52:06+08:00",
+          "subject": "Update environment configuration and documentation",
+          "additions": 12,
+          "deletions": 14,
+          "files_changed": 7,
+          "net_lines": -2
+        },
+        {
+          "hash": "0af5907436ee718dc92a34458a70b2b93278392a",
+          "short_hash": "0af5907",
+          "date": "2026-03-19T19:50:45+08:00",
+          "subject": "Enhance README.md with project introduction and tech stack details; update VSCode settings for Python formatting; add development dependencies for black and ruff in pyproject.toml; refactor code for better readability in various model files.",
+          "additions": 174,
+          "deletions": 9,
+          "files_changed": 10,
+          "net_lines": 165
+        },
+        {
+          "hash": "4bb9eec3e651831ab36d8907540a584c7393ff70",
+          "short_hash": "4bb9eec",
+          "date": "2026-03-19T19:45:18+08:00",
+          "subject": "Add configuration files for Python environment and VSCode settings",
+          "additions": 8,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 8
+        },
+        {
+          "hash": "d48630f0925e94b981c202cbd81a8428e9f096d5",
+          "short_hash": "d48630f",
+          "date": "2026-03-19T19:28:43+08:00",
+          "subject": "Update README.md to include optional backend IDE setup instructions and renumber service management sections. Add new uv.lock file for dependency management.",
+          "additions": 2165,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 2163
+        },
+        {
+          "hash": "be4e83b519a90ecb59b1293b0d2207f04fc39b41",
+          "short_hash": "be4e83b",
+          "date": "2026-03-19T18:39:59+08:00",
+          "subject": "Add CLAUDE.md for project documentation and update .gitignore",
+          "additions": 166,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 166
+        },
+        {
+          "hash": "06b0e9231ae7290a0e4881813ddc7fe9f763a5b3",
+          "short_hash": "06b0e92",
+          "date": "2026-03-19T17:48:07+08:00",
+          "subject": "Add initial project structure with backend and frontend components",
+          "additions": 9411,
+          "deletions": 7,
+          "files_changed": 53,
+          "net_lines": 9404
+        },
+        {
+          "hash": "5d3dc3e9b979ae8aa5e9fd9df5b1aa851ee9a65d",
+          "short_hash": "5d3dc3e",
+          "date": "2026-03-19T16:41:00+08:00",
+          "subject": "Update infrastructure plan with new healthcheck endpoint and testing strategy",
+          "additions": 64,
+          "deletions": 8,
+          "files_changed": 1,
+          "net_lines": 56
+        }
+      ]
+    },
+    "davidwong666": {
+      "email": "david20030701@gmail.com",
+      "total_commits": 130,
+      "total_additions": 8810,
+      "total_deletions": 4569,
+      "net_lines": 4241,
+      "total_files_changed": 397,
+      "first_commit": "2026-03-17T21:39:09+08:00",
+      "last_commit": "2026-04-16T16:47:49+08:00",
+      "commits": [
+        {
+          "hash": "7705a0c77b51babb0aef5e3ab3357f95bd90dea6",
+          "short_hash": "7705a0c",
+          "date": "2026-04-16T16:47:49+08:00",
+          "subject": "Update todo list after project demo",
+          "additions": 0,
+          "deletions": 26,
+          "files_changed": 1,
+          "net_lines": -26
+        },
+        {
+          "hash": "96e5d5f68674aa10e54f84916fdaaa862595e3c3",
+          "short_hash": "96e5d5f",
+          "date": "2026-04-16T10:33:06+08:00",
+          "subject": "feat(POST_DEMO): update task features and improve route planning",
+          "additions": 4,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 3
+        },
+        {
+          "hash": "b1d8d72dc7d98d7614d36867db846f5d32362882",
+          "short_hash": "b1d8d72",
+          "date": "2026-04-16T07:44:09+08:00",
+          "subject": "feat(POST_DEMO): enhance task management and UI/UX improvements",
+          "additions": 31,
+          "deletions": 10,
+          "files_changed": 1,
+          "net_lines": 21
+        },
+        {
+          "hash": "321df8f24b1d0cc596d80f16b8d1a1065e930c1c",
+          "short_hash": "321df8f",
+          "date": "2026-04-16T07:38:30+08:00",
+          "subject": "feat(POST_DEMO): update available models and enhance UI/UX features",
+          "additions": 7,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 7
+        },
+        {
+          "hash": "9cda0b5bf888b5e34dd8f68cc24476e193918050",
+          "short_hash": "9cda0b5",
+          "date": "2026-04-16T07:26:16+08:00",
+          "subject": "refactor(image_storage): implement local image storage for trip itineraries",
+          "additions": 13,
+          "deletions": 107,
+          "files_changed": 6,
+          "net_lines": -94
+        },
+        {
+          "hash": "a26b7bf768865a6ec213eb5fb6c619d982e71585",
+          "short_hash": "a26b7bf",
+          "date": "2026-04-16T07:20:58+08:00",
+          "subject": "fix(LivePage): increase width of SelectTrigger for better UI layout",
+          "additions": 1,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "4c82733c93d237aea333b1b0c26b00955867f124",
+          "short_hash": "4c82733",
+          "date": "2026-04-16T07:18:59+08:00",
+          "subject": "fix(seed_db): update guest and location ratings in demo itinerary",
+          "additions": 2,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "fa5aefac0b56ffb2aa22f0c9dc98beae5e917b70",
+          "short_hash": "fa5aefa",
+          "date": "2026-04-16T07:12:07+08:00",
+          "subject": "fix(FlightCard, HotelCard): adjust time formatting and rating display",
+          "additions": 14,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": 10
+        },
+        {
+          "hash": "7a9fa2daca8cb2fcc714796c09001e161812051e",
+          "short_hash": "7a9fa2d",
+          "date": "2026-04-16T05:39:54+08:00",
+          "subject": "feat(architecture): update tech stack and backend structure",
+          "additions": 163,
+          "deletions": 150,
+          "files_changed": 1,
+          "net_lines": 13
+        },
+        {
+          "hash": "bb5d51de67475acbbf01cd951ffa74c19fb74c7c",
+          "short_hash": "bb5d51d",
+          "date": "2026-04-16T05:12:02+08:00",
+          "subject": "feat(streaming): refine trip planning output requirements and data handling",
+          "additions": 42,
+          "deletions": 53,
+          "files_changed": 2,
+          "net_lines": -11
+        },
+        {
+          "hash": "3932456e1b54b06aee1fd54b9b31840a2fcc036e",
+          "short_hash": "3932456",
+          "date": "2026-04-16T04:57:53+08:00",
+          "subject": "fix(config): standardize type annotations for backup model configurations",
+          "additions": 3,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "e07abc2d9aa7e181f7215725a5fb1243ca8783bf",
+          "short_hash": "e07abc2",
+          "date": "2026-04-16T04:36:26+08:00",
+          "subject": "feat(models): update LLM model references and add backup model configurations",
+          "additions": 15,
+          "deletions": 14,
+          "files_changed": 3,
+          "net_lines": 1
+        },
+        {
+          "hash": "aa12cd9166b5449952dfbff24d4706d29b0ed184",
+          "short_hash": "aa12cd9",
+          "date": "2026-04-16T04:11:42+08:00",
+          "subject": "feat(streaming): enhance trip planning instructions and tool usage guidelines",
+          "additions": 47,
+          "deletions": 14,
+          "files_changed": 1,
+          "net_lines": 33
+        },
+        {
+          "hash": "27c39677ca6171cce9f746daf1ca5f5f38733106",
+          "short_hash": "27c3967",
+          "date": "2026-04-15T19:45:40+08:00",
+          "subject": "feat(images): replace JPEG image and update itinerary image URLs",
+          "additions": 32,
+          "deletions": 11,
+          "files_changed": 6,
+          "net_lines": 21
+        },
+        {
+          "hash": "f82c415b4430709f2c163a0343f7871c2e23bc8b",
+          "short_hash": "f82c415",
+          "date": "2026-04-15T19:24:42+08:00",
+          "subject": "feat(static-files): add static image serving and update demo itinerary image URLs",
+          "additions": 51,
+          "deletions": 34,
+          "files_changed": 7,
+          "net_lines": 17
+        },
+        {
+          "hash": "bbec8cb66d53d14de994be17c5129517dc83b55e",
+          "short_hash": "bbec8cb",
+          "date": "2026-04-15T19:12:34+08:00",
+          "subject": "feat(logging): improve model selection logging in live and chat sessions",
+          "additions": 375,
+          "deletions": 140,
+          "files_changed": 4,
+          "net_lines": 235
+        },
+        {
+          "hash": "d6c7eed5268e011d4024028558dfafd894346dd1",
+          "short_hash": "d6c7eed",
+          "date": "2026-04-15T19:04:45+08:00",
+          "subject": "feat(chat): enhance LLM model selection and logging in chat and live sessions",
+          "additions": 139,
+          "deletions": 15,
+          "files_changed": 11,
+          "net_lines": 124
+        },
+        {
+          "hash": "02e91862652e41f222703ebd08e6bc557e13456b",
+          "short_hash": "02e9186",
+          "date": "2026-04-15T18:46:36+08:00",
+          "subject": "feat(images): add hotel image asset to enhance visual content",
+          "additions": 0,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "368a6dd0387a36fd2d1e8b4d68f68d392c5bb08d",
+          "short_hash": "368a6dd",
+          "date": "2026-04-15T18:44:39+08:00",
+          "subject": "feat(env): add backup model configurations and include new image assets",
+          "additions": 4,
+          "deletions": 0,
+          "files_changed": 16,
+          "net_lines": 4
+        },
+        {
+          "hash": "decad1248ac22f0fd2579ac9acf450ad5f87ca13",
+          "short_hash": "decad12",
+          "date": "2026-04-15T16:22:57+08:00",
+          "subject": "fix(seed_db): update demo itinerary dates and booking URLs for May 2026",
+          "additions": 11,
+          "deletions": 11,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "ca1607ab304fabd0f394649706eee02ab0be9e8a",
+          "short_hash": "ca1607a",
+          "date": "2026-04-14T05:43:14+08:00",
+          "subject": "feat(hotels): add embedded map feature to HotelCard component",
+          "additions": 8,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 8
+        },
+        {
+          "hash": "86446080f308b863840f5414ac6b25eb8fef1518",
+          "short_hash": "8644608",
+          "date": "2026-04-14T05:22:24+08:00",
+          "subject": "fix(streaming): clarify map_url usage in activity instructions",
+          "additions": 2,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "716009b23d15eb06702e2f0941513d4c8b1179a1",
+          "short_hash": "716009b",
+          "date": "2026-04-14T05:15:38+08:00",
+          "subject": "feat(streaming): enhance flight and hotel search instructions with retry strategies",
+          "additions": 16,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 14
+        },
+        {
+          "hash": "60b9b9cc3f18e891ec1158cb34a020398eb78663",
+          "short_hash": "60b9b9c",
+          "date": "2026-04-14T05:12:31+08:00",
+          "subject": "feat(flights): improve IATA code normalization and error handling in flight search",
+          "additions": 86,
+          "deletions": 14,
+          "files_changed": 2,
+          "net_lines": 72
+        },
+        {
+          "hash": "dcb237f91a4085454785b5fb21a8cb6055e8acf8",
+          "short_hash": "dcb237f",
+          "date": "2026-04-14T05:06:42+08:00",
+          "subject": "feat(streaming): enhance flight search instructions with detailed airport code guidelines",
+          "additions": 18,
+          "deletions": 4,
+          "files_changed": 1,
+          "net_lines": 14
+        },
+        {
+          "hash": "ada4016aa48e99e0ee9c28f8e945949a4e5e0e0f",
+          "short_hash": "ada4016",
+          "date": "2026-04-14T05:00:25+08:00",
+          "subject": "feat(itinerary): add title field to TripItinerary model and update title generation logic",
+          "additions": 33,
+          "deletions": 2,
+          "files_changed": 5,
+          "net_lines": 31
+        },
+        {
+          "hash": "dc964f7e5f4449e20a1043b866703e2df70a4163",
+          "short_hash": "dc964f7",
+          "date": "2026-04-14T04:48:33+08:00",
+          "subject": "refactor(attractions, hotels): update map URL construction to remove API key requirement",
+          "additions": 16,
+          "deletions": 14,
+          "files_changed": 2,
+          "net_lines": 2
+        },
+        {
+          "hash": "f41ccc8ec2cde98517a7ff182efa5fc5ec74cb26",
+          "short_hash": "f41ccc8",
+          "date": "2026-04-14T04:40:30+08:00",
+          "subject": "feat(hotels): update hotel pricing and display logic",
+          "additions": 48,
+          "deletions": 30,
+          "files_changed": 4,
+          "net_lines": 18
+        },
+        {
+          "hash": "6f1ae48634eab0d54c64fd5724a37e8708edd00a",
+          "short_hash": "6f1ae48",
+          "date": "2026-04-14T04:26:04+08:00",
+          "subject": "feat(flights): enhance flight search functionality with passenger support",
+          "additions": 32,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": 26
+        },
+        {
+          "hash": "01af78bb807c932d679a6a9d792b861b57f2cb03",
+          "short_hash": "01af78b",
+          "date": "2026-04-12T21:19:41+08:00",
+          "subject": "chore: update Playwright configuration for workflow and remove unnecessary cwd setting",
+          "additions": 1,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": -1
+        },
+        {
+          "hash": "5a57c7e2cc5e0320c7ad519a086e2508b7f5683d",
+          "short_hash": "5a57c7e",
+          "date": "2026-04-12T21:10:48+08:00",
+          "subject": "chore: specify working directory for Playwright tests in workflow",
+          "additions": 1,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "1520ecfe901f767a5079a9e331bf717409425a48",
+          "short_hash": "1520ecf",
+          "date": "2026-04-12T16:54:50+08:00",
+          "subject": "chore: streamline Playwright dependency installation in workflow",
+          "additions": 0,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "881ffcd93540cc0c82fb782722666a4f76c54ee8",
+          "short_hash": "881ffcd",
+          "date": "2026-04-12T16:37:53+08:00",
+          "subject": "fix(confirm-dialog): adjust z-index for overlay and content components",
+          "additions": 4,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": 0
+        },
+        {
+          "hash": "7c804f322bc62cb1766d5fd28c80dc55e51579a8",
+          "short_hash": "7c804f3",
+          "date": "2026-04-12T16:21:47+08:00",
+          "subject": "chore: remove package.json and package-lock.json files",
+          "additions": 8,
+          "deletions": 177,
+          "files_changed": 3,
+          "net_lines": -169
+        },
+        {
+          "hash": "3ffd4c653d60318abf3520450bc2bb0cf26fd705",
+          "short_hash": "3ffd4c6",
+          "date": "2026-04-12T16:07:57+08:00",
+          "subject": "chore: update Playwright configuration and dependencies",
+          "additions": 143,
+          "deletions": 56,
+          "files_changed": 5,
+          "net_lines": 87
+        },
+        {
+          "hash": "4308cfe7080aabab7c939a21d26ee7d5c798a6de",
+          "short_hash": "4308cfe",
+          "date": "2026-04-12T16:01:12+08:00",
+          "subject": "refactor(seed_db): update map URLs and enhance attraction descriptions in demo itinerary",
+          "additions": 52,
+          "deletions": 68,
+          "files_changed": 2,
+          "net_lines": -16
+        },
+        {
+          "hash": "d2e2be2c5d16f36db5e50378e686a79ab5117643",
+          "short_hash": "d2e2be2",
+          "date": "2026-04-12T15:06:30+08:00",
+          "subject": "feat(seed_db): enrich demo itinerary with detailed flight and hotel information",
+          "additions": 58,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 56
+        },
+        {
+          "hash": "dcdb7969b20a06034b342336f1eb0fb770a09468",
+          "short_hash": "dcdb796",
+          "date": "2026-04-11T22:11:20+08:00",
+          "subject": "feat(streaming-service): update system instructions for trip planning guidelines",
+          "additions": 6,
+          "deletions": 162,
+          "files_changed": 2,
+          "net_lines": -156
+        },
+        {
+          "hash": "01032fe02e4bd320311207c69f23cc40d03debd7",
+          "short_hash": "01032fe",
+          "date": "2026-04-11T21:29:55+08:00",
+          "subject": "feat(streaming-service): refine system instructions for trip planning data extraction",
+          "additions": 6,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": 3
+        },
+        {
+          "hash": "9fc123b1ffd99847f87ba895fb59a3dfc3549f87",
+          "short_hash": "9fc123b",
+          "date": "2026-04-11T21:15:09+08:00",
+          "subject": "feat(itinerary): enhance itinerary schema with additional fields",
+          "additions": 15,
+          "deletions": 8,
+          "files_changed": 2,
+          "net_lines": 7
+        },
+        {
+          "hash": "53243959de931fbb2b78baf4f3eeb8c67db078fa",
+          "short_hash": "5324395",
+          "date": "2026-04-11T21:11:58+08:00",
+          "subject": "fix(attractions): update map URL format for Google Maps integration",
+          "additions": 22,
+          "deletions": 8,
+          "files_changed": 5,
+          "net_lines": 14
+        },
+        {
+          "hash": "2c280cef5e99dd39ba1990abc7c1e52817b69e94",
+          "short_hash": "2c280ce",
+          "date": "2026-04-11T20:48:07+08:00",
+          "subject": "feat(flights): unify booking URLs for round-trip flights",
+          "additions": 6,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 6
+        },
+        {
+          "hash": "123c9d4d47c9251e3807812bf96306b90b0d0b0c",
+          "short_hash": "123c9d4",
+          "date": "2026-04-11T20:46:50+08:00",
+          "subject": "feat(streaming-service): update system instruction prompts for enhanced data handling",
+          "additions": 16,
+          "deletions": 9,
+          "files_changed": 2,
+          "net_lines": 7
+        },
+        {
+          "hash": "8aff1946f3f9a38fd3ec96a894b63aae1d7450e8",
+          "short_hash": "8aff194",
+          "date": "2026-04-11T20:45:20+08:00",
+          "subject": "feat(attraction-card): enhance AttractionCard with collapsible description and embedded map",
+          "additions": 85,
+          "deletions": 9,
+          "files_changed": 2,
+          "net_lines": 76
+        },
+        {
+          "hash": "d88a3a99655e6639751dad69d820f47f2741a46f",
+          "short_hash": "d88a3a9",
+          "date": "2026-04-11T20:42:50+08:00",
+          "subject": "feat(hotel-card): enhance HotelCard component with additional hotel details",
+          "additions": 85,
+          "deletions": 6,
+          "files_changed": 2,
+          "net_lines": 79
+        },
+        {
+          "hash": "97bcab9db7a09d99862cd1ad0cc173b3695897e2",
+          "short_hash": "97bcab9",
+          "date": "2026-04-11T20:40:18+08:00",
+          "subject": "feat(flight-card): enhance FlightCard component with additional flight details",
+          "additions": 281,
+          "deletions": 29,
+          "files_changed": 5,
+          "net_lines": 252
+        },
+        {
+          "hash": "a688249b0b4ad6d028ef4677802e79822052162e",
+          "short_hash": "a688249",
+          "date": "2026-04-11T20:20:18+08:00",
+          "subject": "update(TRIP_CARD): refine flight card specifications and prompt adjustments",
+          "additions": 2,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "c9b0ad2953de72d105f310819e6e1cbdd1a1ca5d",
+          "short_hash": "c9b0ad2",
+          "date": "2026-04-11T20:17:26+08:00",
+          "subject": "delete sample itineraries for Tokyo and Hong Kong; add trip card specifications for flight, hotel, and attraction details",
+          "additions": 8,
+          "deletions": 297,
+          "files_changed": 3,
+          "net_lines": -289
+        },
+        {
+          "hash": "ce1ed2ae5abd3a254c9875371de727eb24c7068d",
+          "short_hash": "ce1ed2a",
+          "date": "2026-04-11T18:30:10+08:00",
+          "subject": "feat(image-storage): enhance image storage logic in trip service",
+          "additions": 38,
+          "deletions": 46,
+          "files_changed": 1,
+          "net_lines": -8
+        },
+        {
+          "hash": "fd3950e6917ad8ebc8fb2901e4bea9f44a2fd685",
+          "short_hash": "fd3950e",
+          "date": "2026-04-11T18:19:06+08:00",
+          "subject": "remove done tasks",
+          "additions": 0,
+          "deletions": 638,
+          "files_changed": 2,
+          "net_lines": -638
+        },
+        {
+          "hash": "0024590b14d79ceed64cd20eb8fcc8ee7c171184",
+          "short_hash": "0024590",
+          "date": "2026-04-11T18:18:33+08:00",
+          "subject": "feat(flights): improve round-trip flight search with enhanced error handling",
+          "additions": 98,
+          "deletions": 38,
+          "files_changed": 2,
+          "net_lines": 60
+        },
+        {
+          "hash": "0267c7a12fb603d8219ce09563d50622f1743463",
+          "short_hash": "0267c7a",
+          "date": "2026-04-11T18:06:14+08:00",
+          "subject": "feat(flights): enhance round-trip search with departure_token handling",
+          "additions": 153,
+          "deletions": 30,
+          "files_changed": 2,
+          "net_lines": 123
+        },
+        {
+          "hash": "de3422090591302e1a474940e9132c092c483697",
+          "short_hash": "de34220",
+          "date": "2026-04-11T17:21:39+08:00",
+          "subject": "add reminder",
+          "additions": 9,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 8
+        },
+        {
+          "hash": "b643a120856d081385b6e44bc27cbd990e3f9c6c",
+          "short_hash": "b643a12",
+          "date": "2026-04-11T02:43:36+08:00",
+          "subject": "Migrate files from docs to tasks",
+          "additions": 45,
+          "deletions": 0,
+          "files_changed": 5,
+          "net_lines": 45
+        },
+        {
+          "hash": "f6e2bbf5fb07815f91f87c1e7123006a674fbfb5",
+          "short_hash": "f6e2bbf",
+          "date": "2026-04-11T02:40:29+08:00",
+          "subject": "refactor(hotels): limit number of hotels returned from API to 3",
+          "additions": 2,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 0
+        },
+        {
+          "hash": "37a804e603c878ecad9855049c93cf8ab4107444",
+          "short_hash": "37a804e",
+          "date": "2026-04-11T02:39:58+08:00",
+          "subject": "feat(image-storage): implement local image storage for attractions and hotels",
+          "additions": 103,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 103
+        },
+        {
+          "hash": "517bd62f037d8a04cb39d341b9d330981b28d0f8",
+          "short_hash": "517bd62",
+          "date": "2026-04-11T02:20:42+08:00",
+          "subject": "feat(dependencies): add python-socks to project dependencies",
+          "additions": 13,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 12
+        },
+        {
+          "hash": "62373535c2be993f8f22ba1827e3515b1612d392",
+          "short_hash": "6237353",
+          "date": "2026-04-11T02:07:24+08:00",
+          "subject": "refactor(config): remove GEMINI_CASUAL_MODEL from configuration",
+          "additions": 0,
+          "deletions": 4,
+          "files_changed": 2,
+          "net_lines": -4
+        },
+        {
+          "hash": "e25f9c5404286632cd78c6fda37d5bb9de76079a",
+          "short_hash": "e25f9c5",
+          "date": "2026-04-11T01:50:09+08:00",
+          "subject": "refactor(chat): simplify sidebar button logic in ChatPage component",
+          "additions": 1,
+          "deletions": 28,
+          "files_changed": 1,
+          "net_lines": -27
+        },
+        {
+          "hash": "5a37d7122559f21df3c1f4f440c2ee6b7650b802",
+          "short_hash": "5a37d71",
+          "date": "2026-04-09T08:32:32+08:00",
+          "subject": "refactor(preference_repo, message_service): improve error handling and optimize session deletion",
+          "additions": 13,
+          "deletions": 10,
+          "files_changed": 2,
+          "net_lines": 3
+        },
+        {
+          "hash": "148c9a738feb9ba4fb67a9e59f554f9f44bf75a4",
+          "short_hash": "148c9a7",
+          "date": "2026-04-09T08:22:41+08:00",
+          "subject": "Update improvements document to mark request cancellation on unmount as skipped",
+          "additions": 1,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "7656fcec3082dfc134878995ba736c67e78ba979",
+          "short_hash": "7656fce",
+          "date": "2026-04-09T08:14:55+08:00",
+          "subject": "refactor(ChatPage): simplify header class logic",
+          "additions": 1,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": -2
+        },
+        {
+          "hash": "dc943690bd667c5a5acdf15c0699ef806d43c927",
+          "short_hash": "dc94369",
+          "date": "2026-04-09T08:04:53+08:00",
+          "subject": "feat(chat_sessions): add guest session renaming functionality",
+          "additions": 68,
+          "deletions": 3,
+          "files_changed": 3,
+          "net_lines": 65
+        },
+        {
+          "hash": "06ab3c8bd44a72226f545cf4f10a9a138f2bd68f",
+          "short_hash": "06ab3c8",
+          "date": "2026-04-09T07:58:06+08:00",
+          "subject": "Refactor create_session logic to avoid duplicate chat titles",
+          "additions": 25,
+          "deletions": 19,
+          "files_changed": 1,
+          "net_lines": 6
+        },
+        {
+          "hash": "033a6554f106c02364a8d929a53b68c475cd4f94",
+          "short_hash": "033a655",
+          "date": "2026-04-09T07:52:58+08:00",
+          "subject": "Implement guest session deletion feature",
+          "additions": 45,
+          "deletions": 0,
+          "files_changed": 4,
+          "net_lines": 45
+        },
+        {
+          "hash": "ade760f89d828989acbd98bfc5b4beea541bedc0",
+          "short_hash": "ade760f",
+          "date": "2026-04-09T07:47:30+08:00",
+          "subject": "Refactor ChatPage: Add login check for clearing chat history",
+          "additions": 4,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": -2
+        },
+        {
+          "hash": "eca2b77af4168d1c15e6dc2f8bb552361c9239dd",
+          "short_hash": "eca2b77",
+          "date": "2026-04-09T07:40:11+08:00",
+          "subject": "Update improvements document and implement delete session confirmation dialog",
+          "additions": 25,
+          "deletions": 6,
+          "files_changed": 2,
+          "net_lines": 19
+        },
+        {
+          "hash": "62df79ed839341e8ce88a35f14baecea24fb9293",
+          "short_hash": "62df79e",
+          "date": "2026-04-09T07:35:27+08:00",
+          "subject": "fix(chat_sessions, health): update session ID return type and add database connection verification",
+          "additions": 11,
+          "deletions": 6,
+          "files_changed": 3,
+          "net_lines": 5
+        },
+        {
+          "hash": "161c27cc7c62374c72de3391d27f1bb35eaf9419",
+          "short_hash": "161c27c",
+          "date": "2026-04-09T07:27:48+08:00",
+          "subject": "refactor(wikiImage): centralize image fetching and validation logic",
+          "additions": 150,
+          "deletions": 216,
+          "files_changed": 4,
+          "net_lines": -66
+        },
+        {
+          "hash": "e2bf4e0c55d55d3a0c6dba8d2f37481f7ed936b8",
+          "short_hash": "e2bf4e0",
+          "date": "2026-04-09T07:23:38+08:00",
+          "subject": "fix(chat_sessions): log preference extraction failures for better traceability",
+          "additions": 7,
+          "deletions": 3,
+          "files_changed": 2,
+          "net_lines": 4
+        },
+        {
+          "hash": "762b7993d420337f3101253c4d4d6b34c80d27d1",
+          "short_hash": "762b799",
+          "date": "2026-04-09T07:21:45+08:00",
+          "subject": "fix(search): update SerpAPI fallback to use displayed_link if link is missing",
+          "additions": 2,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 0
+        },
+        {
+          "hash": "e93075b2f661a82a604054c3a4b6b3ebf7002ba4",
+          "short_hash": "e93075b",
+          "date": "2026-04-09T07:13:30+08:00",
+          "subject": "refactor(message_service): optimize message deletion logic",
+          "additions": 3,
+          "deletions": 9,
+          "files_changed": 2,
+          "net_lines": -6
+        },
+        {
+          "hash": "764b5120e991d5df667066890409d4fdf5273f5a",
+          "short_hash": "764b512",
+          "date": "2026-04-09T07:06:59+08:00",
+          "subject": "feat(database): add missing database indexes for improved query performance",
+          "additions": 64,
+          "deletions": 8,
+          "files_changed": 5,
+          "net_lines": 56
+        },
+        {
+          "hash": "299dbee35dbfa588bcaba87d1ea001ad375d4036",
+          "short_hash": "299dbee",
+          "date": "2026-04-09T07:02:41+08:00",
+          "subject": "feat(database): implement cascade delete for chat session messages",
+          "additions": 48,
+          "deletions": 19,
+          "files_changed": 5,
+          "net_lines": 29
+        },
+        {
+          "hash": "d4b01007b20f23ed38b51cc4019d256ad108a132",
+          "short_hash": "d4b0100",
+          "date": "2026-04-09T06:54:14+08:00",
+          "subject": "chore(IMPROVEMENTS.md): update silent error suppression status to done",
+          "additions": 2,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 1
+        },
+        {
+          "hash": "9947fc646edb3f3baa31dedc29e1f439690c84fb",
+          "short_hash": "9947fc6",
+          "date": "2026-04-09T06:51:55+08:00",
+          "subject": "chore(IMPROVEMENTS.md): mark useCallback dependency issue as resolved",
+          "additions": 4,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 3
+        },
+        {
+          "hash": "7cce1b372882ada4dd2dd2b561243f8ecb8b477d",
+          "short_hash": "7cce1b3",
+          "date": "2026-04-09T06:48:17+08:00",
+          "subject": "fix(preference_repo): resolve race condition in upsert_preferences function",
+          "additions": 14,
+          "deletions": 10,
+          "files_changed": 2,
+          "net_lines": 4
+        },
+        {
+          "hash": "1cf215eb8df9b69a57b56b63ac82375ffea3550c",
+          "short_hash": "1cf215e",
+          "date": "2026-04-09T06:33:38+08:00",
+          "subject": "feat(hotels): add adults parameter to hotel search functionality",
+          "additions": 2,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "6a1e6b82134ed4bdbe2f432c3c5e01287fbf08f3",
+          "short_hash": "6a1e6b8",
+          "date": "2026-04-09T06:33:19+08:00",
+          "subject": "chore(IMPROVEMENTS.md): mark security issues as skipped",
+          "additions": 19,
+          "deletions": 19,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "1d54d2dddd236f290334fb1233d3b40812ee0db6",
+          "short_hash": "1d54d2d",
+          "date": "2026-04-09T06:20:35+08:00",
+          "subject": "refactor(tests): simplify chat streaming endpoint tests",
+          "additions": 2,
+          "deletions": 42,
+          "files_changed": 1,
+          "net_lines": -40
+        },
+        {
+          "hash": "e045eea3a4e8479410ef7b59391f6dcd63edc42c",
+          "short_hash": "e045eea",
+          "date": "2026-04-09T06:15:48+08:00",
+          "subject": "feat(tests): add unit tests for chat streaming endpoint",
+          "additions": 0,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "63dfb550789e9ebe51d9cff5f5c075e63fffd25e",
+          "short_hash": "63dfb55",
+          "date": "2026-04-09T04:07:25+08:00",
+          "subject": "feat(IMPROVEMENTS.md): add comprehensive improvements document outlining critical, high, medium, and low priority issues across backend and frontend",
+          "additions": 468,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 468
+        },
+        {
+          "hash": "8d60a508914818b5d97dba108865ab221a2c2cca",
+          "short_hash": "8d60a50",
+          "date": "2026-04-07T19:33:48+08:00",
+          "subject": "fix(seed_db): update demo itinerary dates and booking URLs for accuracy",
+          "additions": 6,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "5bbfcef1fe78623ddb15a49ae96664c736bd20e6",
+          "short_hash": "5bbfcef",
+          "date": "2026-04-07T19:27:08+08:00",
+          "subject": "feat(HotelCard, MapEmbed): adjust map display dimensions for improved user experience",
+          "additions": 10,
+          "deletions": 12,
+          "files_changed": 2,
+          "net_lines": -2
+        },
+        {
+          "hash": "afb6e4028da66d4737bc18fe13df103bfa0fc030",
+          "short_hash": "afb6e40",
+          "date": "2026-04-07T19:25:09+08:00",
+          "subject": "feat(seed_db, dev.sh, TripPage): update database seeding and enhance trip deletion UX",
+          "additions": 121,
+          "deletions": 13,
+          "files_changed": 8,
+          "net_lines": 108
+        },
+        {
+          "hash": "ebeb029109f6d769211aff567add092d1b20e257",
+          "short_hash": "ebeb029",
+          "date": "2026-04-07T19:01:53+08:00",
+          "subject": "feat(itinerary, streaming_service): enhance validation and error handling",
+          "additions": 51,
+          "deletions": 10,
+          "files_changed": 3,
+          "net_lines": 41
+        },
+        {
+          "hash": "906def044518949e26619713556100fae6fd9680",
+          "short_hash": "906def0",
+          "date": "2026-04-07T09:10:42+08:00",
+          "subject": "feat(hotels, seed_db): update booking URLs and budget estimates",
+          "additions": 11,
+          "deletions": 9,
+          "files_changed": 3,
+          "net_lines": 2
+        },
+        {
+          "hash": "dfa9787aba0c657cc9c64345619ad083e0d932be",
+          "short_hash": "dfa9787",
+          "date": "2026-04-07T08:49:15+08:00",
+          "subject": "feat(flights, streaming_service): enhance flight search and budget rounding functionality",
+          "additions": 54,
+          "deletions": 10,
+          "files_changed": 2,
+          "net_lines": 44
+        },
+        {
+          "hash": "74e44ccba7f13b7a3e2ac5f48a4dfffff2fe91d5",
+          "short_hash": "74e44cc",
+          "date": "2026-04-07T08:25:21+08:00",
+          "subject": "feat(InputBar, useChat, ChatPage): add finalizing callback and enhance itinerary handling",
+          "additions": 43,
+          "deletions": 7,
+          "files_changed": 4,
+          "net_lines": 36
+        },
+        {
+          "hash": "0b8a1359a4c9be03be6762736c922bf7c9ca837c",
+          "short_hash": "0b8a135",
+          "date": "2026-04-07T08:02:46+08:00",
+          "subject": "feat(ChatPage): add inline indicator for itinerary readiness",
+          "additions": 8,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 7
+        },
+        {
+          "hash": "6af69c6f33140cd4400c5213151aebd83786e86d",
+          "short_hash": "6af69c6",
+          "date": "2026-04-07T07:51:59+08:00",
+          "subject": "feat(chat): implement itinerary handling in chat streaming",
+          "additions": 18,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 18
+        },
+        {
+          "hash": "e417d234f4bcfc2dbbdd8a0012907b4ce4a6cffb",
+          "short_hash": "e417d23",
+          "date": "2026-04-07T07:45:49+08:00",
+          "subject": "fix(streaming_service): correct parameter usage in finalize_trip_plan function",
+          "additions": 1,
+          "deletions": 1,
+          "files_changed": 1,
+          "net_lines": 0
+        },
+        {
+          "hash": "22cd57b222f61c8e0115faa6ed21190be8cc7c6a",
+          "short_hash": "22cd57b",
+          "date": "2026-04-07T07:35:50+08:00",
+          "subject": "refactor(streaming_service): simplify finalize_trip_plan parameters and enhance trip data extraction",
+          "additions": 12,
+          "deletions": 51,
+          "files_changed": 1,
+          "net_lines": -39
+        },
+        {
+          "hash": "377af4611b8e0a527254dadd9e2d671427c786e2",
+          "short_hash": "377af46",
+          "date": "2026-04-07T07:22:05+08:00",
+          "subject": "feat(TASKS): update task list and enhance trip planning features",
+          "additions": 11,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": 5
+        },
+        {
+          "hash": "9241c02e2316617acb5ee9c130615808eb390624",
+          "short_hash": "9241c02",
+          "date": "2026-04-07T07:15:10+08:00",
+          "subject": "feat(ChatPage): add budget display and enhance itinerary presentation",
+          "additions": 116,
+          "deletions": 117,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "4f3874e987a03de7651616b19ac42823a12f3ad2",
+          "short_hash": "4f3874e",
+          "date": "2026-04-07T07:09:12+08:00",
+          "subject": "feat(trips): enhance demo trip itinerary validation and data structure",
+          "additions": 225,
+          "deletions": 18,
+          "files_changed": 5,
+          "net_lines": 207
+        },
+        {
+          "hash": "01cee2ccabe4ad8ccf6f6e85bdb78cf18e238fc4",
+          "short_hash": "01cee2c",
+          "date": "2026-04-07T06:22:23+08:00",
+          "subject": "refactor(streaming_service): clarify user confirmation instructions for trip planning",
+          "additions": 5,
+          "deletions": 4,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "9367c3e7a98f85a92377fbe4ebea7940903d817c",
+          "short_hash": "9367c3e",
+          "date": "2026-04-07T06:18:43+08:00",
+          "subject": "feat(useChat): add tool result labels for improved feedback",
+          "additions": 14,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 12
+        },
+        {
+          "hash": "74a18b909c68bda045ab109ac019868efd966d86",
+          "short_hash": "74a18b9",
+          "date": "2026-04-07T05:35:57+08:00",
+          "subject": "refactor(ChatPage): improve thinking label logic and message handling",
+          "additions": 9,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": 3
+        },
+        {
+          "hash": "bd515da06a65a0f4e6f876e72d73cb341856e1bf",
+          "short_hash": "bd515da",
+          "date": "2026-04-07T05:06:10+08:00",
+          "subject": "refactor(ChatPage): enhance thinking bubble display logic",
+          "additions": 46,
+          "deletions": 52,
+          "files_changed": 1,
+          "net_lines": -6
+        },
+        {
+          "hash": "74fe2eff0ca4865922466cfd252af62f76de5b99",
+          "short_hash": "74fe2ef",
+          "date": "2026-04-07T04:55:46+08:00",
+          "subject": "feat(backend, frontend): enhance message streaming and state management",
+          "additions": 66,
+          "deletions": 96,
+          "files_changed": 5,
+          "net_lines": -30
+        },
+        {
+          "hash": "86ec326a65d4506b21841a51c72780925dc01170",
+          "short_hash": "86ec326",
+          "date": "2026-04-07T04:36:08+08:00",
+          "subject": "feat(frontend): improve chat message rendering and state management",
+          "additions": 113,
+          "deletions": 102,
+          "files_changed": 1,
+          "net_lines": 11
+        },
+        {
+          "hash": "23c8c2b23a421c50d7542b7137d25ed4559387a9",
+          "short_hash": "23c8c2b",
+          "date": "2026-04-07T04:12:51+08:00",
+          "subject": "refactor(api): remove unnecessary status message during reconnection retries",
+          "additions": 1,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "066d60eeceb9392b0f1ab469fd72279f4ed76b1b",
+          "short_hash": "066d60e",
+          "date": "2026-04-07T04:12:09+08:00",
+          "subject": "feat(backend): update user preference travel style default value",
+          "additions": 2,
+          "deletions": 1,
+          "files_changed": 2,
+          "net_lines": 1
+        },
+        {
+          "hash": "e0a120078a7518a071dd63394b02d032eb3963b0",
+          "short_hash": "e0a1200",
+          "date": "2026-04-07T03:47:01+08:00",
+          "subject": "feat(backend, frontend): enhance validation handling and update user preference schema",
+          "additions": 41,
+          "deletions": 14,
+          "files_changed": 4,
+          "net_lines": 27
+        },
+        {
+          "hash": "d6b228f0daaeb3bcbb6203eae7e21473d6b6e721",
+          "short_hash": "d6b228f",
+          "date": "2026-04-07T03:29:18+08:00",
+          "subject": "feat(backend, frontend): update hotel data structure and embed map functionality",
+          "additions": 38,
+          "deletions": 40,
+          "files_changed": 6,
+          "net_lines": -2
+        },
+        {
+          "hash": "fd3c0768b260a160be5ad6b5b93974e4881fe80c",
+          "short_hash": "fd3c076",
+          "date": "2026-04-04T23:41:50+08:00",
+          "subject": "feat(docs): update TASKS.md to reflect completed tasks and enhance clarity",
+          "additions": 2,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "a6b8a71d9cec60838db33da2b62d4395806f5a28",
+          "short_hash": "a6b8a71",
+          "date": "2026-04-04T23:37:03+08:00",
+          "subject": "feat(docs): add chat history bar alignment task to TASKS.md",
+          "additions": 1,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 1
+        },
+        {
+          "hash": "4833764c392abb89831256df3ad4db670a01cb36",
+          "short_hash": "4833764",
+          "date": "2026-04-04T23:34:25+08:00",
+          "subject": "feat(docs): update TASKS.md to include guest access task and refine open issues",
+          "additions": 5,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "ad1f59a415d8f37cc6184dae66588b95dc65bf26",
+          "short_hash": "ad1f59a",
+          "date": "2026-04-02T01:33:36+08:00",
+          "subject": "Update pre-commit configuration to streamline Python and frontend checks",
+          "additions": 18,
+          "deletions": 15,
+          "files_changed": 1,
+          "net_lines": 3
+        },
+        {
+          "hash": "29ceed8f5d7fdc59a68b9f24c75d4d4feb03d30e",
+          "short_hash": "29ceed8",
+          "date": "2026-04-02T01:00:03+08:00",
+          "subject": "Refine TASKS.md to enhance clarity and organization of remaining tasks",
+          "additions": 9,
+          "deletions": 24,
+          "files_changed": 1,
+          "net_lines": -15
+        },
+        {
+          "hash": "70743664873ab6f690b1285911c725321f4de43e",
+          "short_hash": "7074366",
+          "date": "2026-04-02T00:49:20+08:00",
+          "subject": "Implement agent-directed trip planning flow by removing button gating and unifying agent execution.",
+          "additions": 60,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 60
+        },
+        {
+          "hash": "83d61161b68c1f0bf4d3a6687788d37f4039f1e2",
+          "short_hash": "83d6116",
+          "date": "2026-04-02T00:48:12+08:00",
+          "subject": "Enhance itinerary display with additional hotel details",
+          "additions": 60,
+          "deletions": 6,
+          "files_changed": 3,
+          "net_lines": 54
+        },
+        {
+          "hash": "1c67fb89a92162401843bec114c7577c9e05fc8b",
+          "short_hash": "1c67fb8",
+          "date": "2026-04-02T00:39:02+08:00",
+          "subject": "Update TASKS.md to clarify responsibilities for Voice module; add TTS upgrade phases and new frontend tasks for improved user experience",
+          "additions": 34,
+          "deletions": 60,
+          "files_changed": 1,
+          "net_lines": -26
+        },
+        {
+          "hash": "3d67970577168231f9147478380031f95f65f674",
+          "short_hash": "3d67970",
+          "date": "2026-03-29T00:50:12+08:00",
+          "subject": "fix(chat): improve error handling messages for service connectivity issues",
+          "additions": 21,
+          "deletions": 2,
+          "files_changed": 2,
+          "net_lines": 19
+        },
+        {
+          "hash": "37a22de24288c7c75769fa839b380dae895c99d6",
+          "short_hash": "37a22de",
+          "date": "2026-03-29T00:46:43+08:00",
+          "subject": "feat(trip): add demo trip endpoint and update seeding script",
+          "additions": 559,
+          "deletions": 15,
+          "files_changed": 7,
+          "net_lines": 544
+        },
+        {
+          "hash": "6512707ca593a271979e29101b88e03a5febcac5",
+          "short_hash": "6512707",
+          "date": "2026-03-29T00:25:18+08:00",
+          "subject": "feat: add database migration step to dev script",
+          "additions": 3,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 3
+        },
+        {
+          "hash": "d530983b105f15def74c915fdaba59d3bfea4288",
+          "short_hash": "d530983",
+          "date": "2026-03-29T00:22:33+08:00",
+          "subject": "feat: add TypeScript type checking for frontend files and enhance pre-commit setup",
+          "additions": 231,
+          "deletions": 101,
+          "files_changed": 10,
+          "net_lines": 130
+        },
+        {
+          "hash": "61f1c64194790676731db6c33b3bab6508f3e6f4",
+          "short_hash": "61f1c64",
+          "date": "2026-03-26T16:25:12+08:00",
+          "subject": "feat: update Docker configurations and dependencies for VPN integration",
+          "additions": 26,
+          "deletions": 4,
+          "files_changed": 4,
+          "net_lines": 22
+        },
+        {
+          "hash": "4a55fe8b680b9ce9015d1402156a70f641caf922",
+          "short_hash": "4a55fe8",
+          "date": "2026-03-26T16:18:02+08:00",
+          "subject": "feat: refactor auth schemas, add DB seed script and auth tests",
+          "additions": 550,
+          "deletions": 105,
+          "files_changed": 12,
+          "net_lines": 445
+        },
+        {
+          "hash": "c0f55b63cc520a1e5db09f34389ec6814dcb92f0",
+          "short_hash": "c0f55b6",
+          "date": "2026-03-26T15:18:34+08:00",
+          "subject": "IN PROGRESS feat: integrate VPN proxy support and enhance backend configuration",
+          "additions": 203,
+          "deletions": 21,
+          "files_changed": 16,
+          "net_lines": 182
+        },
+        {
+          "hash": "8b2b7e3a9a51c59543e886c699c5785550eac116",
+          "short_hash": "8b2b7e3",
+          "date": "2026-03-26T14:18:39+08:00",
+          "subject": "refactor: improve layout and functionality of ChatPage and AppLayout",
+          "additions": 55,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 55
+        },
+        {
+          "hash": "a9d9ae221ebaefbbfb4c735286c2550c041b0581",
+          "short_hash": "a9d9ae2",
+          "date": "2026-03-26T12:28:01+08:00",
+          "subject": "feat: enhance pre-commit configuration and add frontend formatting",
+          "additions": 445,
+          "deletions": 543,
+          "files_changed": 27,
+          "net_lines": -98
+        },
+        {
+          "hash": "a9926a61923f017671c6039006d46fa480a05a8f",
+          "short_hash": "a9926a6",
+          "date": "2026-03-26T12:08:34+08:00",
+          "subject": "refactor: improve layout and styling of LoginPage",
+          "additions": 16,
+          "deletions": 12,
+          "files_changed": 1,
+          "net_lines": 4
+        },
+        {
+          "hash": "d836c53f65e7d456587c4bd36e7adf0ae184943d",
+          "short_hash": "d836c53",
+          "date": "2026-03-26T12:06:24+08:00",
+          "subject": "feat: add pre-commit hooks and fix lint errors",
+          "additions": 201,
+          "deletions": 71,
+          "files_changed": 19,
+          "net_lines": 130
+        },
+        {
+          "hash": "8df5a0b6b2b4fd701a1163dd2b124f21615b9c17",
+          "short_hash": "8df5a0b",
+          "date": "2026-03-24T12:02:15+08:00",
+          "subject": "Enhance README.md with detailed quick start instructions, required API keys, and project structure; add ESLint configuration for frontend and update package.json for linting scripts; introduce dependency checker script for setup automation.",
+          "additions": 412,
+          "deletions": 43,
+          "files_changed": 5,
+          "net_lines": 369
+        },
+        {
+          "hash": "0cc239c26693ed43d7fbe97af2e9fb635d03a81e",
+          "short_hash": "0cc239c",
+          "date": "2026-03-24T11:36:04+08:00",
+          "subject": "Add CLAUDE rules and configuration files for agent orchestration and coding standards",
+          "additions": 827,
+          "deletions": 1,
+          "files_changed": 21,
+          "net_lines": 826
+        },
+        {
+          "hash": "ce9221f72b50d8753169b9dd3eebe797899ea13c",
+          "short_hash": "ce9221f",
+          "date": "2026-03-20T04:26:11+08:00",
+          "subject": "Revise CLAUDE.md to streamline project overview and enhance documentation",
+          "additions": 52,
+          "deletions": 135,
+          "files_changed": 1,
+          "net_lines": -83
+        },
+        {
+          "hash": "5c4a70fcd9281c26f5f047305395ddf093033231",
+          "short_hash": "5c4a70f",
+          "date": "2026-03-17T21:49:09+08:00",
+          "subject": "Enhance infrastructure plan documentation and file structure",
+          "additions": 163,
+          "deletions": 136,
+          "files_changed": 1,
+          "net_lines": 27
+        },
+        {
+          "hash": "d36d4889e892c26d25ad8d39c0a80331cb6ecaa2",
+          "short_hash": "d36d488",
+          "date": "2026-03-17T21:39:09+08:00",
+          "subject": "Add full infrastructure plan and monorepo structure documentation",
+          "additions": 383,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 383
+        }
+      ]
+    },
+    "lim44104": {
+      "email": "xuanqinglim@gmail.com",
+      "total_commits": 32,
+      "total_additions": 3323,
+      "total_deletions": 1409,
+      "net_lines": 1914,
+      "total_files_changed": 68,
+      "first_commit": "2026-03-27T17:15:30+08:00",
+      "last_commit": "2026-04-13T10:47:05+08:00",
+      "commits": [
+        {
+          "hash": "87e4eb64015ea5f708a578c107202db7eda5b33e",
+          "short_hash": "87e4eb6",
+          "date": "2026-04-13T10:47:05+08:00",
+          "subject": "fix: restore typewriter effect for streaming AI responses",
+          "additions": 10,
+          "deletions": 10,
+          "files_changed": 2,
+          "net_lines": 0
+        },
+        {
+          "hash": "162b91f06573e21b0c3317d84f0aebefa3107683",
+          "short_hash": "162b91f",
+          "date": "2026-04-12T14:31:02+08:00",
+          "subject": "fix: add fallback embed map and make location text clickable",
+          "additions": 23,
+          "deletions": 16,
+          "files_changed": 1,
+          "net_lines": 7
+        },
+        {
+          "hash": "9b513b5a120f98c4ada7a2be15c4164711f78e76",
+          "short_hash": "9b513b5",
+          "date": "2026-04-12T14:23:55+08:00",
+          "subject": "feat: render enriched flight and hotel details including duration, aircraft, ratings, and expandable amenities in trip cards",
+          "additions": 204,
+          "deletions": 135,
+          "files_changed": 2,
+          "net_lines": 69
+        },
+        {
+          "hash": "e3a5f26d3fe73d29ec13d79d0b97d2f294859ca0",
+          "short_hash": "e3a5f26",
+          "date": "2026-04-11T17:12:09+08:00",
+          "subject": "test: mock audio APIs to fix voice toggle test in headless CI",
+          "additions": 52,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 52
+        },
+        {
+          "hash": "4abb6b4badae07a78d2fda2e108f3b4e25bbae94",
+          "short_hash": "4abb6b4",
+          "date": "2026-04-11T17:07:21+08:00",
+          "subject": "test: add missing interactions to voice toggle E2E test",
+          "additions": 8,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 8
+        },
+        {
+          "hash": "1f8f70f2ce5597a24c05df9eb10ab7954527ee2a",
+          "short_hash": "1f8f70f",
+          "date": "2026-04-11T17:05:10+08:00",
+          "subject": "fix: remove example test",
+          "additions": 0,
+          "deletions": 18,
+          "files_changed": 1,
+          "net_lines": -18
+        },
+        {
+          "hash": "30dec5dc7c0337b769c730c265ea629f9c629be0",
+          "short_hash": "30dec5d",
+          "date": "2026-04-11T17:03:21+08:00",
+          "subject": "fix: actually copy failed message to clipboard on error",
+          "additions": 10,
+          "deletions": 6,
+          "files_changed": 1,
+          "net_lines": 4
+        },
+        {
+          "hash": "3e5f3e09a754b89a6dcec37ffb71bad893a8884d",
+          "short_hash": "3e5f3e0",
+          "date": "2026-04-11T17:01:35+08:00",
+          "subject": "fix: prevent inconsistent auth state on initialization",
+          "additions": 8,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 6
+        },
+        {
+          "hash": "e2640b88ae1b06b7ac0ef86a35f2d841c9695236",
+          "short_hash": "e2640b8",
+          "date": "2026-04-10T18:04:30+08:00",
+          "subject": "ci: fix frontend dependency installation and webserver directory",
+          "additions": 14,
+          "deletions": 8,
+          "files_changed": 2,
+          "net_lines": 6
+        },
+        {
+          "hash": "88c75cc2ba3c2d83856b85b880248dd9700c781e",
+          "short_hash": "88c75cc",
+          "date": "2026-04-10T17:58:56+08:00",
+          "subject": "ci: fix vite not found and frontend dependency installation",
+          "additions": 2,
+          "deletions": 3,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "33f64088238403e67606e723296e46ae0e54da4e",
+          "short_hash": "33f6408",
+          "date": "2026-04-10T17:55:24+08:00",
+          "subject": "ci: fix webServer working directory for GitHub Actions",
+          "additions": 2,
+          "deletions": 5,
+          "files_changed": 1,
+          "net_lines": -3
+        },
+        {
+          "hash": "7e4da1bf8e36d8a3698803d6cc43b8fae9043c5d",
+          "short_hash": "7e4da1b",
+          "date": "2026-04-10T17:05:50+08:00",
+          "subject": "ci: configure playwright webServer for GitHub Actions",
+          "additions": 10,
+          "deletions": 5,
+          "files_changed": 1,
+          "net_lines": 5
+        },
+        {
+          "hash": "b4442b1b65c9af8aa039692a1281fbb10a20eb68",
+          "short_hash": "b4442b1",
+          "date": "2026-04-10T16:45:01+08:00",
+          "subject": "feat: implement responsive pages",
+          "additions": 321,
+          "deletions": 353,
+          "files_changed": 2,
+          "net_lines": -32
+        },
+        {
+          "hash": "480a1d3fbc39c81b06f8de16b4c1394e78b2dcd5",
+          "short_hash": "480a1d3",
+          "date": "2026-04-10T16:33:56+08:00",
+          "subject": "feat: implement session error handling and message retry logic",
+          "additions": 59,
+          "deletions": 3,
+          "files_changed": 2,
+          "net_lines": 56
+        },
+        {
+          "hash": "fae497c84eb580d20d33a288985c2f6792615e69",
+          "short_hash": "fae497c",
+          "date": "2026-04-10T16:09:50+08:00",
+          "subject": "feat: add session loading skeleton and preserve newlines in chat bubbles",
+          "additions": 239,
+          "deletions": 210,
+          "files_changed": 1,
+          "net_lines": 29
+        },
+        {
+          "hash": "5f553cb3c755db99d8cb2b98cecc51fc68509f5e",
+          "short_hash": "5f553cb",
+          "date": "2026-04-10T15:49:07+08:00",
+          "subject": "fix: add E2E tests for chat streaming, trip view, and auth flow",
+          "additions": 430,
+          "deletions": 3,
+          "files_changed": 10,
+          "net_lines": 427
+        },
+        {
+          "hash": "250ea71c3135f3b19f791c1ef55370574df9ceed",
+          "short_hash": "250ea71",
+          "date": "2026-04-10T12:29:13+08:00",
+          "subject": "fix(ui): resolve streaming typewriter effect, ensure instant trip plan display, and add auto-expanding animated thinking bubbles for smoother UX.",
+          "additions": 115,
+          "deletions": 27,
+          "files_changed": 3,
+          "net_lines": 88
+        },
+        {
+          "hash": "95e2156aad5d9aeb01083597fb029f1ee40bb8b6",
+          "short_hash": "95e2156",
+          "date": "2026-04-02T21:49:49+08:00",
+          "subject": "perf(ui): implement global singleton queue with auto-retry to bypass Wikipedia rate limits",
+          "additions": 208,
+          "deletions": 102,
+          "files_changed": 2,
+          "net_lines": 106
+        },
+        {
+          "hash": "e04f4482ddc7aee0c6935e2fc0674da456bcf61c",
+          "short_hash": "e04f448",
+          "date": "2026-04-02T21:17:09+08:00",
+          "subject": "fix(security): sanitize API error messages to prevent XSS vulnerabilities",
+          "additions": 12,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 10
+        },
+        {
+          "hash": "e20bd85f1815381c99f2dafa8eb1e932b5eb7ec5",
+          "short_hash": "e20bd85",
+          "date": "2026-04-02T21:13:07+08:00",
+          "subject": "fix(ui): replace page reload with soft retry to preserve state",
+          "additions": 10,
+          "deletions": 5,
+          "files_changed": 1,
+          "net_lines": 5
+        },
+        {
+          "hash": "56e39529bb2460c203983cbb50657929282c50da",
+          "short_hash": "56e3952",
+          "date": "2026-04-02T17:58:42+08:00",
+          "subject": "fix(api): set global timeout to 60s with 180s override for AI chat",
+          "additions": 6,
+          "deletions": 2,
+          "files_changed": 1,
+          "net_lines": 4
+        },
+        {
+          "hash": "f3ef9fdd409b65d36a9736756374e46f743abcc4",
+          "short_hash": "f3ef9fd",
+          "date": "2026-04-02T17:55:45+08:00",
+          "subject": "fix(ui): resolve memory leak in checkImageWorks by adding cleanup routine",
+          "additions": 44,
+          "deletions": 20,
+          "files_changed": 2,
+          "net_lines": 24
+        },
+        {
+          "hash": "5cad234a71feba0ec58fc0edbe0e8e7a27cff4ad",
+          "short_hash": "5cad234",
+          "date": "2026-04-02T17:27:51+08:00",
+          "subject": "refactor(ui): unify image fallback logic in AttractionCard",
+          "additions": 95,
+          "deletions": 45,
+          "files_changed": 1,
+          "net_lines": 50
+        },
+        {
+          "hash": "72ab2b37e277df535c3b55e8e114089027bf2387",
+          "short_hash": "72ab2b3",
+          "date": "2026-04-02T17:24:12+08:00",
+          "subject": "feat(api): implement standardized APIError envelope, timeouts, and global error interceptor",
+          "additions": 74,
+          "deletions": 27,
+          "files_changed": 3,
+          "net_lines": 47
+        },
+        {
+          "hash": "0d34c7d198525f3f5200a2483acdf1b1eadbe6ad",
+          "short_hash": "0d34c7d",
+          "date": "2026-04-02T17:04:03+08:00",
+          "subject": "feat(ui): implement skeleton loaders for trip lists, itinerary details, and chat typing indicators to improve perceived performance",
+          "additions": 90,
+          "deletions": 8,
+          "files_changed": 2,
+          "net_lines": 82
+        },
+        {
+          "hash": "9480764f5e1e4328ecdfb14e44cdbdfd106ac897",
+          "short_hash": "9480764",
+          "date": "2026-04-02T16:52:48+08:00",
+          "subject": "feat(ui): add ImageLightbox component and implement search fallback for trip cards to prevent broken images",
+          "additions": 284,
+          "deletions": 103,
+          "files_changed": 3,
+          "net_lines": 181
+        },
+        {
+          "hash": "2d1299c866a7fde481e1adb77ee8eed95950287b",
+          "short_hash": "2d1299c",
+          "date": "2026-04-01T15:43:30+08:00",
+          "subject": "Update Task.md",
+          "additions": 4,
+          "deletions": 5,
+          "files_changed": 1,
+          "net_lines": -1
+        },
+        {
+          "hash": "65ad74c6389ce008ed157f5b13a2d8fe49cea79e",
+          "short_hash": "65ad74c",
+          "date": "2026-04-01T15:29:09+08:00",
+          "subject": "fix(trip-ui): silence 404 console errors by migrating AttractionCard to the Action API with high-res support",
+          "additions": 15,
+          "deletions": 10,
+          "files_changed": 1,
+          "net_lines": 5
+        },
+        {
+          "hash": "71363e54ad62ed5326ca9170f673cd60bb0b12fe",
+          "short_hash": "71363e5",
+          "date": "2026-04-01T15:22:33+08:00",
+          "subject": "feat(trip-ui): integrate trip budgets, daily themes, activity tips, flight prices, and high-resolution fallback image fetching.",
+          "additions": 218,
+          "deletions": 26,
+          "files_changed": 3,
+          "net_lines": 192
+        },
+        {
+          "hash": "94af5872133dd05d6d18ad7c1aa03d446b982964",
+          "short_hash": "94af587",
+          "date": "2026-04-01T14:56:18+08:00",
+          "subject": "feat(trip-ui): extract and polish itinerary components",
+          "additions": 234,
+          "deletions": 175,
+          "files_changed": 6,
+          "net_lines": 59
+        },
+        {
+          "hash": "45a839e142850b4541694a232f6ea774af20de72",
+          "short_hash": "45a839e",
+          "date": "2026-03-27T18:01:06+08:00",
+          "subject": "feat(trip-ui): implement full itinerary mapping and data-driven components",
+          "additions": 302,
+          "deletions": 34,
+          "files_changed": 3,
+          "net_lines": 268
+        },
+        {
+          "hash": "38c1c8bb4fe5da045ca76ff038a0300c74b0585f",
+          "short_hash": "38c1c8b",
+          "date": "2026-03-27T17:15:30+08:00",
+          "subject": "feat: connect My Trips page to backend",
+          "additions": 220,
+          "deletions": 41,
+          "files_changed": 5,
+          "net_lines": 179
+        }
+      ]
+    },
+    "Peng Minqi": {
+      "email": "161701674+mencaire@users.noreply.github.com",
+      "total_commits": 1,
+      "total_additions": 5,
+      "total_deletions": 0,
+      "net_lines": 5,
+      "total_files_changed": 1,
+      "first_commit": "2026-03-17T12:21:51+08:00",
+      "last_commit": "2026-03-17T12:21:51+08:00",
+      "commits": [
+        {
+          "hash": "93df571f4310d0c877ee044960726464a8c5ec4c",
+          "short_hash": "93df571",
+          "date": "2026-03-17T12:21:51+08:00",
+          "subject": "Update README.md",
+          "additions": 5,
+          "deletions": 0,
+          "files_changed": 1,
+          "net_lines": 5
+        }
+      ]
+    },
+    "davidwkk": {
+      "email": "105434983+davidwkk@users.noreply.github.com",
+      "total_commits": 1,
+      "total_additions": 209,
+      "total_deletions": 0,
+      "net_lines": 209,
+      "total_files_changed": 2,
+      "first_commit": "2026-03-17T02:11:29+08:00",
+      "last_commit": "2026-03-17T02:11:29+08:00",
+      "commits": [
+        {
+          "hash": "aa008d0decfa394761aae6e23cac9e6c07069864",
+          "short_hash": "aa008d0",
+          "date": "2026-03-17T02:11:29+08:00",
+          "subject": "Initial commit",
+          "additions": 209,
+          "deletions": 0,
+          "files_changed": 2,
+          "net_lines": 209
+        }
+      ]
+    }
+  }
+}

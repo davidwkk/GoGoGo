@@ -1061,11 +1061,7 @@ async def stream_agent_response(
                             service="chat",
                             trace_id=trace_id,
                             session_id=session_id,
-                            reason=(
-                                "disabled"
-                                if not auto_save_trip
-                                else "guest_user"
-                            ),
+                            reason=("disabled" if not auto_save_trip else "guest_user"),
                         ).info(
                             "Trip auto-save skipped"
                             + (" (disabled)" if not auto_save_trip else " (guest user)")

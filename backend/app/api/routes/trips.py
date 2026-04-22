@@ -33,7 +33,9 @@ def create_trip(
     verify_user_exists(user_id, db)
     trace_id = str(uuid4())
     # session_id is optional here; Live uses manual save after plan generation
-    return save_trip(db, user_id, session_id=None, itinerary=body.itinerary, trace_id=trace_id)
+    return save_trip(
+        db, user_id, session_id=None, itinerary=body.itinerary, trace_id=trace_id
+    )
 
 
 @router.get("/{trip_id}")
