@@ -194,10 +194,22 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
   const discardAudioUntilTurnCompleteRef = useRef(false);
   const isRecordingRef = useRef(false);
   const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const manualDisconnectRef = useRef(false);
+  const sessionIdRef = useRef<string>('');
+  const connectRef = useRef<(() => void) | null>(null);
 
   const micStreamRef = useRef<MediaStream | null>(null);
   const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const micProcessorRef = useRef<ScriptProcessorNode | null>(null);
+
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
 
   const stopAudio = useCallback(() => {
     try {
@@ -274,7 +286,7 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
 
   const applyTranscriptChunk = useCallback((role: 'user' | 'model' | 'system', text: string) => {
     if (!text) return;
-    setTranscriptsRef.current(prev => {
+    setTranscriptsRef.current((prev: LiveTranscriptItem[]) => {
       const last = prev[prev.length - 1];
       // After optimistic text send, Gemini may echo the same user line via input_transcription — skip duplicate.
       if (role === 'user' && last?.role === 'user') {
@@ -293,6 +305,7 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
   }, []);
 
   const hardResetConnection = useCallback(() => {
+    clearReconnectTimer();
     clearStallTimer();
     wsRef.current?.close();
     wsRef.current = null;
@@ -306,9 +319,21 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
     userUnlockedAfterStopRef.current = false;
     discardAudioUntilTurnCompleteRef.current = false;
     setStatus('idle');
-  }, [clearStallTimer, stopAudio, stopMic]);
+  }, [clearReconnectTimer, clearStallTimer, stopAudio, stopMic]);
 
   useEffect(() => {
+    // Stable session id per section. Used by backend to preserve context across reconnects.
+    // Persisted so a refresh doesn't lose the "live session" continuity for this section.
+    try {
+      const key = `live_session_id:${sectionKey}`;
+      const existing = localStorage.getItem(key);
+      const sid = existing && existing.trim().length > 0 ? existing : crypto.randomUUID();
+      localStorage.setItem(key, sid);
+      sessionIdRef.current = sid;
+    } catch {
+      sessionIdRef.current = crypto.randomUUID();
+    }
+
     hardResetConnection();
     return () => {
       hardResetConnection();
@@ -318,6 +343,8 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
   const connect = useCallback(() => {
     if (wsRef.current) return;
     clearStallTimer();
+    clearReconnectTimer();
+    manualDisconnectRef.current = false;
     setLastError(null);
     setStatus('connecting');
     setIsModelResponding(false);
@@ -327,15 +354,20 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
     discardAudioUntilTurnCompleteRef.current = false;
     try {
       const live_model = useChatStore.getState().live_model;
+      const sid = sessionIdRef.current || crypto.randomUUID();
       const wsUrl =
-        (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1')
+        (((import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL as
+          | string
+          | undefined) || 'http://localhost:8000/api/v1')
           .replace(/^http/, 'ws')
-          .replace(/\/$/, '') + `/live/ws?model=${encodeURIComponent(live_model)}`;
+          .replace(/\/$/, '') +
+        `/live/ws?model=${encodeURIComponent(live_model)}&session_id=${encodeURIComponent(sid)}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
       ws.onopen = () => {
         if (wsRef.current !== ws) return;
         setStatus('connected');
+        reconnectAttemptsRef.current = 0;
         const ctx = ensurePlaybackContext(audioCtxRef);
         void ctx.resume().catch(() => {});
       };
@@ -358,6 +390,17 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
         userUnlockedAfterStopRef.current = false;
         discardAudioUntilTurnCompleteRef.current = false;
         setStatus('idle');
+
+        if (manualDisconnectRef.current) return;
+        // Auto-reconnect with backoff (keeps transcripts in UI).
+        const attempt = reconnectAttemptsRef.current + 1;
+        reconnectAttemptsRef.current = attempt;
+        const delay = Math.min(10_000, 500 * 2 ** Math.min(6, attempt)); // 1s..10s
+        clearReconnectTimer();
+        reconnectTimerRef.current = setTimeout(() => {
+          reconnectTimerRef.current = null;
+          connectRef.current?.();
+        }, delay);
       };
       ws.onmessage = evt => {
         if (wsRef.current !== ws) return;
@@ -427,9 +470,22 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
       setStatus('error');
       setLastError(e instanceof Error ? e.message : 'Failed to connect');
     }
-  }, [applyTranscriptChunk, clearStallTimer, refreshRespondingUi, stopAudio, stopMic]);
+  }, [applyTranscriptChunk, clearReconnectTimer, clearStallTimer, refreshRespondingUi, stopAudio, stopMic]);
+
+  // Keep a stable ref to the latest connect() (for reconnect timer).
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  // Auto-connect when entering a live section.
+  useEffect(() => {
+    if (status === 'idle' && !wsRef.current) {
+      connect();
+    }
+  }, [connect, status]);
 
   const disconnect = useCallback(() => {
+    manualDisconnectRef.current = true;
     hardResetConnection();
   }, [hardResetConnection]);
 
@@ -449,7 +505,7 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
       const ctx = ensurePlaybackContext(audioCtxRef);
       void ctx.resume().catch(() => {});
 
-      setTranscriptsRef.current(prev => [
+      setTranscriptsRef.current((prev: LiveTranscriptItem[]) => [
         ...prev,
         { id: crypto.randomUUID(), role: 'user', text: t },
       ]);
@@ -486,7 +542,7 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
       const processor = ctx.createScriptProcessor(4096, 1, 1);
       micProcessorRef.current = processor;
 
-      processor.onaudioprocess = ev => {
+      processor.onaudioprocess = (ev: AudioProcessingEvent) => {
         if (!isRecordingRef.current) return;
         const input = ev.inputBuffer.getChannelData(0);
         const pcm16 = downsampleTo16k(input, ctx.sampleRate);

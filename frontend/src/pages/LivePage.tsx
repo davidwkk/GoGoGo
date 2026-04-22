@@ -92,8 +92,6 @@ export function LivePage() {
     transcripts,
     isRecording,
     isModelResponding,
-    connect,
-    disconnect,
     sendText,
     startRecording,
     stopRecording,
@@ -433,15 +431,6 @@ export function LivePage() {
               </SelectContent>
             </Select>
 
-            {status !== 'connected' ? (
-              <Button onClick={connect} disabled={status === 'connecting'}>
-                {status === 'connecting' ? 'Connecting…' : 'Connect'}
-              </Button>
-            ) : (
-              <Button variant="secondary" onClick={disconnect}>
-                Disconnect
-              </Button>
-            )}
             <Button variant="ghost" onClick={clear} disabled={transcripts.length === 0}>
               Clear transcript
             </Button>
@@ -485,7 +474,9 @@ export function LivePage() {
                     ? isModelResponding
                       ? 'Thinking… or press Stop to cancel'
                       : 'Type a message…'
-                    : 'Connect to start…'
+                    : status === 'connecting'
+                      ? 'Connecting…'
+                      : 'Reconnecting…'
                 }
                 disabled={status !== 'connected'}
                 onChange={e => setText(e.target.value)}
