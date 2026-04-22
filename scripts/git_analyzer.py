@@ -195,6 +195,43 @@ def fetch_diff_stats(commit_hash: str) -> tuple[int, int, int]:
     return additions, deletions, files
 
 
+def _compute_file_stats(commits: list[dict]) -> dict:
+    """Compute aggregate file stats across all commits."""
+    backend_files = set()
+    frontend_files = set()
+    migration_files = set()
+    total_files = set()
+
+    for commit in commits:
+        raw = run_git("show", "--numstat", "--format=", commit["hash"])
+        for line in raw.splitlines():
+            parts = line.split("\t")
+            if len(parts) == 3:
+                filepath = parts[2]
+                total_files.add(filepath)
+                if filepath.startswith("backend/"):
+                    backend_files.add(filepath)
+                elif filepath.startswith("frontend/") or "/src/" in filepath:
+                    frontend_files.add(filepath)
+
+    # Detect migrations via alembic/versions path in file tree
+    migration_result = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    for line in migration_result.stdout.splitlines():
+        if "alembic/versions/" in line or "migrations/" in line:
+            migration_files.add(line)
+
+    return {
+        "total_files": len(total_files),
+        "backend_files": len(backend_files),
+        "frontend_files": len(frontend_files),
+        "db_migrations": len(migration_files),
+    }
+
+
 # ── Data Aggregation ──────────────────────────────────────────────────────────
 def build_author_map(commits: list[dict]) -> dict:
     """
@@ -354,7 +391,7 @@ def print_author_section(author: str, data: dict, rank: int):
     print()
 
 
-def print_overall_summary(author_map: dict):
+def print_overall_summary(author_map: dict, file_stats: dict | None = None):
     total_commits = sum(d["total_commits"] for d in author_map.values())
     total_adds = sum(d["total_additions"] for d in author_map.values())
     total_dels = sum(d["total_deletions"] for d in author_map.values())
@@ -375,13 +412,22 @@ def print_overall_summary(author_map: dict):
         )
     )
     print(colorize(f"  Files Changed  : {total_files}", C.CYAN))
+    if file_stats:
+        print(colorize(f"  Backend Files  : {file_stats['backend_files']}", C.CYAN))
+        print(colorize(f"  Frontend Files : {file_stats['frontend_files']}", C.CYAN))
+        print(colorize(f"  DB Migrations : {file_stats['db_migrations']}", C.CYAN))
     print(colorize("═" * 72, C.CYAN))
     print()
 
 
 # ── JSON Export ───────────────────────────────────────────────────────────────
 def export_json(
-    author_map: dict, repo: str, branch: str, output_file: str, abstract: list[dict]
+    author_map: dict,
+    repo: str,
+    branch: str,
+    output_file: str,
+    abstract: list[dict],
+    file_stats: dict,
 ):
     """Serialize the full report to a JSON file."""
     report = {
@@ -404,6 +450,7 @@ def export_json(
             }
             for a in abstract
         ],
+        "file_stats": file_stats,
         "authors": {},
     }
 
@@ -477,6 +524,9 @@ def main():
     # ── Merge Identities ──
     merged_map, abstract = _merge_identities(author_map)
 
+    # ── File Stats ──
+    file_stats = _compute_file_stats(commits)
+
     # Sort authors by total commits descending
     sorted_authors = sorted(
         merged_map.items(), key=lambda x: x[1]["total_commits"], reverse=True
@@ -488,10 +538,10 @@ def main():
     for rank, (author, data) in enumerate(sorted_authors, start=1):
         print_author_section(author, data, rank)
 
-    print_overall_summary(merged_map)
+    print_overall_summary(merged_map, file_stats)
 
     # ── JSON Export ──
-    export_json(merged_map, repo, branch, args.output, abstract)
+    export_json(merged_map, repo, branch, args.output, abstract, file_stats)
 
 
 if __name__ == "__main__":
