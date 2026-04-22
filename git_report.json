@@ -2,19 +2,19 @@
   "meta": {
     "repo": "GoGoGo",
     "branch": "main",
-    "generated": "2026-04-23T06:29:04.812648"
+    "generated": "2026-04-23T06:34:11.334916"
   },
   "abstract": [
     {
       "name": "David Wong",
       "identities": ["davidwong666", "DavidWongLinux", "davidwkk"],
-      "total_commits": 326,
-      "total_additions": 58099,
-      "total_deletions": 15068,
-      "net_lines": 43031,
-      "total_files_changed": 1301,
+      "total_commits": 327,
+      "total_additions": 60977,
+      "total_deletions": 17935,
+      "net_lines": 43042,
+      "total_files_changed": 1304,
       "first_commit": "2026-03-17T02:11:29+08:00",
-      "last_commit": "2026-04-23T06:13:33+08:00"
+      "last_commit": "2026-04-23T06:29:26+08:00"
     },
     {
       "name": "Peng Minqi",
@@ -39,17 +39,33 @@
       "last_commit": "2026-04-13T10:47:05+08:00"
     }
   ],
+  "file_stats": {
+    "total_files": 276,
+    "backend_files": 117,
+    "frontend_files": 53,
+    "db_migrations": 8
+  },
   "authors": {
     "David Wong": {
       "email": "david20030701@gmail.com",
-      "total_commits": 326,
-      "total_additions": 58099,
-      "total_deletions": 15068,
-      "net_lines": 43031,
-      "total_files_changed": 1301,
+      "total_commits": 327,
+      "total_additions": 60977,
+      "total_deletions": 17935,
+      "net_lines": 43042,
+      "total_files_changed": 1304,
       "first_commit": "2026-03-17T02:11:29+08:00",
-      "last_commit": "2026-04-23T06:13:33+08:00",
+      "last_commit": "2026-04-23T06:29:26+08:00",
       "commits": [
+        {
+          "hash": "6cc701f766fdd66e88da40475ae73985bbe78b94",
+          "short_hash": "6cc701f",
+          "date": "2026-04-23T06:29:26+08:00",
+          "subject": "Remove commit heatmap image and update git report generation to include author identity grouping and detailed statistics. The `git_analyzer.py` script now exports a JSON report without generating a heatmap.",
+          "additions": 2878,
+          "deletions": 2867,
+          "files_changed": 3,
+          "net_lines": 11
+        },
         {
           "hash": "cf5f01d4fe0b6b48983ef735a8a28efce5b2d15e",
           "short_hash": "cf5f01d",
