@@ -354,14 +354,17 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
     discardAudioUntilTurnCompleteRef.current = false;
     try {
       const live_model = useChatStore.getState().live_model;
+      const live_voice = useChatStore.getState().live_voice;
       const sid = sessionIdRef.current || crypto.randomUUID();
+      const voiceParam =
+        live_voice && live_voice !== 'default' ? `&voice=${encodeURIComponent(live_voice)}` : '';
       const wsUrl =
         (((import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL as
           | string
           | undefined) || 'http://localhost:8000/api/v1')
           .replace(/^http/, 'ws')
           .replace(/\/$/, '') +
-        `/live/ws?model=${encodeURIComponent(live_model)}&session_id=${encodeURIComponent(sid)}`;
+        `/live/ws?model=${encodeURIComponent(live_model)}&session_id=${encodeURIComponent(sid)}${voiceParam}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
       ws.onopen = () => {

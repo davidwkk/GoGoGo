@@ -42,6 +42,15 @@ const LIVE_MODELS: { value: string; label: string }[] = [
   },
 ];
 
+const LIVE_VOICES: { value: string; label: string }[] = [
+  { value: 'default', label: 'Default (model choice)' },
+  { value: 'Zephyr', label: 'Zephyr' },
+  { value: 'Puck', label: 'Puck' },
+  { value: 'Charon', label: 'Charon' },
+  { value: 'Fenrir', label: 'Fenrir' },
+  { value: 'Kore', label: 'Kore' },
+];
+
 function sortLiveSectionsForSidebar(list: LiveSectionPersisted[]): LiveSectionPersisted[] {
   return [...list].sort((a, b) => {
     const pa = a.pinned ? 1 : 0;
@@ -106,9 +115,15 @@ export function LivePage() {
 
   const live_model = useChatStore(s => s.live_model);
   const setLiveModel = useChatStore(s => s.setLiveModel);
+  const live_voice = useChatStore(s => s.live_voice);
+  const setLiveVoice = useChatStore(s => s.setLiveVoice);
 
   const handleModelChange = (val: string) => {
     setLiveModel(val);
+  };
+
+  const handleVoiceChange = (val: string) => {
+    setLiveVoice(val);
   };
 
   useEffect(() => {
@@ -418,19 +433,6 @@ export function LivePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <Select value={live_model} onValueChange={handleModelChange}>
-              <SelectTrigger className="w-[240px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LIVE_MODELS.map(m => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <Button variant="ghost" onClick={clear} disabled={transcripts.length === 0}>
               Clear transcript
             </Button>
@@ -464,6 +466,43 @@ export function LivePage() {
 
         <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm px-3 sm:px-6 py-3">
           <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs font-medium text-muted-foreground">Preference</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground">Model</div>
+                  <Select value={live_model} onValueChange={handleModelChange}>
+                    <SelectTrigger className="w-[260px]">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LIVE_MODELS.map(m => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground">Voice</div>
+                  <Select value={live_voice} onValueChange={handleVoiceChange}>
+                    <SelectTrigger className="w-[220px]">
+                      <SelectValue placeholder="Select voice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LIVE_VOICES.map(v => (
+                        <SelectItem key={v.value} value={v.value}>
+                          {v.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <textarea
                 ref={inputRef}
