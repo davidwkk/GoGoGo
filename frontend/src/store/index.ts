@@ -42,6 +42,7 @@ export interface ChatState {
   // LLM Model selection
   llm_model: string;
   live_model: string;
+  live_voice: string;
 
   // Actions
   setSessionId: (id: string | null) => void;
@@ -65,6 +66,7 @@ export interface ChatState {
   resetTravelSettings: () => void;
   setLlmModel: (model: string) => void;
   setLiveModel: (model: string) => void;
+  setLiveVoice: (voice: string) => void;
 }
 
 export const useChatStore = create<ChatState>(set => ({
@@ -82,6 +84,7 @@ export const useChatStore = create<ChatState>(set => ({
 
   llm_model: 'gemini-3.1-flash-lite-preview',
   live_model: 'gemini-3.1-flash-live-preview',
+  live_voice: 'default',
 
   setSessionId: id => set({ sessionId: id }),
   setMessages: messages => set({ messages }),
@@ -135,6 +138,8 @@ export const useChatStore = create<ChatState>(set => ({
   setLlmModel: model => set({ llm_model: model }),
 
   setLiveModel: model => set({ live_model: model }),
+
+  setLiveVoice: voice => set({ live_voice: voice }),
 }));
 
 // ─── Auth store re-exports ───────────────────────────────────────────────────

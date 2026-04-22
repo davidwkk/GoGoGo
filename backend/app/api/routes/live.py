@@ -138,12 +138,30 @@ async def live_ws(
     ws: WebSocket,
     model: str | None = Query(default=None, alias="model"),
     session_id: str | None = Query(default=None, alias="session_id"),
+    voice: str | None = Query(default=None, alias="voice"),
 ) -> None:
     # ── Resolve model ───────────────────────────────────────────────────────────
     live_model = model or settings.GEMINI_LIVE_MODEL
     user_selected = model is not None and model != settings.GEMINI_LIVE_MODEL
     connection_id = f"live_{id(ws)}"
     sid = (session_id or "").strip() or None
+    voice_name = (voice or "").strip() or None
+
+    allowed_voices = {
+        "Zephyr",
+        "Puck",
+        "Charon",
+        "Fenrir",
+        "Kore",
+    }
+    if voice_name and voice_name not in allowed_voices:
+        logger.bind(
+            event="live_invalid_voice",
+            connection_id=connection_id,
+            session_id=sid,
+            requested_voice=voice_name,
+        ).warning(f"[{connection_id}] Invalid voice requested: {voice_name}")
+        voice_name = None
 
     logger.bind(
         event="live_connect_start",
@@ -153,6 +171,7 @@ async def live_ws(
         effective_model=live_model,
         default_model=settings.GEMINI_LIVE_MODEL,
         user_selected_model=user_selected,
+        requested_voice=voice_name,
         proxy_enabled=settings.LLM_PROXY_ENABLED,
         proxy_url=settings.SOCKS5_PROXY_URL if settings.LLM_PROXY_ENABLED else None,
     ).info(
@@ -181,6 +200,12 @@ async def live_ws(
         "input_audio_transcription": {},
         "output_audio_transcription": {},
     }
+    if voice_name:
+        config["speech_config"] = {
+            "voice_config": {
+                "prebuilt_voice_config": {"voice_name": voice_name},
+            }
+        }
 
     logger.bind(
         event="live_session_connecting",
@@ -190,6 +215,7 @@ async def live_ws(
         config_response_modalities=["AUDIO"],
         config_input_transcription=True,
         config_output_transcription=True,
+        config_voice=voice_name,
     ).info(f"[{connection_id}] Connecting to Gemini Live session")
 
     # Track stats for this session
