@@ -366,9 +366,11 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
       const voiceParam =
         live_voice && live_voice !== 'default' ? `&voice=${encodeURIComponent(live_voice)}` : '';
       const wsUrl =
-        (((import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL as
-          | string
-          | undefined) || 'http://localhost:8000/api/v1')
+        (
+          ((import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL as
+            | string
+            | undefined) || 'http://localhost:8000/api/v1'
+        )
           .replace(/^http/, 'ws')
           .replace(/\/$/, '') +
         `/live/ws?model=${encodeURIComponent(live_model)}&session_id=${encodeURIComponent(sid)}${voiceParam}`;
@@ -480,7 +482,14 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
       setStatus('error');
       setLastError(e instanceof Error ? e.message : 'Failed to connect');
     }
-  }, [applyTranscriptChunk, clearReconnectTimer, clearStallTimer, refreshRespondingUi, stopAudio, stopMic]);
+  }, [
+    applyTranscriptChunk,
+    clearReconnectTimer,
+    clearStallTimer,
+    refreshRespondingUi,
+    stopAudio,
+    stopMic,
+  ]);
 
   // Keep a stable ref to the latest connect() (for reconnect timer).
   useEffect(() => {

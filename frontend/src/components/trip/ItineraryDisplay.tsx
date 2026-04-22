@@ -1,12 +1,4 @@
-import {
-  Banknote,
-  Bed,
-  Calendar,
-  MapPin,
-  Plane,
-  Sparkles,
-  Ticket,
-} from 'lucide-react';
+import { Banknote, Bed, Calendar, MapPin, Plane, Sparkles, Ticket } from 'lucide-react';
 
 import type { DayPlan, Flight, TripItinerary } from '@/types/trip';
 import { AttractionCard } from '@/components/trip/AttractionCard';
@@ -197,4 +189,3 @@ export function ItineraryDisplay({
     </div>
   );
 }
-

@@ -129,7 +129,7 @@ def _ctx_compose_prompt(msgs: list[_CtxMsg]) -> str:
         "",
         "Context (do not repeat):",
     ]
-    for m in (last_users + last_model):
+    for m in last_users + last_model:
         role = "User" if m["role"] == "user" else "Assistant"
         t = (m["text"] or "").strip()
         if not t:

@@ -251,7 +251,7 @@ export const chatService = {
           body: JSON.stringify(req),
           signal,
         });
-      } catch (fetchErr) {
+      } catch {
         warn('[streamMessage] Fetch error, retrying:', fetchErr);
         if (attempt >= MAX_RETRIES)
           throw {
@@ -437,7 +437,7 @@ export const livePlanService = {
           body: JSON.stringify(req),
           signal,
         });
-      } catch (fetchErr) {
+      } catch {
         if (attempt >= MAX_RETRIES)
           throw {
             detail: 'Connection failed. Please check your network and try again.',
@@ -530,7 +530,11 @@ export const livePlanService = {
       } catch {
         reader.cancel().catch(() => {});
         if (attempt >= MAX_RETRIES) {
-          throw { detail: 'Connection lost. Please try again.', statusCode: 0, code: 'NETWORK_ERROR' };
+          throw {
+            detail: 'Connection lost. Please try again.',
+            statusCode: 0,
+            code: 'NETWORK_ERROR',
+          };
         }
         continue;
       }
