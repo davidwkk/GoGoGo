@@ -4,12 +4,11 @@ git_analyzer.py
 ---------------
 Analyzes git commit history for the current repository.
 Groups commits by author, shows per-commit details, cumulative stats,
-and renders a commit frequency heatmap.
+and exports a JSON report.
 
 Usage:
     python git_analyzer.py              # analyze current repo
     python git_analyzer.py --include-merges  # include merge commits
-    python git_analyzer.py --no-heatmap      # skip heatmap
     python git_analyzer.py --output report.json  # custom output filename
 """
 
@@ -20,14 +19,76 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 
-# ── Optional: matplotlib for heatmap ──────────────────────────────────────────
-try:
-    import matplotlib.pyplot as plt
-    import numpy as np
+# pyright: reportPossiblyUnboundVariable=false, reportGeneralTypeIssues=false, reportAttributeAccessIssue=false, reportOperatorIssue=false, reportOptionalMemberAccess=false, reportArgumentType=false
 
-    HAS_MATPLOTLIB = True
-except ImportError:
-    HAS_MATPLOTLIB = False
+# ── Identity Mapping ───────────────────────────────────────────────────────────
+# Groups multiple author identities that belong to the same person.
+IDENTITY_GROUPS = [
+    {
+        "name": "David Wong",
+        "identities": ["davidwong666", "DavidWongLinux", "davidwkk"],
+    },
+    {"name": "Peng Minqi", "identities": ["mencare", "mencaire", "Peng Minqi"]},
+]
+
+
+def _merge_identities(author_map: dict) -> tuple[dict, list[dict]]:
+    """
+    Merge identity groups into combined author entries.
+    Returns (merged_map, abstract) where abstract contains the combined stats.
+    """
+    identity_to_group: dict[str, str] = {}
+    for group in IDENTITY_GROUPS:
+        for ident in group["identities"]:
+            identity_to_group[ident.lower()] = group["name"]
+
+    merged: dict = {}
+    abstract: list[dict] = []
+
+    for author, data in author_map.items():
+        group_name = identity_to_group.get(author.lower())
+        if group_name:
+            if group_name not in merged:
+                merged[group_name] = {
+                    "email": data["email"],
+                    "total_commits": 0,
+                    "total_additions": 0,
+                    "total_deletions": 0,
+                    "total_files_changed": 0,
+                    "first_commit": data["first_commit"],
+                    "last_commit": data["last_commit"],
+                    "commits": [],
+                    "identities": [],
+                }
+            merged[group_name]["identities"].append(author)
+            merged[group_name]["total_commits"] += data["total_commits"]
+            merged[group_name]["total_additions"] += data["total_additions"]
+            merged[group_name]["total_deletions"] += data["total_deletions"]
+            merged[group_name]["total_files_changed"] += data["total_files_changed"]
+            merged[group_name]["commits"].extend(data["commits"])
+
+            if data["first_commit"]:
+                if (
+                    merged[group_name]["first_commit"] is None
+                    or data["first_commit"] < merged[group_name]["first_commit"]
+                ):
+                    merged[group_name]["first_commit"] = data["first_commit"]
+            if data["last_commit"]:
+                if data["last_commit"] > merged[group_name]["last_commit"]:
+                    merged[group_name]["last_commit"] = data["last_commit"]
+        else:
+            merged[author] = data
+
+    for group in IDENTITY_GROUPS:
+        if group["name"] in merged:
+            abstract.append({"name": group["name"], **merged[group["name"]]})
+
+    # Add non-merged authors to abstract
+    for author, data in merged.items():
+        if author not in [g["name"] for g in IDENTITY_GROUPS]:
+            abstract.append({"name": author, **data})
+
+    return merged, abstract
 
 
 # ── ANSI Colors ───────────────────────────────────────────────────────────────
@@ -318,64 +379,10 @@ def print_overall_summary(author_map: dict):
     print()
 
 
-# ── Heatmap ───────────────────────────────────────────────────────────────────
-def render_heatmap(commits: list[dict], repo: str):
-    """
-    Renders a GitHub-style commit frequency heatmap:
-      - X-axis: Hour of day (0–23)
-      - Y-axis: Day of week (Mon–Sun)
-    """
-    if not HAS_MATPLOTLIB:
-        print(colorize("[WARN] matplotlib not installed. Skipping heatmap.", C.YELLOW))
-        print(colorize("       Install with: pip install matplotlib numpy", C.DIM))
-        return
-
-    # Build 7x24 matrix
-    matrix = np.zeros((7, 24), dtype=int)
-    for c in commits:
-        dt = datetime.fromisoformat(c["date"])
-        dow = dt.weekday()  # 0=Mon, 6=Sun
-        hour = dt.hour
-        matrix[dow][hour] += 1
-
-    fig, ax = plt.subplots(figsize=(16, 4))
-    cmap = plt.cm.YlGn
-    im = ax.imshow(matrix, cmap=cmap, aspect="auto")
-
-    ax.set_xticks(range(24))
-    ax.set_xticklabels(
-        [f"{h:02d}:00" for h in range(24)], rotation=45, ha="right", fontsize=8
-    )
-    ax.set_yticks(range(7))
-    ax.set_yticklabels(DAYS)
-
-    # Annotate cells
-    for r in range(7):
-        for col in range(24):
-            val = matrix[r][col]
-            if val > 0:
-                ax.text(
-                    col,
-                    r,
-                    str(val),
-                    ha="center",
-                    va="center",
-                    fontsize=7,
-                    color="black" if val < matrix.max() * 0.7 else "white",
-                )
-
-    plt.colorbar(im, ax=ax, label="Commit Count")
-    ax.set_title(
-        f"Commit Frequency Heatmap — {repo}\n(Day of Week × Hour of Day)", fontsize=12
-    )
-    plt.tight_layout()
-    plt.savefig("commit_heatmap.png", dpi=150)
-    plt.show()
-    print(colorize("  📈 Heatmap saved to commit_heatmap.png", C.GREEN))
-
-
 # ── JSON Export ───────────────────────────────────────────────────────────────
-def export_json(author_map: dict, repo: str, branch: str, output_file: str):
+def export_json(
+    author_map: dict, repo: str, branch: str, output_file: str, abstract: list[dict]
+):
     """Serialize the full report to a JSON file."""
     report = {
         "meta": {
@@ -383,6 +390,20 @@ def export_json(author_map: dict, repo: str, branch: str, output_file: str):
             "branch": branch,
             "generated": datetime.now().isoformat(),
         },
+        "abstract": [
+            {
+                "name": a["name"],
+                "identities": a.get("identities", []),
+                "total_commits": a["total_commits"],
+                "total_additions": a["total_additions"],
+                "total_deletions": a["total_deletions"],
+                "net_lines": a["total_additions"] - a["total_deletions"],
+                "total_files_changed": a["total_files_changed"],
+                "first_commit": a["first_commit"],
+                "last_commit": a["last_commit"],
+            }
+            for a in abstract
+        ],
         "authors": {},
     }
 
@@ -413,6 +434,7 @@ def export_json(author_map: dict, repo: str, branch: str, output_file: str):
 
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
     print(colorize(f"  💾 JSON report saved to {output_file}", C.GREEN))
 
@@ -427,12 +449,6 @@ def main():
         action="store_true",
         default=False,
         help="Include merge commits (excluded by default)",
-    )
-    parser.add_argument(
-        "--no-heatmap",
-        action="store_true",
-        default=False,
-        help="Skip rendering the commit frequency heatmap",
     )
     parser.add_argument(
         "--output",
@@ -458,9 +474,12 @@ def main():
     print(colorize(f"  ⏳ Loading diff stats for {len(commits)} commits...\n", C.CYAN))
     author_map = build_author_map(commits)
 
+    # ── Merge Identities ──
+    merged_map, abstract = _merge_identities(author_map)
+
     # Sort authors by total commits descending
     sorted_authors = sorted(
-        author_map.items(), key=lambda x: x[1]["total_commits"], reverse=True
+        merged_map.items(), key=lambda x: x[1]["total_commits"], reverse=True
     )
 
     # ── Print Terminal Report ──
@@ -469,15 +488,10 @@ def main():
     for rank, (author, data) in enumerate(sorted_authors, start=1):
         print_author_section(author, data, rank)
 
-    print_overall_summary(author_map)
-
-    # ── Heatmap ──
-    if not args.no_heatmap:
-        all_commits = [c for d in author_map.values() for c in d["commits"]]
-        render_heatmap(all_commits, repo)
+    print_overall_summary(merged_map)
 
     # ── JSON Export ──
-    export_json(author_map, repo, branch, args.output)
+    export_json(merged_map, repo, branch, args.output, abstract)
 
 
 if __name__ == "__main__":
