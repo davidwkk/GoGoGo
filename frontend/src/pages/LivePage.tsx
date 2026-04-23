@@ -46,7 +46,7 @@ import { tripService } from '@/services/tripService';
 import { useAuthStore } from '@/store';
 import { TripPlanningPreferenceFields } from '@/components/chat/TripPlanningPreferenceFields';
 import { ItineraryDisplay } from '@/components/trip/ItineraryDisplay';
-import type { TripItinerary } from '@/types/trip';
+import type { TravelSettings, TripItinerary } from '@/types/trip';
 
 const LIVE_MODELS: { value: string; label: string }[] = [
   { value: 'gemini-3.1-flash-live-preview', label: '3.1 Flash Live (Default)' },
@@ -159,15 +159,25 @@ function PlanningProcessPanel({
 function looksLikeGeneratePlanIntent(s: string): boolean {
   const t = s.trim().toLowerCase();
   if (!t) return false;
-  return (
-    t === 'generate plan' ||
+  if (t === 'generate plan' || t === '/plan') return true;
+  // Do not treat refusals as plan generation.
+  if (/\b(don't|do not|dont|never|no need to)\b/.test(t) && /\b(generate|creat|build|make)\b/.test(t)) {
+    return false;
+  }
+  if (
     t.includes('generate the plan') ||
     t.includes('now give me a travel plan') ||
     t.includes('give me a travel plan') ||
     t.includes('now give me a plan') ||
     t.includes('travel plan') ||
-    t === '/plan'
-  );
+    t.includes('trip plan')
+  ) {
+    return true;
+  }
+  // "Generate a full itinerary", "create my trip plan", etc. → must hit SSE tool pipeline, not Live WS only.
+  const wantsBuild = /\b(generate|creat(e|ing)|build|built|make|made|produce|draft)\b/.test(t);
+  const aboutPlan = /\b(plan|plans|itinerary|itineraries|schedule|schedules)\b/.test(t);
+  return wantsBuild && aboutPlan;
 }
 
 function isYesIntent(s: string): boolean {
@@ -183,9 +193,27 @@ function isNoIntent(s: string): boolean {
   return /^(no|n)\b/.test(t);
 }
 
+type LivePlanPreferencesForSse = Pick<
+  TravelSettings,
+  | 'travel_style'
+  | 'dietary_restriction'
+  | 'hotel_tier'
+  | 'max_flight_stops'
+  | 'budget_min_hkd'
+  | 'budget_max_hkd'
+>;
+
+function flightStopsSummary(stops: number): string {
+  if (stops === 0) return 'direct only (0 stops)';
+  if (stops === 1) return 'at most 1 stop';
+  if (stops === 2) return 'at most 2 stops';
+  return String(stops);
+}
+
 function buildPlanPromptFromTranscripts(
   transcripts: LiveTranscriptItem[],
-  userAsk: string
+  userAsk: string,
+  prefs: LivePlanPreferencesForSse
 ): string {
   const recent = transcripts.slice(-12);
   const lines = recent
@@ -194,12 +222,24 @@ function buildPlanPromptFromTranscripts(
   return [
     'System: You are generating a trip plan based on the following context.',
     'System: DO NOT restate or recap this context. Use it silently and only output the trip plan content needed.',
+    'System: Extract destination, travel dates, trip purpose, and group (size/relationship) from the conversation when present.',
+    'System: The user has not added separate one-off “special” constraints beyond the transcript. Use the Live app preferences',
+    'System: below for style, diet, hotel tier, flight stop limit, and budget when the chat does not specify them.',
+    'System: If the user gave dates/purpose/group in the transcript, you MUST honor those; do not re-ask for that information—',
+    'System: proceed with tools and build the itinerary (unless something essential is still missing, then call it out once).',
+    'System: Proceed with tool calls and produce a full itinerary that fits the conversation and these defaults.',
+    '',
+    'System: Live app preferences (use when the transcript is silent on that aspect):',
+    `System:   style=${prefs.travel_style}, diet=${prefs.dietary_restriction}, hotel=${prefs.hotel_tier}, ` +
+      `flights max_stops=${prefs.max_flight_stops} (${flightStopsSummary(
+        prefs.max_flight_stops
+      )}), budget (HKD)=${prefs.budget_min_hkd}–${prefs.budget_max_hkd}.`,
     '',
     'Context (do not repeat):',
     ...lines,
     '',
     `User request: ${userAsk}`,
-    'System: The user confirms: yes. Proceed with tool calls and finalize the plan.',
+    'System: The user is asking to generate the travel plan now. Proceed with tool calls and finalize the plan.',
   ].join('\n');
 }
 
@@ -570,6 +610,30 @@ export function LivePage() {
               continue;
             }
             if (chunk.startsWith('__MESSAGE_ID__:')) continue;
+            if (chunk.startsWith('__STATUS__:')) {
+              const st = chunk.slice('__STATUS__:'.length);
+              const block =
+                st === 'generating_trip_plan'
+                  ? '**Status:** `generating_trip_plan`\n\n**Generating your travel plan**\n\nSearching flights, hotels, weather, and attractions…\n\n'
+                  : `**Status:** ${st}\n\n`;
+              fullText += block;
+              if (streamingMsgId === null) {
+                streamingMsgId = crypto.randomUUID();
+                patchActiveTranscripts(prev => [
+                  ...prev,
+                  { id: streamingMsgId!, role: 'model', text: fullText },
+                ]);
+              } else {
+                patchActiveTranscripts(prev => {
+                  const last = prev.findIndex(x => x.id === streamingMsgId);
+                  if (last === -1) return prev;
+                  const next = [...prev];
+                  next[last] = { ...next[last], text: fullText };
+                  return next;
+                });
+              }
+              continue;
+            }
           }
 
           // Plain text chunk
@@ -605,7 +669,7 @@ export function LivePage() {
         patchActiveItinerary(gotItinerary as Record<string, unknown>);
         appendTranscript(
           'model',
-          'Plan generated. Do you need to save this plan? Reply "yes" to save.'
+          '**Plan generated**\n\nDo you want to save this trip to **My Trips**?\n\nReply with **yes** to save, or **no** to skip.'
         );
         setPendingSavePrompt(true);
         setIsPlanMode(false); // exit plan mode after generation
@@ -633,7 +697,10 @@ export function LivePage() {
       const itinerary = activeSection?.lastItinerary;
       setPendingSavePrompt(false);
       if (!token) {
-        appendTranscript('model', 'Please sign in to save trip plans to My Trips.');
+        appendTranscript(
+          'model',
+          '**Sign in required**\n\nPlease sign in to save trip plans to **My Trips**.'
+        );
         toast.error('Please sign in to save.');
         return;
       }
@@ -644,7 +711,7 @@ export function LivePage() {
       try {
         appendTranscript('user', trimmed);
         await tripService.createTrip(itinerary);
-        appendTranscript('model', 'Saved. You can view it in My Trips.');
+        appendTranscript('model', '**Saved**\n\nYou can open it in **My Trips** anytime.');
         toast.success('Trip saved to My Trips');
       } catch (e) {
         appendTranscript(
@@ -660,7 +727,7 @@ export function LivePage() {
       appendTranscript('user', trimmed);
       appendTranscript(
         'model',
-        'Okay — I won’t save it. Tell me what you want to change, or type “generate plan” to regenerate.'
+        '**Understood — I won’t save this plan.**\n\nTell me what you want to change, or type **Generate plan** to run the planner again.'
       );
       return;
     }
@@ -668,7 +735,14 @@ export function LivePage() {
     // Enter plan mode on intent and run a plan generation turn
     if (!isPlanMode && looksLikeGeneratePlanIntent(trimmed)) {
       setIsPlanMode(true);
-      const prompt = buildPlanPromptFromTranscripts(transcripts, trimmed);
+      const prompt = buildPlanPromptFromTranscripts(transcripts, trimmed, {
+        travel_style: travelSettings.travel_style,
+        dietary_restriction: travelSettings.dietary_restriction,
+        hotel_tier: travelSettings.hotel_tier,
+        max_flight_stops: travelSettings.max_flight_stops,
+        budget_min_hkd: travelSettings.budget_min_hkd,
+        budget_max_hkd: travelSettings.budget_max_hkd,
+      });
       await runPlanTurn({ displayText: trimmed, sseText: prompt }, { forceNew: true });
       return;
     }
@@ -692,6 +766,7 @@ export function LivePage() {
     text,
     token,
     transcripts,
+    travelSettings,
   ]);
 
   return (

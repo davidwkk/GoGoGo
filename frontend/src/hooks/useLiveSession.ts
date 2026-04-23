@@ -530,7 +530,17 @@ export function useLiveSession({ sectionKey, transcripts, setTranscripts }: UseL
       ]);
       refreshRespondingUi();
       scheduleStallWatchdog();
-      wsSend({ type: 'text', text: t });
+      const ts = useChatStore.getState().travelSettings;
+      wsSend({
+        type: 'text',
+        text: t,
+        budget_min_hkd: ts.budget_min_hkd,
+        budget_max_hkd: ts.budget_max_hkd,
+        travel_style: ts.travel_style,
+        dietary_restriction: ts.dietary_restriction,
+        hotel_tier: ts.hotel_tier,
+        max_flight_stops: ts.max_flight_stops,
+      });
     },
     [refreshRespondingUi, scheduleStallWatchdog, wsSend]
   );
