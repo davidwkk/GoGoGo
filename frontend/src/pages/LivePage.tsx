@@ -44,6 +44,7 @@ import { useChatStore } from '@/store';
 import { livePlanService } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useAuthStore } from '@/store';
+import { TripPlanningPreferenceFields } from '@/components/chat/TripPlanningPreferenceFields';
 import { ItineraryDisplay } from '@/components/trip/ItineraryDisplay';
 import type { TripItinerary } from '@/types/trip';
 
@@ -318,6 +319,7 @@ export function LivePage() {
   const setLiveModel = useChatStore(s => s.setLiveModel);
   const live_voice = useChatStore(s => s.live_voice);
   const setLiveVoice = useChatStore(s => s.setLiveVoice);
+  const travelSettings = useChatStore(s => s.travelSettings);
 
   const handleModelChange = (val: string) => {
     setLiveModel(val);
@@ -477,6 +479,11 @@ export function LivePage() {
       const t = displayText.trim();
       if (!t) return;
 
+      if (travelSettings.budget_min_hkd > travelSettings.budget_max_hkd) {
+        toast.error('Budget minimum must be less than or equal to maximum (HKD).');
+        return;
+      }
+
       // Stop WS response audio stream UI while we’re doing SSE planning
       stopResponse();
 
@@ -510,6 +517,14 @@ export function LivePage() {
         })(),
         force_new_session: forceNew || undefined,
         generate_plan: false,
+        user_preferences: {
+          travel_style: travelSettings.travel_style,
+          dietary_restriction: travelSettings.dietary_restriction,
+          hotel_tier: travelSettings.hotel_tier,
+          budget_min_hkd: travelSettings.budget_min_hkd,
+          budget_max_hkd: travelSettings.budget_max_hkd,
+          max_flight_stops: travelSettings.max_flight_stops,
+        },
       };
 
       try {
@@ -604,6 +619,7 @@ export function LivePage() {
       setPlanningExpanded,
       stopResponse,
       token,
+      travelSettings,
     ]
   );
 
@@ -921,9 +937,10 @@ export function LivePage() {
 
         <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm px-3 sm:px-6 py-3">
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2">
               <div className="text-xs font-medium text-muted-foreground">Preference</div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+                <TripPlanningPreferenceFields idPrefix="live-" />
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-muted-foreground">Model</div>
                   <Select value={live_model} onValueChange={handleModelChange}>
