@@ -1,6 +1,8 @@
 # GoGoGo
 
-Final Project for CSCI3280 2025-26 Sem2 — AI-powered travel agent
+AI-powered travel agent — plan trips through natural language conversation, get structured itineraries with flights, hotels, attractions, weather, and budget breakdowns.
+
+GoGoGo is a full-stack travel planner built for CSCI3280 2025-26 Sem 2. Users chat with a Google Gemini-powered AI agent that calls real-time travel APIs (SerpAPI, Tavily, OpenWeatherMap, Google Maps) to produce structured trip plans delivered via SSE streaming. Supports both authenticated users (persistent trip storage) and anonymous guest sessions.
 
 ## Quick Start
 
