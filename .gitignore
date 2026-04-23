@@ -238,3 +238,5 @@ vpn/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+git_report.json
