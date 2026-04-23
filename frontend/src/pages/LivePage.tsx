@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SetStateAction,
+} from 'react';
 import DOMPurify from 'dompurify';
 import {
   Menu,
@@ -37,6 +45,7 @@ import { livePlanService } from '@/services/api';
 import { tripService } from '@/services/tripService';
 import { useAuthStore } from '@/store';
 import { ItineraryDisplay } from '@/components/trip/ItineraryDisplay';
+import type { TripItinerary } from '@/types/trip';
 
 const LIVE_MODELS: { value: string; label: string }[] = [
   { value: 'gemini-3.1-flash-live-preview', label: '3.1 Flash Live (Default)' },
@@ -104,6 +113,42 @@ function StructuredPayload({ text }: { text: string }) {
               {DOMPurify.sanitize(extracted.restText)}
             </ReactMarkdown>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlanningProcessPanel({
+  steps,
+  expanded,
+  onToggleExpanded,
+  busy,
+}: {
+  steps: string[];
+  expanded: boolean;
+  onToggleExpanded: () => void;
+  busy: boolean;
+}) {
+  if (steps.length === 0 && !busy) return null;
+  return (
+    <div className="mt-2 rounded-xl border bg-muted/30 p-3">
+      <button
+        type="button"
+        onClick={onToggleExpanded}
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+      >
+        <span>💭 Thinking process</span>
+        <span className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>▶</span>
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-1.5">
+          {steps.map((s, i) => (
+            <div key={i} className="text-xs text-muted-foreground break-words">
+              {s}
+            </div>
+          ))}
+          {busy && <div className="text-xs text-muted-foreground">Working…</div>}
         </div>
       )}
     </div>
@@ -251,12 +296,23 @@ export function LivePage() {
     setTranscripts: patchActiveTranscripts,
   });
 
+  const planningAnchorIndex = useMemo(() => {
+    for (let i = transcripts.length - 1; i >= 0; i -= 1) {
+      const tr = transcripts[i];
+      if (tr.role === 'model' && /generating_trip_plan/i.test(tr.text)) return i;
+    }
+    return -1;
+  }, [transcripts]);
+
   const token = useAuthStore(s => s.token);
 
   const [isPlanMode, setIsPlanMode] = useState(false);
   const [planBusy, setPlanBusy] = useState(false);
   const [pendingSavePrompt, setPendingSavePrompt] = useState(false);
   const planAbortRef = useRef<AbortController | null>(null);
+
+  const showPlanningToolsPanel =
+    planBusy || (activeSection?.planningSteps?.length ?? 0) > 0;
 
   const live_model = useChatStore(s => s.live_model);
   const setLiveModel = useChatStore(s => s.setLiveModel);
@@ -807,57 +863,48 @@ export function LivePage() {
         </header>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-6 py-4">
-          {/* Planning / tools panel */}
-          {(planBusy || (activeSection?.planningSteps?.length ?? 0) > 0) && (
-            <div className="mb-5 max-w-4xl">
-              <button
-                type="button"
-                onClick={() => setPlanningExpanded(!(activeSection?.planningExpanded ?? false))}
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <span>💭 Thinking process</span>
-                <span
-                  className={`transition-transform ${(activeSection?.planningExpanded ?? false) ? 'rotate-90' : ''}`}
-                >
-                  ▶
-                </span>
-              </button>
-              {(activeSection?.planningExpanded ?? false) && (
-                <div className="mt-2 rounded-xl border bg-muted/30 p-3 space-y-1.5">
-                  {(activeSection?.planningSteps ?? []).map((s, i) => (
-                    <div key={i} className="text-xs text-muted-foreground break-words">
-                      {s}
-                    </div>
-                  ))}
-                  {planBusy && <div className="text-xs text-muted-foreground">Working…</div>}
-                </div>
-              )}
-            </div>
-          )}
-
           {transcripts.length === 0 ? (
             <div className="text-sm text-muted-foreground">No messages yet.</div>
           ) : (
             <div className="space-y-6 max-w-4xl">
-              {transcripts.map(t => (
-                <div key={t.id} className="text-sm">
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                    {t.role}
-                  </div>
-                  {t.role === 'user' ? (
-                    <div className="whitespace-pre-wrap break-words text-foreground">{t.text}</div>
-                  ) : (
-                    <div>
-                      <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {DOMPurify.sanitize(t.text)}
-                        </ReactMarkdown>
+              {transcripts.map((t, idx) => {
+                const showPlanningBelow =
+                  showPlanningToolsPanel &&
+                  (planningAnchorIndex >= 0
+                    ? idx === planningAnchorIndex
+                    : idx === transcripts.length - 1);
+                return (
+                  <Fragment key={t.id}>
+                    <div className="text-sm">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                        {t.role}
                       </div>
-                      {t.role === 'model' && <StructuredPayload text={t.text} />}
+                      {t.role === 'user' ? (
+                        <div className="whitespace-pre-wrap break-words text-foreground">{t.text}</div>
+                      ) : (
+                        <div>
+                          <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {DOMPurify.sanitize(t.text)}
+                            </ReactMarkdown>
+                          </div>
+                          {t.role === 'model' && <StructuredPayload text={t.text} />}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                    {showPlanningBelow && (
+                      <PlanningProcessPanel
+                        steps={activeSection?.planningSteps ?? []}
+                        expanded={activeSection?.planningExpanded ?? false}
+                        onToggleExpanded={() =>
+                          setPlanningExpanded(!(activeSection?.planningExpanded ?? false))
+                        }
+                        busy={planBusy}
+                      />
+                    )}
+                  </Fragment>
+                );
+              })}
             </div>
           )}
 
