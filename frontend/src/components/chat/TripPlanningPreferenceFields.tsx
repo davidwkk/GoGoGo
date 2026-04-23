@@ -23,10 +23,12 @@ const TRAVEL_STYLES: { value: TravelStyle; label: string }[] = [
 ];
 
 const DIETARY_RESTRICTIONS: { value: DietaryRestriction; label: string }[] = [
-  { value: 'none', label: 'No restriction' },
+  { value: 'none', label: 'No Restriction' },
   { value: 'vegetarian', label: 'Vegetarian' },
   { value: 'vegan', label: 'Vegan' },
   { value: 'halal', label: 'Halal' },
+  { value: 'kosher', label: 'Kosher' },
+  { value: 'gluten_free', label: 'Gluten Free' },
 ];
 
 const ALLOWED_DIETARY = new Set(DIETARY_RESTRICTIONS.map(d => d.value));
