@@ -58,8 +58,9 @@ def _b64_data(data: Any) -> str | None:
 # (user/model/system) keyed by `session_id`, and replay it as a compact context
 # prompt when a client reconnects.
 #
-# This is intentionally in-memory (per backend process). For production / multi-
-# replica, move to Redis or DB.
+# This is intentionally in-memory (per backend process). Multiple uvicorn/gunicorn
+# workers or replicas do NOT share this store — use a single process or add Redis/DB
+# for shared session_id context in production.
 
 
 class _CtxMsg(TypedDict):
@@ -89,14 +90,19 @@ _LIVE_SYSTEM_PROMPT = "\n".join(
         "System: Transport preference order: Flight first, then High Speed Railway.",
         "System: Match the user's language (e.g. English or 中文) in your reply.",
         "",
-        "System: When the user names a destination or says they want to travel, but dates / purpose / group are still missing,",
+        "System: When the user names a destination or says they want to travel, but dates / purpose / group / total budget (HKD) are still missing,",
         "System: respond warmly, acknowledge the destination in the opening line, then ask only for what you still need.",
         "System: CLARIFYING QUESTIONS — use Markdown. Put each missing item on its own line.",
         "System: Use a numbered list OR a bullet list (·). Each item MUST start with the number or bullet, then a space,",
         "System: then a bold label and colon, then the question, e.g. 1. **Dates:** …  or  · **Purpose:** …",
         "System: Put a blank line between the short intro paragraph and the list, and between the list and any closing line if needed.",
-        "System: Typical labels (skip any the user already gave): **Dates:**, **Purpose:**, **Group:**.",
-        "System: Optionally add **Budget (HKD):** only if budget is unclear and not already covered.",
+        "System: Typical labels (skip any the user already gave): **Dates:**, **Purpose:**, **Group:**, **Budget (HKD):**.",
+        "System: Budget is required with the others: ask for total trip budget (min–max HKD) unless the user or Live lines already gave it.",
+        "System: If a Live preference budget line exists, still include **Budget (HKD):** but phrase it as confirm or adjust that saved range.",
+        "System: Live app preferences: Separate System lines in the same turn may list budget (HKD), travel style, diet,",
+        "System: hotel tier, and max flight stops. If the user does not state those in chat, assume the values from those lines.",
+        "System: If they state something different in chat, prefer the user's words.",
+        "System: Do not ask to repeat **Dates:**, **Purpose:**, **Group:**, **Budget (HKD):**, or other preference items in the clarifying list if already covered by chat or by those Live lines.",
         "System: Example shape (adapt destination and wording; renumber if you skip items):",
         "System:   Opening: I'd love to help you plan your trip to Shanghai!",
         "System:   Blank line, then: To get started, could you share a few more details?",
@@ -104,11 +110,66 @@ _LIVE_SYSTEM_PROMPT = "\n".join(
         "System:   1. **Dates:** What are your travel dates (start and end)?",
         "System:   2. **Purpose:** Is this for vacation, business, or something else?",
         "System:   3. **Group:** How many people are traveling, and what is your relationship (solo, couple, family, friends)?",
+        "System:   4. **Budget (HKD):** What is your total budget range for this trip (minimum and maximum HKD)?",
         "System: Do not ask in one long comma-separated sentence; do not omit bold on the labels.",
         "System: You may include useful links (hotels/attractions) and maps when relevant.",
-        "System: If you output structured data, put it in a fenced code block like ```json ... ``` to preserve formatting.",
+        "System: When the user asks to generate, create, or produce a **full itinerary** or **complete travel plan** with real flights, hotels, or weather,",
+        "System: do NOT answer with a large invented ```json``` trip document as if it came from live APIs — this Live channel cannot call those tools.",
+        "System: Instead, briefly ask them to send a short line such as **Generate plan** or **Generate itinerary** so the app runs the tool-backed planner and shows the travel card.",
+        "System: For small structured snippets (not a full trip replacement), you may still use Markdown or a small fenced ```json``` block when helpful.",
     ]
 )
+
+
+def _live_preference_hint_block(msg: dict) -> str:
+    """
+    Client may send each Live text turn with the same fields as the Live preference bar:
+    budget_min_hkd, budget_max_hkd, travel_style, dietary_restriction, hotel_tier, max_flight_stops.
+    Injected as System lines so the model can assume them when the user does not state them in chat.
+    """
+    out: list[str] = []
+    raw_min, raw_max = msg.get("budget_min_hkd"), msg.get("budget_max_hkd")
+    if raw_min is not None or raw_max is not None:
+        try:
+            mn = float(raw_min) if raw_min is not None else None
+            mx = float(raw_max) if raw_max is not None else None
+        except (TypeError, ValueError):
+            mn = mx = None
+        if mn is not None and mx is not None and mn >= 0 and mx >= 0 and mn <= mx:
+            out.append(
+                f"System: Live preference budget (HKD): {int(mn)}–{int(mx)} total. "
+                "If the user does not state a budget, use this range; if they state another amount, prefer theirs."
+            )
+    for key, label in (
+        ("travel_style", "travel style"),
+        ("dietary_restriction", "diet"),
+        ("hotel_tier", "hotel tier"),
+    ):
+        v = msg.get(key)
+        if not isinstance(v, str):
+            continue
+        s = v.strip()
+        if not s or len(s) > 64:
+            continue
+        out.append(
+            f"System: Live preference {label}: {s}. If the user does not specify this, assume this value; "
+            "if they contradict it, prefer the user."
+        )
+    raw_stops = msg.get("max_flight_stops")
+    if raw_stops is not None:
+        try:
+            stops = int(float(raw_stops))
+        except (TypeError, ValueError):
+            stops = None
+        if stops in (0, 1, 2):
+            label = {0: "direct flights only", 1: "up to 1 stop", 2: "up to 2 stops"}[stops]
+            out.append(
+                f"System: Live preference max flight stops: {stops} ({label}). If the user does not specify, assume this; "
+                "if they want different routings, prefer the user."
+            )
+    if not out:
+        return ""
+    return "\n".join(out) + "\n"
 
 
 def _ctx_prune(now: float) -> None:
@@ -131,17 +192,17 @@ def _ctx_compose_prompt(msgs: list[_CtxMsg]) -> str:
     often responds by recapping it. Instead, we provide only the most recent
     user/model exchanges and instruct the model NOT to recap.
     """
-    # newest messages matter most
     user_msgs = [m for m in msgs if m["role"] == "user"]
     model_msgs = [m for m in msgs if m["role"] == "model"]
 
-    last_users = user_msgs[-4:] if user_msgs else []
+    last_users = user_msgs[-6:] if user_msgs else []
     last_model = model_msgs[-1:] if model_msgs else []
 
     lines: list[str] = [
         "System: Reconnect context for an ongoing live travel-planning session.",
-        "System: CRITICAL: Do NOT recap, summarize, or repeat the context below unless the user explicitly asks.",
-        "System: Use it silently to answer the next user message or ask one short clarifying question if needed.",
+        "System: CRITICAL: Do NOT recap, summarize, or read aloud the context below unless the user explicitly asks.",
+        "System: Continue the same travel-planning thread. Do not re-ask for destination or for details the user",
+        "System: already provided in the context; respond to their latest user message in continuation.",
         "",
         "Context (do not repeat):",
     ]
@@ -150,8 +211,9 @@ def _ctx_compose_prompt(msgs: list[_CtxMsg]) -> str:
         t = (m["text"] or "").strip()
         if not t:
             continue
-        if len(t) > 500:
-            t = t[:500] + "…"
+        max_len = 1800 if m["role"] == "model" else 600
+        if len(t) > max_len:
+            t = t[:max_len] + "…"
         lines.append(f"- {role}: {t}")
 
     lines.append("")
@@ -169,7 +231,23 @@ async def _ctx_append(
     async with _CTX_LOCK:
         _ctx_prune(now)
         msgs = _CTX_STORE.setdefault(session_id, [])
-        msgs.append({"role": role, "text": t, "ts": now})
+        if role == "model" and msgs and msgs[-1]["role"] == "model":
+            # Coalesce: output_transcription is streamed as many chunks per turn; merge
+            # into one message so _ctx_compose can see the full last assistant reply.
+            prev = (msgs[-1].get("text") or "").strip()
+            p_st, t_st = prev.strip(), t
+            if not p_st:
+                msgs[-1]["text"] = t_st
+            elif t_st.startswith(p_st) and len(t_st) >= len(p_st):
+                # Cumulative strings (entire line-so-far each time)
+                msgs[-1]["text"] = t_st
+            elif p_st in t_st and len(t_st) > len(p_st):
+                msgs[-1]["text"] = t_st
+            else:
+                msgs[-1]["text"] = f"{p_st} {t_st}" if t_st else p_st
+            msgs[-1]["ts"] = now
+        else:
+            msgs.append({"role": role, "text": t, "ts": now})
         if len(msgs) > _CTX_MAX_MESSAGES:
             _CTX_STORE[session_id] = msgs[-_CTX_MAX_MESSAGES:]
 
@@ -291,14 +369,13 @@ async def live_ws(
             ).info(f"[{connection_id}] ✅ Gemini Live session connected")
 
             # NOTE: Gemini Live sessions are not resumable. We keep an in-memory
-            # transcript and inject it into the *first user turn* after a reconnect,
-            # which is more reliable than trying to "replay" it as a standalone input.
-            injected_context_for_this_ws = False
+            # transcript per session_id and inject it (plus the fixed system prompt)
+            # on every user text we forward, so the model never sees a bare user line
+            # after a reconnect and preferences always apply.
 
             # ── pump: client → gemini ─────────────────────────────────────────
             async def pump_client_to_gemini() -> None:
                 nonlocal stats
-                nonlocal injected_context_for_this_ws
                 try:
                     while True:
                         raw = await ws.receive_text()
@@ -316,34 +393,28 @@ async def live_ws(
                             text = str(msg.get("text") or "").strip()
                             if not text:
                                 continue
-                            # Inject system prompt on the first user turn for this WS.
-                            send_text = text
-                            if not injected_context_for_this_ws:
-                                send_text = _LIVE_SYSTEM_PROMPT + "\nUser: " + text
-                                injected_context_for_this_ws = True
-                            # If this is a reconnect (history exists), inject context
-                            # into the first user turn we forward upstream.
-                            # Note: we already injected system prompt above; if we also
-                            # have replayable context, prepend it too.
+                            pref_hint = _live_preference_hint_block(msg)
+                            ph_block = ("\n" + pref_hint) if pref_hint else ""
+                            ctx_block = ""
+                            ctx_msg_count = 0
                             if sid:
-                                ctx_msgs = await _ctx_get(sid)
-                                if ctx_msgs:
-                                    send_text = (
-                                        _LIVE_SYSTEM_PROMPT
-                                        + "\n"
-                                        + _ctx_compose_prompt(ctx_msgs)
-                                        + "\nUser: "
-                                        + text
-                                    )
-                                    logger.bind(
-                                        event="live_context_injected_first_turn",
-                                        connection_id=connection_id,
-                                        session_id=sid,
-                                        context_messages=len(ctx_msgs),
-                                        injected_chars=len(send_text),
-                                    ).info(
-                                        f"[{connection_id}] Injected context into first turn ({len(ctx_msgs)} msgs)"
-                                    )
+                                prior_ctx = await _ctx_get(sid)
+                                ctx_msg_count = len(prior_ctx)
+                                if prior_ctx:
+                                    ctx_block = "\n" + _ctx_compose_prompt(prior_ctx)
+                            send_text = (
+                                _LIVE_SYSTEM_PROMPT + ph_block + ctx_block + "\nUser: " + text
+                            )
+                            if sid and ctx_block:
+                                logger.bind(
+                                    event="live_context_injected_with_text",
+                                    connection_id=connection_id,
+                                    session_id=sid,
+                                    context_messages=ctx_msg_count,
+                                    injected_chars=len(send_text),
+                                ).info(
+                                    f"[{connection_id}] Injected {ctx_msg_count} context msgs with user text"
+                                )
                             if sid:
                                 await _ctx_append(sid, "user", text)
                             # Use realtime input for text as well (not send_client_content)
