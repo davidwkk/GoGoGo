@@ -1,0 +1,198 @@
+import { useEffect } from 'react';
+
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useChatStore } from '@/store';
+import type { DietaryRestriction, HotelTier, TravelStyle } from '@/types/trip';
+
+const TRAVEL_STYLES: { value: TravelStyle; label: string }[] = [
+  { value: 'no_special_style', label: 'No special style' },
+  { value: 'adventure', label: 'Adventure' },
+  { value: 'relaxing', label: 'Relaxing' },
+  { value: 'cultural', label: 'Cultural' },
+  { value: 'foodie', label: 'Foodie' },
+  { value: 'nature', label: 'Nature' },
+  { value: 'shopping', label: 'Shopping' },
+];
+
+const DIETARY_RESTRICTIONS: { value: DietaryRestriction; label: string }[] = [
+  { value: 'none', label: 'No restriction' },
+  { value: 'vegetarian', label: 'Vegetarian' },
+  { value: 'vegan', label: 'Vegan' },
+  { value: 'halal', label: 'Halal' },
+];
+
+const ALLOWED_DIETARY = new Set(DIETARY_RESTRICTIONS.map(d => d.value));
+
+const HOTEL_TIERS: { value: HotelTier; label: string }[] = [
+  { value: 'budget', label: 'Budget' },
+  { value: 'mid_range', label: 'Mid Range' },
+  { value: 'luxury', label: 'Luxury' },
+];
+
+const MAX_FLIGHT_STOPS = [
+  { value: '0', label: 'Direct only' },
+  { value: '1', label: '1 Stops' },
+  { value: '2', label: '2 Stops' },
+];
+
+export interface TripPlanningPreferenceFieldsProps {
+  /** Prefix for `id` / `htmlFor` when multiple instances may exist on one page */
+  idPrefix?: string;
+  /** Wider triggers on Live footer */
+  className?: string;
+}
+
+export function TripPlanningPreferenceFields({
+  idPrefix = '',
+  className = '',
+}: TripPlanningPreferenceFieldsProps) {
+  const travelSettings = useChatStore(s => s.travelSettings);
+  const setTravelSettings = useChatStore(s => s.setTravelSettings);
+
+  const p = idPrefix;
+
+  useEffect(() => {
+    if (!ALLOWED_DIETARY.has(travelSettings.dietary_restriction)) {
+      setTravelSettings({ dietary_restriction: 'none' });
+    }
+  }, [travelSettings.dietary_restriction, setTravelSettings]);
+
+  return (
+    <div className={`flex flex-wrap items-center gap-4 ${className}`.trim()}>
+      <div className="space-y-1">
+        <Label htmlFor={`${p}travel_style`} className="text-xs">
+          Style
+        </Label>
+        <Select
+          value={travelSettings.travel_style}
+          onValueChange={value => setTravelSettings({ travel_style: value as TravelStyle })}
+        >
+          <SelectTrigger id={`${p}travel_style`} className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TRAVEL_STYLES.map(s => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor={`${p}dietary_restriction`} className="text-xs">
+          Diet
+        </Label>
+        <Select
+          value={
+            ALLOWED_DIETARY.has(travelSettings.dietary_restriction)
+              ? travelSettings.dietary_restriction
+              : 'none'
+          }
+          onValueChange={value =>
+            setTravelSettings({
+              dietary_restriction: value as DietaryRestriction,
+            })
+          }
+        >
+          <SelectTrigger id={`${p}dietary_restriction`} className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DIETARY_RESTRICTIONS.map(d => (
+              <SelectItem key={d.value} value={d.value}>
+                {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor={`${p}hotel_tier`} className="text-xs">
+          Hotel
+        </Label>
+        <Select
+          value={travelSettings.hotel_tier}
+          onValueChange={value => setTravelSettings({ hotel_tier: value as HotelTier })}
+        >
+          <SelectTrigger id={`${p}hotel_tier`} className="w-[120px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {HOTEL_TIERS.map(h => (
+              <SelectItem key={h.value} value={h.value}>
+                {h.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor={`${p}max_flight_stops`} className="text-xs">
+          Flights
+        </Label>
+        <Select
+          value={String(travelSettings.max_flight_stops)}
+          onValueChange={value => setTravelSettings({ max_flight_stops: parseInt(value, 10) })}
+        >
+          <SelectTrigger id={`${p}max_flight_stops`} className="w-[120px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MAX_FLIGHT_STOPS.map(s => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor={`${p}budget_min`} className="text-xs">
+          Budget (HKD)
+        </Label>
+        <div className="flex items-center gap-1">
+          <Input
+            id={`${p}budget_min`}
+            type="number"
+            min={0}
+            placeholder="Min"
+            className="w-[80px]"
+            value={travelSettings.budget_min_hkd}
+            onChange={e =>
+              setTravelSettings({
+                budget_min_hkd: parseInt(e.target.value, 10) || 0,
+              })
+            }
+          />
+          <span className="text-muted-foreground">-</span>
+          <Input
+            id={`${p}budget_max`}
+            type="number"
+            min={0}
+            placeholder="Max"
+            className="w-[80px]"
+            value={travelSettings.budget_max_hkd}
+            onChange={e =>
+              setTravelSettings({
+                budget_max_hkd: parseInt(e.target.value, 10) || 0,
+              })
+            }
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
