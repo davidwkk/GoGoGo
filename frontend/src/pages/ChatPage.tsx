@@ -2,9 +2,6 @@
 
 import { InputBar } from '@/components/chat/InputBar';
 import { TravelSettingsBar } from '@/components/chat/TravelSettingsBar';
-import { AttractionCard } from '@/components/trip/AttractionCard';
-import { FlightCard } from '@/components/trip/FlightCard';
-import { HotelCard } from '@/components/trip/HotelCard';
 import { ItineraryDisplay } from '@/components/trip/ItineraryDisplay';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useTTS } from '@/hooks/useTTS';
@@ -13,22 +10,15 @@ import { useAuthStore, useChatStore } from '@/store';
 import type { TripItinerary } from '@/types/trip';
 import DOMPurify from 'dompurify';
 import {
-  Banknote,
-  Bed,
-  Calendar,
   Copy,
-  MapPin,
   Menu,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
-  Plane,
   PlusCircle,
-  Sparkles,
   Square,
   Star,
-  Ticket,
   Trash2,
   Volume2, // Added Menu icon for mobile sidebar toggle
   X, // Added X icon to close sidebar on mobile
@@ -696,10 +686,23 @@ export function ChatPage() {
         }
         await chatSessionsService.clearAllGuestHistory(guestUid);
       }
-      setSessions([]);
       clearMessages();
       useChatStore.setState({ thinkingSteps: [] });
-      setSessionId(null);
+
+      // Create a new session immediately so the chat is never left empty
+      const guestUid = !isLoggedIn ? (localStorage.getItem('guest_uid') ?? undefined) : undefined;
+      const created = isLoggedIn
+        ? await chatSessionsService.create()
+        : await chatSessionsService.createGuest(guestUid!);
+      setSessions([
+        {
+          id: created.session_id,
+          title: created.title,
+          is_favorite: created.is_favorite ?? false,
+          created_at: created.created_at,
+        },
+      ]);
+      setSessionId(String(created.session_id));
       toast.success('All chat history cleared');
     } catch (e) {
       const err = e as { response?: { data?: { detail?: string } } };
